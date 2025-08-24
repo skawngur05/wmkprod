@@ -1,7 +1,6 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Lead, ASSIGNEES, INSTALLERS } from '@shared/schema';
-import { formatDate } from '@/lib/auth';
 import { useState, useRef } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { Lead } from '@shared/schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,10 +17,6 @@ interface FollowupsData {
   overdue: Lead[];
   dueToday: Lead[];
   upcoming: Lead[];
-}
-
-interface InstallationsData {
-  installations: Lead[];
 }
 
 export default function Followups() {
@@ -127,6 +122,14 @@ export default function Followups() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(parseFloat(amount));
   };
   
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+  
   const getPaymentStatusBadge = (lead: Lead) => {
     if (lead.remarks !== 'sold') return null;
     
@@ -151,13 +154,8 @@ export default function Followups() {
     return names[assignee] || assignee;
   };
   
-  const getInstallerName = (installer: string) => {
-    const names: Record<string, string> = {
-      'angel': 'Angel',
-      'brian': 'Brian',
-      'luis': 'Luis'
-    };
-    return names[installer] || installer;
+  const getDaysOverdue = (date: string) => {
+    return Math.ceil((new Date().getTime() - new Date(date).getTime()) / (1000 * 3600 * 24));
   };
 
   return (
@@ -165,7 +163,7 @@ export default function Followups() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900" data-testid="followups-title">
-          Follow-Up Management MVP
+          Follow-Up Management
         </h1>
         <p className="text-gray-600 mt-2">
           Revenue-focused lead follow-up system with smart prioritization
@@ -254,11 +252,12 @@ export default function Followups() {
           </CardContent>
         </Card>
       </div>
-      {/* Overdue Follow-ups Section */}
+
+      {/* Overdue Follow-ups Table */}
       <div ref={overdueRef} className="mb-12">
-        <h2 className="text-2xl font-bold text-red-800 mb-4 flex items-center">
+        <h2 className="text-2xl font-bold text-red-800 mb-6 flex items-center">
           <span className="w-3 h-3 bg-red-500 rounded-full mr-3"></span>
-          CRITICAL - Overdue Follow-Ups ({activeOverdue.length})
+          CRITICAL - Overdue Follow-ups ({activeOverdue.length})
         </h2>
         
         {activeOverdue.length === 0 ? (
@@ -269,78 +268,93 @@ export default function Followups() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {activeOverdue.map((lead) => (
-              <Card key={lead.id} className="border-red-200 bg-red-50 hover:shadow-md transition-shadow" data-testid={`overdue-lead-${lead.id}`}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <h3 className="text-lg font-semibold text-red-900">{lead.name}</h3>
-                        <Badge className="ml-2 bg-red-200 text-red-800">
-                          {lead.next_followup_date && 
-                            Math.ceil((new Date().getTime() - new Date(lead.next_followup_date).getTime()) / (1000 * 3600 * 24))
-                          } days overdue
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                        <div>
-                          <p className="text-red-700"><span className="font-medium">Phone:</span> {lead.phone}</p>
-                          {lead.email && <p className="text-red-700"><span className="font-medium">Email:</span> {lead.email}</p>}
-                        </div>
-                        <div>
-                          <p className="text-red-700"><span className="font-medium">Status:</span> {lead.remarks}</p>
-                          <p className="text-red-700"><span className="font-medium">Assigned to:</span> {getTeamMemberName(lead.assigned_to)}</p>
-                        </div>
-                      </div>
-                      
-                      {lead.project_amount && (
-                        <p className="text-red-700 font-medium mb-2">
-                          Project Value: {formatCurrency(lead.project_amount)}
-                        </p>
-                      )}
-                      
-                      {getPaymentStatusBadge(lead) && (
-                        <div className="mb-2">{getPaymentStatusBadge(lead)}</div>
-                      )}
-                      
-                      {lead.notes && (
-                        <p className="text-red-600 text-sm italic">Notes: {lead.notes}</p>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-2 ml-4">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="border-red-300 text-red-700 hover:bg-red-100"
-                        onClick={() => window.open(`tel:${lead.phone}`, '_self')}
-                        data-testid={`button-call-overdue-${lead.id}`}
-                      >
-                        📞 Call
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="border-red-300 text-red-700 hover:bg-red-100"
-                        onClick={() => handleQuickEdit(lead)}
-                        data-testid={`button-edit-overdue-${lead.id}`}
-                      >
-                        ✏️ Update
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card className="border-red-200">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-red-50 border-b border-red-200">
+                    <tr>
+                      <th className="text-left py-4 px-6 font-semibold text-red-900">Lead Info</th>
+                      <th className="text-left py-4 px-6 font-semibold text-red-900">Contact</th>
+                      <th className="text-left py-4 px-6 font-semibold text-red-900">Status</th>
+                      <th className="text-left py-4 px-6 font-semibold text-red-900">Days Overdue</th>
+                      <th className="text-left py-4 px-6 font-semibold text-red-900">Project Value</th>
+                      <th className="text-center py-4 px-6 font-semibold text-red-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeOverdue.map((lead, index) => (
+                      <tr key={lead.id} className={`border-b border-red-100 hover:bg-red-25 ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-red-25'
+                      }`} data-testid={`overdue-lead-${lead.id}`}>
+                        <td className="py-4 px-6">
+                          <div>
+                            <h3 className="font-semibold text-red-900">{lead.name}</h3>
+                            <p className="text-red-700 text-xs">Assigned: {getTeamMemberName(lead.assigned_to)}</p>
+                            {lead.notes && (
+                              <p className="text-red-600 text-xs italic mt-1">Notes: {lead.notes}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-red-700">
+                            <p className="font-medium">{lead.phone}</p>
+                            {lead.email && <p className="text-xs">{lead.email}</p>}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div>
+                            <Badge className="bg-red-200 text-red-800 capitalize">{lead.remarks}</Badge>
+                            {getPaymentStatusBadge(lead) && (
+                              <div className="mt-1">{getPaymentStatusBadge(lead)}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <Badge className="bg-red-100 text-red-800">
+                            {lead.next_followup_date ? `${getDaysOverdue(lead.next_followup_date)} days` : 'Not set'}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="font-medium text-red-700">
+                            {lead.project_amount ? formatCurrency(lead.project_amount) : 'Not set'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex gap-2 justify-center">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-red-300 text-red-700 hover:bg-red-100"
+                              onClick={() => window.open(`tel:${lead.phone}`, '_self')}
+                              data-testid={`button-call-overdue-${lead.id}`}
+                            >
+                              📞
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-red-300 text-red-700 hover:bg-red-100"
+                              onClick={() => handleQuickEdit(lead)}
+                              data-testid={`button-edit-overdue-${lead.id}`}
+                            >
+                              ✏️
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
-      {/* Due Today Follow-ups Section */}
+      {/* Due Today Follow-ups Table */}
       <div ref={todayRef} className="mb-12">
-        <h2 className="text-2xl font-bold text-yellow-800 mb-4 flex items-center">
+        <h2 className="text-2xl font-bold text-yellow-800 mb-6 flex items-center">
           <span className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></span>
           URGENT - Due Today ({activeDueToday.length})
         </h2>
@@ -353,74 +367,93 @@ export default function Followups() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {activeDueToday.map((lead) => (
-              <Card key={lead.id} className="border-yellow-200 bg-yellow-50 hover:shadow-md transition-shadow" data-testid={`today-lead-${lead.id}`}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <h3 className="text-lg font-semibold text-yellow-900">{lead.name}</h3>
-                        <Badge className="ml-2 bg-yellow-200 text-yellow-800">Due Today</Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                        <div>
-                          <p className="text-yellow-700"><span className="font-medium">Phone:</span> {lead.phone}</p>
-                          {lead.email && <p className="text-yellow-700"><span className="font-medium">Email:</span> {lead.email}</p>}
-                        </div>
-                        <div>
-                          <p className="text-yellow-700"><span className="font-medium">Status:</span> {lead.remarks}</p>
-                          <p className="text-yellow-700"><span className="font-medium">Assigned to:</span> {getTeamMemberName(lead.assigned_to)}</p>
-                        </div>
-                      </div>
-                      
-                      {lead.project_amount && (
-                        <p className="text-yellow-700 font-medium mb-2">
-                          Project Value: {formatCurrency(lead.project_amount)}
-                        </p>
-                      )}
-                      
-                      {getPaymentStatusBadge(lead) && (
-                        <div className="mb-2">{getPaymentStatusBadge(lead)}</div>
-                      )}
-                      
-                      {lead.notes && (
-                        <p className="text-yellow-600 text-sm italic">Notes: {lead.notes}</p>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-2 ml-4">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                        onClick={() => window.open(`tel:${lead.phone}`, '_self')}
-                        data-testid={`button-call-today-${lead.id}`}
-                      >
-                        📞 Call
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                        onClick={() => handleQuickEdit(lead)}
-                        data-testid={`button-edit-today-${lead.id}`}
-                      >
-                        ✏️ Update
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card className="border-yellow-200">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-yellow-50 border-b border-yellow-200">
+                    <tr>
+                      <th className="text-left py-4 px-6 font-semibold text-yellow-900">Lead Info</th>
+                      <th className="text-left py-4 px-6 font-semibold text-yellow-900">Contact</th>
+                      <th className="text-left py-4 px-6 font-semibold text-yellow-900">Status</th>
+                      <th className="text-left py-4 px-6 font-semibold text-yellow-900">Due Date</th>
+                      <th className="text-left py-4 px-6 font-semibold text-yellow-900">Project Value</th>
+                      <th className="text-center py-4 px-6 font-semibold text-yellow-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeDueToday.map((lead, index) => (
+                      <tr key={lead.id} className={`border-b border-yellow-100 hover:bg-yellow-25 ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-yellow-25'
+                      }`} data-testid={`today-lead-${lead.id}`}>
+                        <td className="py-4 px-6">
+                          <div>
+                            <h3 className="font-semibold text-yellow-900">{lead.name}</h3>
+                            <p className="text-yellow-700 text-xs">Assigned: {getTeamMemberName(lead.assigned_to)}</p>
+                            {lead.notes && (
+                              <p className="text-yellow-600 text-xs italic mt-1">Notes: {lead.notes}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-yellow-700">
+                            <p className="font-medium">{lead.phone}</p>
+                            {lead.email && <p className="text-xs">{lead.email}</p>}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div>
+                            <Badge className="bg-yellow-200 text-yellow-800 capitalize">{lead.remarks}</Badge>
+                            {getPaymentStatusBadge(lead) && (
+                              <div className="mt-1">{getPaymentStatusBadge(lead)}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <Badge className="bg-yellow-100 text-yellow-800">
+                            Due Today
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="font-medium text-yellow-700">
+                            {lead.project_amount ? formatCurrency(lead.project_amount) : 'Not set'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex gap-2 justify-center">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                              onClick={() => window.open(`tel:${lead.phone}`, '_self')}
+                              data-testid={`button-call-today-${lead.id}`}
+                            >
+                              📞
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                              onClick={() => handleQuickEdit(lead)}
+                              data-testid={`button-edit-today-${lead.id}`}
+                            >
+                              ✏️
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
-      {/* Next 7 Days Follow-ups Section */}
+      {/* Upcoming Follow-ups Table */}
       <div ref={upcomingRef} className="mb-12">
-        <h2 className="text-2xl font-bold text-blue-800 mb-4 flex items-center">
+        <h2 className="text-2xl font-bold text-blue-800 mb-6 flex items-center">
           <span className="w-3 h-3 bg-blue-500 rounded-full mr-3"></span>
           UPCOMING - Next 7 Days ({upcomingWeek.length})
         </h2>
@@ -433,153 +466,87 @@ export default function Followups() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {upcomingWeek.map((lead) => (
-              <Card key={lead.id} className="border-blue-200 bg-blue-50 hover:shadow-md transition-shadow" data-testid={`upcoming-lead-${lead.id}`}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <h3 className="text-lg font-semibold text-blue-900">{lead.name}</h3>
-                        <Badge className="ml-2 bg-blue-200 text-blue-800">
-                          {lead.next_followup_date && formatDate(lead.next_followup_date)}
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                        <div>
-                          <p className="text-blue-700"><span className="font-medium">Phone:</span> {lead.phone}</p>
-                          {lead.email && <p className="text-blue-700"><span className="font-medium">Email:</span> {lead.email}</p>}
-                        </div>
-                        <div>
-                          <p className="text-blue-700"><span className="font-medium">Status:</span> {lead.remarks}</p>
-                          <p className="text-blue-700"><span className="font-medium">Assigned to:</span> {getTeamMemberName(lead.assigned_to)}</p>
-                        </div>
-                      </div>
-                      
-                      {lead.project_amount && (
-                        <p className="text-blue-700 font-medium mb-2">
-                          Project Value: {formatCurrency(lead.project_amount)}
-                        </p>
-                      )}
-                      
-                      {getPaymentStatusBadge(lead) && (
-                        <div className="mb-2">{getPaymentStatusBadge(lead)}</div>
-                      )}
-                      
-                      {lead.notes && (
-                        <p className="text-blue-600 text-sm italic">Notes: {lead.notes}</p>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-2 ml-4">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                        onClick={() => window.open(`tel:${lead.phone}`, '_self')}
-                        data-testid={`button-call-upcoming-${lead.id}`}
-                      >
-                        📞 Call
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                        onClick={() => handleQuickEdit(lead)}
-                        data-testid={`button-edit-upcoming-${lead.id}`}
-                      >
-                        📅 Schedule
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-      
-      {/* Scheduled Installations Section */}
-      <div ref={installationsRef} className="mb-12">
-        <h2 className="text-2xl font-bold text-green-800 mb-4 flex items-center">
-          <span className="w-3 h-3 bg-green-500 rounded-full mr-3"></span>
-          REVENUE - Scheduled Installations ({scheduledInstallations.length})
-        </h2>
-        
-        {scheduledInstallations.length === 0 ? (
-          <Card className="border-green-200 bg-green-50">
-            <CardContent className="text-center py-12">
-              <div className="text-6xl text-green-300 mb-4">💰</div>
-              <p className="text-green-600 text-lg">No installations scheduled!</p>
+          <Card className="border-blue-200">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-blue-50 border-b border-blue-200">
+                    <tr>
+                      <th className="text-left py-4 px-6 font-semibold text-blue-900">Lead Info</th>
+                      <th className="text-left py-4 px-6 font-semibold text-blue-900">Contact</th>
+                      <th className="text-left py-4 px-6 font-semibold text-blue-900">Status</th>
+                      <th className="text-left py-4 px-6 font-semibold text-blue-900">Due Date</th>
+                      <th className="text-left py-4 px-6 font-semibold text-blue-900">Project Value</th>
+                      <th className="text-center py-4 px-6 font-semibold text-blue-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {upcomingWeek.map((lead, index) => (
+                      <tr key={lead.id} className={`border-b border-blue-100 hover:bg-blue-25 ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-blue-25'
+                      }`} data-testid={`upcoming-lead-${lead.id}`}>
+                        <td className="py-4 px-6">
+                          <div>
+                            <h3 className="font-semibold text-blue-900">{lead.name}</h3>
+                            <p className="text-blue-700 text-xs">Assigned: {getTeamMemberName(lead.assigned_to)}</p>
+                            {lead.notes && (
+                              <p className="text-blue-600 text-xs italic mt-1">Notes: {lead.notes}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-blue-700">
+                            <p className="font-medium">{lead.phone}</p>
+                            {lead.email && <p className="text-xs">{lead.email}</p>}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div>
+                            <Badge className="bg-blue-200 text-blue-800 capitalize">{lead.remarks}</Badge>
+                            {getPaymentStatusBadge(lead) && (
+                              <div className="mt-1">{getPaymentStatusBadge(lead)}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <Badge className="bg-blue-100 text-blue-800">
+                            {lead.next_followup_date ? formatDate(lead.next_followup_date) : 'Not set'}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="font-medium text-blue-700">
+                            {lead.project_amount ? formatCurrency(lead.project_amount) : 'Not set'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex gap-2 justify-center">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                              onClick={() => window.open(`tel:${lead.phone}`, '_self')}
+                              data-testid={`button-call-upcoming-${lead.id}`}
+                            >
+                              📞
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                              onClick={() => handleQuickEdit(lead)}
+                              data-testid={`button-edit-upcoming-${lead.id}`}
+                            >
+                              ✏️
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-4">
-            {scheduledInstallations.map((lead) => (
-              <Card key={lead.id} className="border-green-200 bg-green-50 hover:shadow-md transition-shadow" data-testid={`installation-lead-${lead.id}`}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <h3 className="text-lg font-semibold text-green-900">{lead.name}</h3>
-                        <Badge className="ml-2 bg-green-200 text-green-800">
-                          Installation: {lead.installation_date && formatDate(lead.installation_date)}
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                        <div>
-                          <p className="text-green-700"><span className="font-medium">Phone:</span> {lead.phone}</p>
-                          {lead.email && <p className="text-green-700"><span className="font-medium">Email:</span> {lead.email}</p>}
-                          <p className="text-green-700"><span className="font-medium">Installer:</span> {lead.assigned_installer ? getInstallerName(lead.assigned_installer) : 'Not assigned'}</p>
-                        </div>
-                        <div>
-                          <p className="text-green-700"><span className="font-medium">Status:</span> {lead.remarks}</p>
-                          <p className="text-green-700"><span className="font-medium">Assigned to:</span> {getTeamMemberName(lead.assigned_to)}</p>
-                        </div>
-                      </div>
-                      
-                      {lead.project_amount && (
-                        <p className="text-green-700 font-medium mb-2">
-                          Project Value: {formatCurrency(lead.project_amount)}
-                        </p>
-                      )}
-                      
-                      {getPaymentStatusBadge(lead) && (
-                        <div className="mb-2">{getPaymentStatusBadge(lead)}</div>
-                      )}
-                      
-                      {lead.additional_notes && (
-                        <p className="text-green-600 text-sm italic">Installation Notes: {lead.additional_notes}</p>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-2 ml-4">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="border-green-300 text-green-700 hover:bg-green-100"
-                        onClick={() => window.open(`tel:${lead.phone}`, '_self')}
-                        data-testid={`button-call-installation-${lead.id}`}
-                      >
-                        📞 Call
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="border-green-300 text-green-700 hover:bg-green-100"
-                        onClick={() => handleQuickEdit(lead)}
-                        data-testid={`button-edit-installation-${lead.id}`}
-                      >
-                        🔧 Manage
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
         )}
       </div>
       
@@ -783,7 +750,9 @@ function QuickEditForm({ lead, onUpdate, onClose }: {
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit">Update Lead</Button>
+        <Button type="submit">
+          Update Lead
+        </Button>
       </div>
     </form>
   );
