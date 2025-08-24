@@ -28,12 +28,24 @@ export default function SampleBooklets() {
     queryFn: async () => {
       const url = filter ? `/api/sample-booklets?status=${filter}` : '/api/sample-booklets';
       const response = await fetch(url);
-      return response.json();
+      if (!response.ok) {
+        throw new Error(`Failed to fetch sample booklets: ${response.status}`);
+      }
+      const data = await response.json();
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
     }
   });
 
   const { data: stats } = useQuery<BookletStats>({
     queryKey: ['/api/sample-booklets/stats/dashboard'],
+    queryFn: async () => {
+      const response = await fetch('/api/sample-booklets/stats/dashboard');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch stats: ${response.status}`);
+      }
+      return response.json();
+    }
   });
 
   const deleteBookletMutation = useMutation({

@@ -1,6 +1,5 @@
 import fs from 'fs';
-import pkg from 'pg';
-const { Pool } = pkg;
+import mysql from 'mysql2/promise';
 
 // Sample data transformation - I'll import a few key leads first to test
 const sampleLeads = [
@@ -105,23 +104,21 @@ const sampleBooklets = [
 ];
 
 async function importData() {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
-  });
+  const pool = mysql.createPool(process.env.DATABASE_URL);
 
   try {
-    const client = await pool.connect();
+    const connection = await pool.getConnection();
 
     // Import sample leads
     console.log('Importing sample leads...');
     for (const lead of sampleLeads) {
-      await client.query(`
+      await connection.execute(`
         INSERT INTO leads (
-          name, phone, email, lead_origin, date_created, 
+          id, name, phone, email, lead_origin, date_created, 
           next_followup_date, remarks, assigned_to, project_amount,
           notes, additional_notes, deposit_paid, balance_paid,
           installation_date, assigned_installer
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         lead.name, lead.phone, lead.email, lead.lead_origin, lead.date_created,
         lead.next_followup_date, lead.remarks, lead.assigned_to, lead.project_amount,
@@ -133,12 +130,12 @@ async function importData() {
     // Import sample booklets  
     console.log('Importing sample booklets...');
     for (const booklet of sampleBooklets) {
-      await client.query(`
+      await connection.execute(`
         INSERT INTO sample_booklets (
-          order_number, customer_name, address, email, phone,
+          id, order_number, customer_name, address, email, phone,
           product_type, tracking_number, status, date_ordered, 
-          date_shipped, notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          date_shipped, notes, created_at, updated_at
+        ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `, [
         booklet.order_number, booklet.customer_name, booklet.address, 
         booklet.email, booklet.phone, booklet.product_type, booklet.tracking_number,
@@ -146,7 +143,7 @@ async function importData() {
       ]);
     }
 
-    client.release();
+    connection.release();
     console.log('Sample data imported successfully!');
     
   } catch (error) {

@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, updateLeadSchema, insertSampleBookletSchema, updateSampleBookletSchema } from "@shared/schema";
 import { z } from "zod";
+import { emailService } from "./email-service";
 
 const loginSchema = z.object({
   username: z.string(),
@@ -60,30 +61,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Lead endpoints
   app.get("/api/leads", async (req, res) => {
     try {
-      const { status, origin, assigned_to, search } = req.query;
-      let leads = await storage.getLeads();
-
-      // Apply filters
-      if (status) {
-        leads = leads.filter(lead => lead.remarks === status);
-      }
-      if (origin) {
-        leads = leads.filter(lead => lead.lead_origin === origin);
-      }
-      if (assigned_to) {
-        leads = leads.filter(lead => lead.assigned_to === assigned_to);
-      }
-      if (search) {
-        const searchTerm = (search as string).toLowerCase();
-        leads = leads.filter(lead => 
-          lead.name.toLowerCase().includes(searchTerm) ||
-          lead.phone.includes(searchTerm) ||
-          (lead.email && lead.email.toLowerCase().includes(searchTerm))
-        );
-      }
-
-      res.json(leads);
+      const { status, origin, assigned_to, search, page, limit } = req.query;
+      
+      // Parse pagination parameters
+      const pageNum = parseInt(page as string) || 1;
+      const limitNum = parseInt(limit as string) || 20;
+      
+      // Prepare filters
+      const filters = {
+        search: search as string,
+        status: status as string,
+        origin: origin as string,
+        assigned_to: assigned_to as string
+      };
+      
+      // Use the new paginated method
+      const result = await storage.getLeadsPaginated(pageNum, limitNum, filters);
+      
+      res.json(result);
     } catch (error) {
+      console.error('Error fetching leads:', error);
       res.status(500).json({ message: "Failed to fetch leads" });
     }
   });
@@ -481,32 +478,230 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         recipient = installation.email;
-        subject = `Installation Confirmation - ${formattedDate}`;
+        subject = `WMK Kitchen Installation Confirmation - ${formattedDate}`;
         emailContent = `
-Dear ${installation.name},
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMK Kitchen Solutions - Installation Confirmation</title>
+</head>
+<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
+    
+    <!-- Main Container Table -->
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e9ecef;">
+        
+        <!-- Logo Header -->
+        <tr>
+            <td style="padding: 30px 20px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #e9ecef;">
+                <h1 style="margin: 0; font-size: 36px; font-weight: bold; color: #2c3e50;">
+                    WMK<span style="color: #007bff; font-weight: bold;">Kitchen</span>
+                </h1>
+                <div style="margin: 10px 0 0; font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;">
+                    Kitchen Transformation Specialists
+                </div>
+            </td>
+        </tr>
+        
+        <!-- Blue Banner -->
+        <tr>
+            <td style="padding: 20px; text-align: center; background-color: #007bff; color: white; font-size: 18px; font-weight: bold;">
+                🔧 Installation Confirmed!
+            </td>
+        </tr>
+        
+        <!-- Main Content -->
+        <tr>
+            <td style="padding: 30px 20px;">
+                
+                <!-- Greeting -->
+                <p style="font-size: 16px; color: #495057; margin-bottom: 25px; line-height: 1.7;">
+                    Dear <strong>${installation.name}</strong>,<br><br>
+                    We are pleased to confirm your kitchen installation appointment with <strong>WMK Kitchen Solutions</strong>. Our professional team is ready to transform your kitchen!
+                </p>
+                
+                <!-- Installation Header -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background-color: #f8f9fa; border-left: 4px solid #007bff; margin: 20px 0;">
+                    <tr>
+                        <td>
+                            <h3 style="margin: 0 0 5px; color: #2c3e50; font-size: 18px; font-weight: 600;">
+                                Installation Appointment
+                            </h3>
+                            <div style="color: #6c757d; font-size: 14px;">Scheduled for ${formattedDate}</div>
+                        </td>
+                    </tr>
+                </table>
+                
+                <!-- Installation Details Table -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 25px 0; border: 1px solid #e9ecef;">
+                    <thead>
+                        <tr style="background-color: #2c3e50; color: white;">
+                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Details</th>
+                            <th style="padding: 15px; text-align: right; font-weight: 600; font-size: 14px;">Information</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>📅 Installation Date</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
+                                ${formattedDate} at 9:00 AM
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>👤 Customer</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
+                                ${installation.name}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>📞 Phone</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
+                                ${installation.phone}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>💰 Project Value</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
+                                ${installation.project_amount ? `$${parseInt(installation.project_amount).toLocaleString()}` : 'Contact office for details'}
+                            </td>
+                        </tr>
+                        <tr style="background-color: #f8f9fa;">
+                            <td style="padding: 15px; color: #2c3e50; font-weight: 600; font-size: 16px;">
+                                <strong>🔧 Lead Installer</strong>
+                            </td>
+                            <td style="padding: 15px; color: #2c3e50; font-weight: 600; font-size: 16px; text-align: right;">
+                                <strong>${installation.assigned_installer ? installation.assigned_installer.charAt(0).toUpperCase() + installation.assigned_installer.slice(1) : 'To be assigned'}</strong>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <!-- What to Expect Section -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="30" style="background-color: #007bff; color: white; margin: 30px 0;">
+                    <tr>
+                        <td style="text-align: center;">
+                            <h3 style="margin: 0 0 15px; font-size: 20px; font-weight: 600;">
+                                🏠 What to Expect
+                            </h3>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="10" style="background-color: rgba(255, 255, 255, 0.1); margin: 20px 0;">
+                                <tr>
+                                    <td style="text-align: left; padding: 8px; color: white;">✓ Team arrives promptly at 9:00 AM</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; padding: 8px; color: white;">✓ Installation takes 4-6 hours typically</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; padding: 8px; color: white;">✓ Final walkthrough and quality inspection</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; padding: 8px; color: white;">✓ All materials and tools provided</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                
+                <!-- Preparation Checklist -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="25" style="background-color: #28a745; color: white; margin: 30px 0;">
+                    <tr>
+                        <td style="text-align: center;">
+                            <h3 style="margin: 0 0 15px; font-size: 20px; font-weight: 600;">
+                                📋 Preparation Checklist
+                            </h3>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="8" style="background-color: rgba(255, 255, 255, 0.1); margin: 15px 0;">
+                                <tr>
+                                    <td style="text-align: left; color: white;">□ Clear work area of personal items</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white;">□ Ensure easy access to installation space</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white;">□ Someone present during installation</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white;">□ Secure pets away from work area</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white;">□ Have final payment ready if balance due</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
 
-Your kitchen installation is scheduled for ${formattedDate} at 9:00 AM.
-
-Installation Details:
-- Customer: ${installation.name}
-- Phone: ${installation.phone}
-- Project Value: ${installation.project_amount ? `$${installation.project_amount}` : 'N/A'}
-- Installer: ${installation.assigned_installer || 'TBD'}
-
-What to expect:
-- Our team will arrive promptly at 9:00 AM
-- Installation typically takes 4-6 hours
-- Please ensure the work area is clear and accessible
-- Someone should be present during the installation
-
-If you have any questions or need to reschedule, please contact us immediately.
-
-${customMessage ? `\nAdditional Notes:\n${customMessage}` : ''}
-
-Thank you for choosing us for your kitchen project!
-
-Best regards,
-Installation Team
+                ${customMessage ? `
+                <!-- Additional Notes -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background-color: #f8f9fa; border-left: 4px solid #ffc107; margin: 20px 0;">
+                    <tr>
+                        <td>
+                            <h3 style="margin: 0 0 15px; color: #2c3e50; font-size: 16px; font-weight: 600;">
+                                📝 Additional Notes
+                            </h3>
+                            <p style="margin: 0; color: #495057; line-height: 1.6;">
+                                ${customMessage}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                ` : ''}
+                
+                <!-- Contact Section -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="25" style="background-color: #343a40; color: white; margin: 30px 0;">
+                    <tr>
+                        <td style="text-align: center;">
+                            <p style="margin: 0 0 15px; font-weight: bold; font-size: 16px;">
+                                💡 Questions or need to reschedule?
+                            </p>
+                            <p style="margin: 0; font-size: 14px;">
+                                Contact us at least 48 hours in advance for any changes.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                
+            </td>
+        </tr>
+        
+        <!-- Footer -->
+        <tr>
+            <td style="background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 30px 20px;">
+                <h4 style="margin: 0 0 15px; color: white; font-size: 18px; font-weight: 600;">
+                    WMK Kitchen Solutions
+                </h4>
+                <p style="margin: 8px 0;">Questions about your installation? We're here to help!</p>
+                <p style="margin: 8px 0;"><strong>📞 Phone:</strong> (XXX) XXX-XXXX</p>
+                <p style="margin: 8px 0;">
+                    <strong>📧 Email:</strong> 
+                    <a href="mailto:installations@wmk-kitchen.com" style="color: #007bff; text-decoration: none;">
+                        installations@wmk-kitchen.com
+                    </a>
+                </p>
+                <p style="margin: 8px 0;">
+                    <strong>🌐 Website:</strong> 
+                    <a href="https://wmk-kitchen.com" style="color: #007bff; text-decoration: none;">
+                        www.wmk-kitchen.com
+                    </a>
+                </p>
+                <p style="margin-top: 20px; font-size: 13px; color: #bdc3c7;">
+                    © 2025 WMK Kitchen Solutions. All rights reserved.<br>
+                    Quality • Craftsmanship • Excellence
+                </p>
+            </td>
+        </tr>
+        
+    </table>
+    
+</body>
+</html>
         `.trim();
         
       } else if (type === 'installer') {
@@ -523,58 +718,290 @@ Installation Team
         };
         
         recipient = installerEmails[installation.assigned_installer] || 'installer@company.com';
-        subject = `Installation Assignment - ${formattedDate}`;
+        subject = `WMK Installation Assignment - ${formattedDate} - ${installation.name}`;
         emailContent = `
-Hi ${installation.assigned_installer?.charAt(0).toUpperCase()}${installation.assigned_installer?.slice(1)},
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMK Kitchen Solutions - Installation Assignment</title>
+</head>
+<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
+    
+    <!-- Main Container Table -->
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e9ecef;">
+        
+        <!-- Logo Header -->
+        <tr>
+            <td style="padding: 30px 20px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #e9ecef;">
+                <h1 style="margin: 0; font-size: 36px; font-weight: bold; color: #2c3e50;">
+                    WMK<span style="color: #fd7e14; font-weight: bold;">Kitchen</span>
+                </h1>
+                <div style="margin: 10px 0 0; font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;">
+                    Professional Installation Team
+                </div>
+            </td>
+        </tr>
+        
+        <!-- Orange Banner -->
+        <tr>
+            <td style="padding: 20px; text-align: center; background-color: #fd7e14; color: white; font-size: 18px; font-weight: bold;">
+                🔧 New Installation Assignment
+            </td>
+        </tr>
+        
+        <!-- Main Content -->
+        <tr>
+            <td style="padding: 30px 20px;">
+                
+                <!-- Greeting -->
+                <p style="font-size: 16px; color: #495057; margin-bottom: 25px; line-height: 1.7;">
+                    Hi <strong>${installation.assigned_installer?.charAt(0).toUpperCase()}${installation.assigned_installer?.slice(1)}</strong>,<br><br>
+                    You have been assigned a new kitchen installation for <strong>WMK Kitchen Solutions</strong>. Please review the details below and prepare accordingly.
+                </p>
+                
+                <!-- Assignment Header -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background-color: #f8f9fa; border-left: 4px solid #fd7e14; margin: 20px 0;">
+                    <tr>
+                        <td>
+                            <h3 style="margin: 0 0 5px; color: #2c3e50; font-size: 18px; font-weight: 600;">
+                                Installation Assignment
+                            </h3>
+                            <div style="color: #6c757d; font-size: 14px;">Scheduled for ${formattedDate}</div>
+                        </td>
+                    </tr>
+                </table>
+                
+                <!-- Job Details Table -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 25px 0; border: 1px solid #e9ecef;">
+                    <thead>
+                        <tr style="background-color: #2c3e50; color: white;">
+                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Job Details</th>
+                            <th style="padding: 15px; text-align: right; font-weight: 600; font-size: 14px;">Information</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>📅 Installation Date</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
+                                ${formattedDate} at 9:00 AM
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>👤 Customer</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
+                                ${installation.name}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>📞 Phone</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
+                                ${installation.phone}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>📧 Email</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
+                                ${installation.email || 'Not provided'}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>💰 Project Value</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
+                                ${installation.project_amount ? `$${parseInt(installation.project_amount).toLocaleString()}` : 'Contact office'}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <!-- Payment Status -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 25px 0; border: 1px solid #e9ecef;">
+                    <thead>
+                        <tr style="background-color: #28a745; color: white;">
+                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Payment Item</th>
+                            <th style="padding: 15px; text-align: center; font-weight: 600; font-size: 14px;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>Deposit Payment</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; text-align: center;">
+                                ${installation.deposit_paid ? '<span style="color: #28a745; font-weight: bold;">✅ PAID</span>' : '<span style="color: #dc3545; font-weight: bold;">⚠️ PENDING</span>'}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
+                                <strong>Final Balance</strong>
+                            </td>
+                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; text-align: center;">
+                                ${installation.balance_paid ? '<span style="color: #28a745; font-weight: bold;">✅ PAID</span>' : '<span style="color: #ffc107; font-weight: bold;">💳 DUE ON COMPLETION</span>'}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <!-- Pre-Installation Checklist -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="30" style="background-color: #fd7e14; color: white; margin: 30px 0;">
+                    <tr>
+                        <td style="text-align: center;">
+                            <h3 style="margin: 0 0 15px; font-size: 20px; font-weight: 600;">
+                                📋 Pre-Installation Checklist
+                            </h3>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="8" style="background-color: rgba(255, 255, 255, 0.1); margin: 15px 0;">
+                                <tr>
+                                    <td style="text-align: left; color: white;">□ Review project specifications and materials list</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white;">□ Confirm all materials are loaded and ready</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white;">□ Contact customer 24 hours prior to confirm</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white;">□ Verify access and parking availability</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white;">□ Ensure all tools and equipment are prepared</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
 
-You have been assigned an installation for ${formattedDate} at 9:00 AM.
+                ${installation.additional_notes ? `
+                <!-- Installation Notes -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background-color: #f8f9fa; border-left: 4px solid #17a2b8; margin: 20px 0;">
+                    <tr>
+                        <td>
+                            <h3 style="margin: 0 0 15px; color: #2c3e50; font-size: 16px; font-weight: 600;">
+                                📝 Installation Notes
+                            </h3>
+                            <p style="margin: 0; color: #495057; line-height: 1.6;">
+                                ${installation.additional_notes}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                ` : ''}
 
-Job Details:
-- Customer: ${installation.name}
-- Phone: ${installation.phone}
-- Email: ${installation.email || 'N/A'}
-- Project Value: ${installation.project_amount ? `$${installation.project_amount}` : 'N/A'}
-- Installation Date: ${formattedDate} at 9:00 AM
-
-Payment Status:
-- Deposit: ${installation.deposit_paid ? 'Paid ✓' : 'Pending'}
-- Balance: ${installation.balance_paid ? 'Paid ✓' : 'Pending'}
-
-${installation.additional_notes ? `Installation Notes:\n${installation.additional_notes}\n` : ''}
-${customMessage ? `\nAdditional Instructions:\n${customMessage}` : ''}
-
-Please contact the customer 24 hours before installation to confirm timing.
-
-Questions? Contact the office.
-
-Thanks!
-Installation Management
+                ${customMessage ? `
+                <!-- Special Instructions -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background-color: #f8f9fa; border-left: 4px solid #ffc107; margin: 20px 0;">
+                    <tr>
+                        <td>
+                            <h3 style="margin: 0 0 15px; color: #2c3e50; font-size: 16px; font-weight: 600;">
+                                ⚡ Special Instructions
+                            </h3>
+                            <p style="margin: 0; color: #495057; line-height: 1.6;">
+                                ${customMessage}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                ` : ''}
+                
+                <!-- Important Reminders -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="25" style="background-color: #343a40; color: white; margin: 30px 0;">
+                    <tr>
+                        <td style="text-align: center;">
+                            <h3 style="margin: 0 0 15px; font-size: 18px; font-weight: 600;">
+                                ⚠️ Important Reminders
+                            </h3>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="8" style="background-color: rgba(255, 255, 255, 0.1); margin: 15px 0;">
+                                <tr>
+                                    <td style="text-align: left; color: white; font-size: 14px;">• Call customer 24 hours before installation</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white; font-size: 14px;">• Arrive promptly at 9:00 AM with all materials</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white; font-size: 14px;">• Conduct quality inspection before walkthrough</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white; font-size: 14px;">• Collect final payment if balance is due</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; color: white; font-size: 14px;">• Report any issues to office immediately</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                
+            </td>
+        </tr>
+        
+        <!-- Footer -->
+        <tr>
+            <td style="background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 30px 20px;">
+                <h4 style="margin: 0 0 15px; color: white; font-size: 18px; font-weight: 600;">
+                    WMK Kitchen Solutions - Installation Team
+                </h4>
+                <p style="margin: 8px 0;">Questions or support needed? Contact the office immediately.</p>
+                <p style="margin: 8px 0;"><strong>📞 Office:</strong> (XXX) XXX-XXXX</p>
+                <p style="margin: 8px 0;">
+                    <strong>📧 Email:</strong> 
+                    <a href="mailto:management@wmk-kitchen.com" style="color: #fd7e14; text-decoration: none;">
+                        management@wmk-kitchen.com
+                    </a>
+                </p>
+                <p style="margin: 8px 0;">
+                    <strong>🌐 Website:</strong> 
+                    <a href="https://wmk-kitchen.com" style="color: #fd7e14; text-decoration: none;">
+                        www.wmk-kitchen.com
+                    </a>
+                </p>
+                <p style="margin-top: 20px; font-size: 13px; color: #bdc3c7;">
+                    © 2025 WMK Kitchen Solutions. All rights reserved.<br>
+                    Excellence in Every Installation
+                </p>
+            </td>
+        </tr>
+        
+    </table>
+    
+</body>
+</html>
         `.trim();
       }
       
-      // In a real application, you would integrate with an email service like:
-      // - SendGrid
-      // - AWS SES 
-      // - Nodemailer with SMTP
-      // - Mailgun
-      // etc.
-      
-      // For now, we'll simulate sending the email
-      console.log('=== EMAIL NOTIFICATION ===');
-      console.log('To:', recipient);
-      console.log('Subject:', subject);
-      console.log('Content:', emailContent);
-      console.log('========================');
-      
-      // Simulate email sending delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      res.json({ 
-        message: "Email sent successfully", 
-        recipient,
-        subject,
-        type
-      });
+      // Send the actual email using our email service
+      try {
+        await emailService.sendEmail({
+          to: recipient,
+          subject: subject,
+          text: 'This email requires HTML support to view properly. Please use an HTML-enabled email client.',
+          html: emailContent
+        });
+        
+        console.log('=== EMAIL SENT SUCCESSFULLY ===');
+        console.log('To:', recipient);
+        console.log('Subject:', subject);
+        console.log('==============================');
+        
+        res.json({ 
+          message: "Email sent successfully", 
+          recipient,
+          subject,
+          type
+        });
+      } catch (emailError) {
+        console.error('Failed to send email:', emailError);
+        res.status(500).json({ message: "Failed to send email notification" });
+      }
     } catch (error) {
       console.error('Email sending error:', error);
       res.status(500).json({ message: "Failed to send email notification" });

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useLocation } from 'wouter';
+import wmkLogo from '@/assets/wmk-logo.png';
 
 export default function Login() {
   const [username, setUsername] = useState('kim');
@@ -36,8 +37,14 @@ export default function Login() {
             <div className="card login-card">
               <div className="card-body p-5">
                 <div className="text-center mb-4">
-                  <i className="fas fa-utensils fa-3x text-primary mb-3" data-testid="logo-icon"></i>
-                  <h2 className="fw-bold text-primary" data-testid="app-title">Wrap My Kitchen</h2>
+                  <div className="d-flex justify-content-center mb-3">
+                    <img 
+                      src={wmkLogo} 
+                      alt="Wrap My Kitchen Logo" 
+                      style={{ height: '80px', width: 'auto' }}
+                      data-testid="logo-image"
+                    />
+                  </div>
                   <p className="text-muted" data-testid="app-subtitle">Lead Management CRM</p>
                 </div>
                 

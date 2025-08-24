@@ -190,7 +190,7 @@ export default function Followups() {
         rowBorder: 'border-red-100',
         rowHover: 'hover:bg-red-25',
         rowAlt: 'bg-red-25',
-        text: 'text-red-700'
+        text: 'text-gray-900' // Changed from text-red-700 to dark gray for better readability
       },
       yellow: {
         headerBg: 'bg-yellow-50',
@@ -199,7 +199,7 @@ export default function Followups() {
         rowBorder: 'border-yellow-100',
         rowHover: 'hover:bg-yellow-25',
         rowAlt: 'bg-yellow-25',
-        text: 'text-yellow-700'
+        text: 'text-gray-900' // Changed from text-yellow-700 to dark gray for better readability
       },
       blue: {
         headerBg: 'bg-blue-50',
@@ -208,7 +208,7 @@ export default function Followups() {
         rowBorder: 'border-blue-100',
         rowHover: 'hover:bg-blue-25',
         rowAlt: 'bg-blue-25',
-        text: 'text-blue-700'
+        text: 'text-gray-900' // Changed from text-blue-700 to dark gray for better readability
       }
     };
 
@@ -241,9 +241,9 @@ export default function Followups() {
                 </td>
                 <td className="py-4 px-6">
                   <div className={theme.text}>
-                    <p className="font-semibold">{lead.name}</p>
-                    <p className="text-sm">{lead.phone}</p>
-                    {lead.email && <p className="text-xs">{lead.email}</p>}
+                    <p className="font-semibold text-base">{lead.name}</p>
+                    <p className="text-sm font-medium text-gray-700">{lead.phone}</p>
+                    {lead.email && <p className="text-sm text-gray-600">{lead.email}</p>}
                   </div>
                 </td>
                 <td className="py-4 px-6">
@@ -546,28 +546,28 @@ export default function Followups() {
                       }`} data-testid={`installation-lead-${lead.id}`}>
                         <td className="py-4 px-6">
                           <div>
-                            <h3 className="font-semibold text-green-900">{lead.name}</h3>
-                            <p className="text-green-700 text-xs">Assigned: {getTeamMemberName(lead.assigned_to)}</p>
+                            <h3 className="font-semibold text-gray-900">{lead.name}</h3>
+                            <p className="text-gray-700 text-sm">Assigned: {getTeamMemberName(lead.assigned_to)}</p>
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <div className="text-green-700">
+                          <div className="text-gray-900">
                             <p className="font-medium">{lead.phone}</p>
-                            {lead.email && <p className="text-xs">{lead.email}</p>}
+                            {lead.email && <p className="text-sm text-gray-600">{lead.email}</p>}
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <span className="text-green-700">
+                          <span className="text-gray-900 font-medium">
                             {formatDate(lead.installation_date ? lead.installation_date.toString() : null)}
                           </span>
                         </td>
                         <td className="py-4 px-6">
-                          <span className="text-green-700 capitalize">
+                          <span className="text-gray-900 capitalize font-medium">
                             {lead.assigned_installer || 'Not assigned'}
                           </span>
                         </td>
                         <td className="py-4 px-6">
-                          <span className="font-medium text-green-700">
+                          <span className="font-medium text-gray-900">
                             {formatCurrency(lead.project_amount)}
                           </span>
                         </td>

@@ -21,8 +21,20 @@ export default function Dashboard() {
     queryKey: ['/api/dashboard/stats'],
   });
 
-  const { data: leads, isLoading: leadsLoading } = useQuery<Lead[]>({
-    queryKey: ['/api/leads'],
+  const { data: leadsResponse, isLoading: leadsLoading } = useQuery<{
+    leads: Lead[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }>({
+    queryKey: ['/api/leads', 1, 10], // Get first page with 10 leads for dashboard
+    queryFn: async () => {
+      const response = await fetch('/api/leads?page=1&limit=10');
+      if (!response.ok) {
+        throw new Error('Failed to fetch leads');
+      }
+      return response.json();
+    }
   });
 
   const { data: followupsData, isLoading: followupsLoading } = useQuery<{
@@ -57,7 +69,7 @@ export default function Dashboard() {
     );
   };
 
-  const recentLeads = leads?.slice(0, 3) || [];
+  const recentLeads = leadsResponse?.leads?.slice(0, 3) || [];
   const todaysFollowups = followupsData ? [...followupsData.overdue, ...followupsData.dueToday] : [];
 
   if (statsLoading || leadsLoading || followupsLoading) {

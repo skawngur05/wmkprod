@@ -53,16 +53,28 @@ interface YearsData {
 export default function Reports() {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   
   const { data: yearsData } = useQuery<YearsData>({
     queryKey: ['/api/reports/years'],
+    queryFn: async () => {
+      const response = await fetch('/api/reports/years');
+      if (!response.ok) throw new Error('Failed to fetch years data');
+      return response.json();
+    }
   });
   
   const { data: analyticsData, isLoading } = useQuery<AnalyticsData>({
-    queryKey: selectedMonth 
-      ? ['/api/reports/analytics', { year: selectedYear, month: selectedMonth }]
-      : ['/api/reports/analytics', { year: selectedYear }],
+    queryKey: ['analytics', selectedYear, selectedMonth],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedYear) params.append('year', selectedYear);
+      if (selectedMonth && selectedMonth !== 'all') params.append('month', selectedMonth);
+      
+      const response = await fetch(`/api/reports/analytics?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch analytics data');
+      return response.json();
+    }
   });
 
   const formatCurrency = (amount: number) => {
@@ -131,7 +143,7 @@ export default function Reports() {
     );
   }
   
-  const { executiveDashboard, leadOriginPerformance, teamPerformance, monthlyBreakdown } = analyticsData;
+  const { executiveDashboard, leadOriginPerformance = [], teamPerformance, monthlyBreakdown } = analyticsData;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -172,7 +184,7 @@ export default function Reports() {
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Months</SelectItem>
+                  <SelectItem value="all">All Months</SelectItem>
                   {months.map(month => (
                     <SelectItem key={month.value} value={month.value}>
                       {month.label}
@@ -182,11 +194,11 @@ export default function Reports() {
               </Select>
             </div>
             
-            {selectedMonth && (
+            {selectedMonth && selectedMonth !== 'all' && (
               <div className="flex items-end">
                 <Button 
                   variant="outline" 
-                  onClick={() => setSelectedMonth('')}
+                  onClick={() => setSelectedMonth('all')}
                   className="h-10"
                 >
                   Clear Month
@@ -199,7 +211,7 @@ export default function Reports() {
         <div className="mt-4">
           <Badge variant="outline" className="text-sm">
             Showing data for: {analyticsData.filterInfo.period === 'all-time' ? 'All Time' : 
-              selectedMonth ? `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : selectedYear
+              (selectedMonth && selectedMonth !== 'all') ? `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : selectedYear
             }
           </Badge>
         </div>

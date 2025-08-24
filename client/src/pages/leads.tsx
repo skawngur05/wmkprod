@@ -14,6 +14,7 @@ export default function Leads() {
     origin: '',
     assigned_to: ''
   });
+  const [currentPage, setCurrentPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showQuickEdit, setShowQuickEdit] = useState(false);
@@ -21,15 +22,25 @@ export default function Leads() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: leads, isLoading } = useQuery<Lead[]>({
-    queryKey: ['/api/leads', filters],
+  const { data: leadsResponse, isLoading } = useQuery<{
+    leads: Lead[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }>({
+    queryKey: ['/api/leads', filters, currentPage],
     queryFn: async () => {
-      // Build query parameters from filters
+      // Build query parameters from filters and pagination
       const params = new URLSearchParams();
       if (filters.search) params.append('search', filters.search);
       if (filters.status) params.append('status', filters.status);
       if (filters.origin) params.append('origin', filters.origin);
       if (filters.assigned_to) params.append('assigned_to', filters.assigned_to);
+      
+      // Add pagination parameters
+      params.append('page', currentPage.toString());
+      params.append('limit', '20');
       
       const url = `/api/leads${params.toString() ? '?' + params.toString() : ''}`;
       const res = await fetch(url, { credentials: "include" });
@@ -42,23 +53,69 @@ export default function Leads() {
     },
   });
 
+  // Extract leads and pagination info from response
+  const leads = leadsResponse?.leads || [];
+  const totalPages = leadsResponse?.totalPages || 1;
+  const total = leadsResponse?.total || 0;
+
+  // Helper function to update filters and reset pagination
+  const updateFilters = (newFilters: typeof filters) => {
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
   const deleteLeadMutation = useMutation({
     mutationFn: async (leadId: string) => {
       await apiRequest('DELETE', `/api/leads/${leadId}`);
+    },
+    onMutate: async (leadId: string) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['/api/leads'] });
+
+      // Snapshot the previous value
+      const previousLeads = queryClient.getQueryData(['/api/leads', filters, currentPage]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['/api/leads', filters, currentPage], (old: any) => {
+        if (!old?.leads) return old;
+        return {
+          ...old,
+          leads: old.leads.filter((lead: any) => lead.id !== leadId),
+          total: old.total - 1
+        };
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousLeads };
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Lead deleted successfully!" });
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to delete lead", variant: "destructive" });
+    onError: (error: Error, leadId: string, context: any) => {
+      // If it's a 404 error, the lead might already be deleted
+      if (error.message.includes('404')) {
+        toast({ title: "Info", description: "Lead was already deleted" });
+        // Still refresh the data to reflect the current state
+        queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      } else {
+        // Rollback the optimistic update on error
+        if (context?.previousLeads) {
+          queryClient.setQueryData(['/api/leads', filters, currentPage], context.previousLeads);
+        }
+        toast({ title: "Error", description: "Failed to delete lead", variant: "destructive" });
+      }
     }
   });
 
   const handleDelete = (leadId: string) => {
     if (window.confirm('Are you sure you want to delete this lead?')) {
-      deleteLeadMutation.mutate(leadId);
+      // Prevent double-clicks by disabling the button during deletion
+      if (!deleteLeadMutation.isPending) {
+        deleteLeadMutation.mutate(leadId);
+      }
     }
   };
 
@@ -135,7 +192,7 @@ export default function Leads() {
                 className="form-control"
                 placeholder="Search leads..."
                 value={filters.search}
-                onChange={(e) => setFilters({...filters, search: e.target.value})}
+                onChange={(e) => updateFilters({...filters, search: e.target.value})}
                 data-testid="input-search-leads"
               />
             </div>
@@ -144,7 +201,7 @@ export default function Leads() {
               <select
                 className="form-select"
                 value={filters.status}
-                onChange={(e) => setFilters({...filters, status: e.target.value})}
+                onChange={(e) => updateFilters({...filters, status: e.target.value})}
                 data-testid="select-filter-status"
               >
                 <option value="">All Statuses</option>
@@ -160,7 +217,7 @@ export default function Leads() {
               <select
                 className="form-select"
                 value={filters.origin}
-                onChange={(e) => setFilters({...filters, origin: e.target.value})}
+                onChange={(e) => updateFilters({...filters, origin: e.target.value})}
                 data-testid="select-filter-origin"
               >
                 <option value="">All Origins</option>
@@ -175,7 +232,7 @@ export default function Leads() {
               <select
                 className="form-select"
                 value={filters.assigned_to}
-                onChange={(e) => setFilters({...filters, assigned_to: e.target.value})}
+                onChange={(e) => updateFilters({...filters, assigned_to: e.target.value})}
                 data-testid="select-filter-assigned"
               >
                 <option value="">All Team</option>
@@ -190,7 +247,7 @@ export default function Leads() {
               </button>
               <button
                 className="btn btn-outline-secondary"
-                onClick={() => setFilters({ search: '', status: '', origin: '', assigned_to: '' })}
+                onClick={() => updateFilters({ search: '', status: '', origin: '', assigned_to: '' })}
                 data-testid="button-clear-filters"
               >
                 <i className="fas fa-times me-1"></i>Clear
@@ -305,25 +362,56 @@ export default function Leads() {
           </div>
         </div>
         <div className="card-footer">
-          <nav>
-            <ul className="pagination pagination-sm mb-0 justify-content-center">
-              <li className="page-item disabled">
-                <a className="page-link" href="#" data-testid="pagination-previous">Previous</a>
-              </li>
-              <li className="page-item active">
-                <a className="page-link" href="#" data-testid="pagination-1">1</a>
-              </li>
-              <li className="page-item">
-                <a className="page-link" href="#" data-testid="pagination-2">2</a>
-              </li>
-              <li className="page-item">
-                <a className="page-link" href="#" data-testid="pagination-3">3</a>
-              </li>
-              <li className="page-item">
-                <a className="page-link" href="#" data-testid="pagination-next">Next</a>
-              </li>
-            </ul>
-          </nav>
+          <div className="d-flex justify-content-between align-items-center">
+            <div className="text-muted">
+              Showing {leads.length > 0 ? ((currentPage - 1) * 20 + 1) : 0} to {Math.min(currentPage * 20, total)} of {total} leads
+            </div>
+            <nav>
+              <ul className="pagination pagination-sm mb-0">
+                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                  <button 
+                    className="page-link" 
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    data-testid="pagination-previous"
+                  >
+                    Previous
+                  </button>
+                </li>
+                
+                {/* Generate page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                  const pageNum = startPage + i;
+                  if (pageNum <= totalPages) {
+                    return (
+                      <li key={pageNum} className={`page-item ${currentPage === pageNum ? 'active' : ''}`}>
+                        <button 
+                          className="page-link" 
+                          onClick={() => setCurrentPage(pageNum)}
+                          data-testid={`pagination-${pageNum}`}
+                        >
+                          {pageNum}
+                        </button>
+                      </li>
+                    );
+                  }
+                  return null;
+                })}
+                
+                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                  <button 
+                    className="page-link" 
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    data-testid="pagination-next"
+                  >
+                    Next
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
         </div>
       </div>
 

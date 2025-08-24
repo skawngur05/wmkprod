@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import re
 import uuid
-import psycopg2
+import mysql.connector
 import os
 
 # Database connection
@@ -98,7 +98,7 @@ def import_leads(leads):
         print("DATABASE_URL not found")
         return
         
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = mysql.connector.connect(DATABASE_URL)
     cur = conn.cursor()
     
     imported_count = 0

@@ -7,6 +7,12 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   
   getLeads(): Promise<Lead[]>;
+  getLeadsPaginated(page?: number, limit?: number, filters?: {
+    search?: string;
+    status?: string;
+    origin?: string;
+    assigned_to?: string;
+  }): Promise<{ leads: Lead[], total: number, page: number, limit: number, totalPages: number }>;
   getLead(id: string): Promise<Lead | undefined>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, updates: UpdateLead): Promise<Lead | undefined>;

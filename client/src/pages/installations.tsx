@@ -12,6 +12,11 @@ import { useState } from 'react';
 export default function Installations() {
   const { data: installations, isLoading } = useQuery<Lead[]>({
     queryKey: ['/api/installations'],
+    queryFn: async () => {
+      const response = await fetch('/api/installations');
+      if (!response.ok) throw new Error('Failed to fetch installations');
+      return response.json();
+    }
   });
   
   const [emailModalOpen, setEmailModalOpen] = useState(false);
