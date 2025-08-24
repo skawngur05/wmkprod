@@ -1,0 +1,103 @@
+import { Switch, Route, Redirect } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider, useAuth } from "@/contexts/auth-context";
+import { Navbar } from "@/components/layout/navbar";
+import NotFound from "@/pages/not-found";
+import Login from "@/pages/login";
+import Dashboard from "@/pages/dashboard";
+import Leads from "@/pages/leads";
+import Followups from "@/pages/followups";
+import Installations from "@/pages/installations";
+import Reports from "@/pages/reports";
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+        <div className="text-center">
+          <i className="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Redirect to="/login" />;
+  }
+
+  return (
+    <>
+      <Navbar />
+      {children}
+    </>
+  );
+}
+
+function AppRouter() {
+  const { user } = useAuth();
+
+  return (
+    <Switch>
+      <Route path="/login">
+        {user ? <Redirect to="/dashboard" /> : <Login />}
+      </Route>
+      
+      <Route path="/dashboard">
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/leads">
+        <ProtectedRoute>
+          <Leads />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/followups">
+        <ProtectedRoute>
+          <Followups />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/installations">
+        <ProtectedRoute>
+          <Installations />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/reports">
+        <ProtectedRoute>
+          <Reports />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/">
+        <Redirect to="/dashboard" />
+      </Route>
+      
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <AppRouter />
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;

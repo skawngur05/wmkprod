@@ -1,0 +1,79 @@
+# Lead Management CRM - React Version
+
+## Overview
+
+A comprehensive lead management system designed for a kitchen wrapping business. The application provides full-featured CRM capabilities including lead tracking, follow-up management, installation scheduling, and performance analytics. Built with a modern React frontend and Express.js backend, the system supports role-based access control and comprehensive business workflow management for sales teams.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React 18 with TypeScript for type safety and modern development practices
+- **Routing**: Wouter for lightweight client-side routing with protected route implementation
+- **State Management**: TanStack Query (React Query) for server state management and caching
+- **UI Framework**: Hybrid approach combining Bootstrap 5 for layout/styling with shadcn/ui components for modern React patterns
+- **Styling**: Tailwind CSS with CSS custom properties for theming, integrated with Bootstrap for rapid prototyping
+- **Forms**: React Hook Form with Zod validation for type-safe form handling
+
+### Backend Architecture
+- **Framework**: Express.js with TypeScript for API development
+- **Database**: PostgreSQL with Drizzle ORM for type-safe database operations
+- **Schema**: Shared TypeScript schemas between frontend and backend using Zod for validation
+- **Storage**: Abstracted storage interface with in-memory implementation for development (easily switchable to database)
+- **Session Management**: Simple session handling with localStorage (production-ready session management to be implemented)
+
+### Authentication System
+- **Authentication**: Username/password based authentication with role-based access control
+- **Roles**: Admin and Sales Rep roles with different permission levels
+- **Default Users**: Pre-configured users (kim, patrick, lina) with "password" as default password
+- **Session Persistence**: Client-side session storage with automatic session restoration
+
+### Data Models
+- **Users**: ID, username, password, role (admin/sales_rep)
+- **Leads**: Comprehensive lead tracking with fields for contact info, lead source, status, assigned team member, project value, follow-up dates, payment tracking, and installation details
+- **Lead Origins**: 14+ predefined sources including social media, referrals, and direct channels
+- **Lead Statuses**: Complete workflow states from "New" to "Sold" with intermediate stages
+- **Team Members**: Kim, Patrick, Lina for sales assignment
+- **Installers**: Angel, Brian, Luis for installation assignment
+
+### Business Logic Features
+- **Dashboard**: Real-time statistics, follow-up alerts, recent activity tracking
+- **Lead Management**: Full CRUD operations with inline editing, bulk operations, and advanced filtering
+- **Follow-up System**: Calendar-based scheduling with overdue/today/upcoming categorization
+- **Installation Tracking**: Payment milestone tracking (deposit/balance) and installation scheduling
+- **Reporting**: Performance analytics, conversion tracking, revenue reporting by team member
+- **Import/Export**: CSV handling for bulk operations and data portability
+
+### Development Tools
+- **Build System**: Vite for fast development and optimized production builds
+- **Type Safety**: End-to-end TypeScript with shared schema definitions
+- **Database Migrations**: Drizzle Kit for schema management and database migrations
+- **Development Environment**: Hot reload with Vite, integrated error handling, and Replit-specific tooling
+
+## External Dependencies
+
+### Database & ORM
+- **PostgreSQL**: Primary database using Neon serverless PostgreSQL
+- **Drizzle ORM**: Type-safe database operations with schema-first approach
+- **Connection**: `@neondatabase/serverless` for Neon database connectivity
+
+### UI & Styling
+- **Radix UI**: Comprehensive component library for accessible, unstyled components
+- **Bootstrap 5**: CSS framework for rapid layout and responsive design
+- **Font Awesome**: Icon library for consistent iconography
+- **Tailwind CSS**: Utility-first CSS framework for custom styling
+- **shadcn/ui**: Modern React component library built on Radix UI
+
+### State Management & API
+- **TanStack Query**: Server state management, caching, and synchronization
+- **React Hook Form**: Performant form library with built-in validation
+- **Zod**: Runtime type validation and schema definition
+
+### Development & Build
+- **Vite**: Fast build tool and development server
+- **ESBuild**: Fast JavaScript bundler for production builds
+- **TypeScript**: Type safety across frontend and backend
+- **Replit Integration**: Platform-specific plugins for development environment
