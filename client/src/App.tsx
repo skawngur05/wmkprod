@@ -4,7 +4,12 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
-import { Navbar } from "@/components/layout/navbar";
+import { Sidebar } from "@/components/layout/sidebar";
+
+// Utility function
+const capitalizeFirst = (str: string): string => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -32,10 +37,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <>
-      <Navbar />
-      {children}
-    </>
+    <div className="app-layout">
+      <Sidebar />
+      <main className="main-content">
+        <div className="content-header">
+          <div className="d-flex justify-content-between align-items-center">
+            <h5 className="mb-0 text-dark">Welcome back, {user ? capitalizeFirst(user.username) : 'User'}</h5>
+            <div className="user-menu">
+              <span className="text-muted">{new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+        </div>
+        <div className="p-4">
+          {children}
+        </div>
+      </main>
+    </div>
   );
 }
 

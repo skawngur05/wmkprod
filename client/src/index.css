@@ -7,57 +7,68 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(220 8.9% 46.1%);
+  --background: hsl(0 0% 98%);
+  --foreground: hsl(0 0% 20%);
   --card: hsl(0 0% 100%);
-  --card-foreground: hsl(220 8.9% 46.1%);
+  --card-foreground: hsl(0 0% 20%);
   --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(220 8.9% 46.1%);
-  --primary: hsl(262.1 83.3% 57.8%);
+  --popover-foreground: hsl(0 0% 20%);
+  --primary: hsl(142 69% 58%);
   --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(220 14.3% 95.9%);
-  --secondary-foreground: hsl(220.9 39.3% 11%);
-  --muted: hsl(220 14.3% 95.9%);
-  --muted-foreground: hsl(220 8.9% 46.1%);
-  --accent: hsl(220 14.3% 95.9%);
-  --accent-foreground: hsl(220.9 39.3% 11%);
+  --secondary: hsl(0 0% 96%);
+  --secondary-foreground: hsl(0 0% 20%);
+  --muted: hsl(0 0% 96%);
+  --muted-foreground: hsl(0 0% 45%);
+  --accent: hsl(0 0% 96%);
+  --accent-foreground: hsl(0 0% 20%);
   --destructive: hsl(0 84.2% 60.2%);
   --destructive-foreground: hsl(0 0% 100%);
-  --border: hsl(220 13% 91%);
-  --input: hsl(220 13% 91%);
-  --ring: hsl(262.1 83.3% 57.8%);
-  --chart-1: hsl(262.1 83.3% 57.8%);
+  --border: hsl(0 0% 89%);
+  --input: hsl(0 0% 89%);
+  --ring: hsl(142 69% 58%);
+  --chart-1: hsl(142 69% 58%);
   --chart-2: hsl(173 58% 39%);
   --chart-3: hsl(197 37% 24%);
   --chart-4: hsl(43 74% 66%);
   --chart-5: hsl(27 87% 67%);
-  --sidebar: hsl(0 0% 100%);
-  --sidebar-foreground: hsl(220 8.9% 46.1%);
-  --sidebar-primary: hsl(262.1 83.3% 57.8%);
+  --sidebar: hsl(0 0% 8%);
+  --sidebar-foreground: hsl(0 0% 100%);
+  --sidebar-primary: hsl(142 69% 58%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(220 14.3% 95.9%);
-  --sidebar-accent-foreground: hsl(220.9 39.3% 11%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(262.1 83.3% 57.8%);
+  --sidebar-accent: hsl(0 0% 15%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(0 0% 15%);
+  --sidebar-ring: hsl(142 69% 58%);
   --font-sans: 'Inter', sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'Menlo', monospace;
   --radius: 0.75rem;
   
-  /* Modern CRM colors */
-  --primary-purple: hsl(262.1 83.3% 57.8%);
-  --primary-gradient: linear-gradient(135deg, hsl(262.1 83.3% 57.8%) 0%, hsl(252 82% 65%) 100%);
-  --success-green: hsl(142.1 76.2% 36.3%);
-  --success-gradient: linear-gradient(135deg, hsl(142.1 76.2% 36.3%) 0%, hsl(142 71% 45%) 100%);
-  --warning-orange: hsl(32.7 98% 60%);
+  /* Wrap My Kitchen brand colors */
+  --wmk-black: hsl(0 0% 8%);
+  --wmk-white: hsl(0 0% 100%);
+  --wmk-green: hsl(142 69% 58%);
+  --wmk-green-dark: hsl(142 69% 45%);
+  --wmk-green-light: hsl(142 69% 70%);
+  --wmk-gray: hsl(0 0% 45%);
+  --wmk-gray-light: hsl(0 0% 96%);
+  
+  /* Brand gradients */
+  --primary-gradient: linear-gradient(135deg, hsl(142 69% 58%) 0%, hsl(142 69% 45%) 100%);
+  --success-gradient: linear-gradient(135deg, hsl(142 69% 58%) 0%, hsl(142 69% 45%) 100%);
   --warning-gradient: linear-gradient(135deg, hsl(32.7 98% 60%) 0%, hsl(43 96% 56%) 100%);
-  --danger-red: hsl(0 84.2% 60.2%);
   --danger-gradient: linear-gradient(135deg, hsl(0 84.2% 60.2%) 0%, hsl(0 72% 51%) 100%);
-  --info-blue: hsl(221.2 83.2% 53.3%);
   --info-gradient: linear-gradient(135deg, hsl(221.2 83.2% 53.3%) 0%, hsl(217 92% 60%) 100%);
+  --dark-gradient: linear-gradient(135deg, hsl(0 0% 8%) 0%, hsl(0 0% 15%) 100%);
+  
+  /* Brand specific colors */
+  --success-green: hsl(142 69% 58%);
+  --warning-orange: hsl(32.7 98% 60%);
+  --danger-red: hsl(0 84.2% 60.2%);
+  --info-blue: hsl(221.2 83.2% 53.3%);
   --light-bg: hsl(0 0% 98%);
-  --dark-text: hsl(220.9 39.3% 11%);
-  --glass-bg: hsla(0, 0%, 100%, 0.8);
+  --dark-text: hsl(0 0% 20%);
+  --glass-bg: hsla(0, 0%, 100%, 0.9);
   --glass-border: hsla(0, 0%, 100%, 0.2);
 }
 
@@ -90,21 +101,155 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    background: linear-gradient(135deg, hsl(0 0% 98%) 0%, hsl(220 14.3% 95.9%) 100%);
+    background: var(--light-bg);
     color: var(--dark-text);
     font-family: 'Inter', sans-serif;
     line-height: 1.6;
   }
 }
 
-/* Modern Bootstrap overrides */
+/* Wrap My Kitchen Layout */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 280px;
+  background: var(--wmk-black);
+  color: var(--wmk-white);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  z-index: 1000;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-header {
+  padding: 2rem 1.5rem;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.sidebar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--wmk-white);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sidebar-brand .brand-wrap {
+  color: var(--wmk-white);
+}
+
+.sidebar-brand .brand-kitchen {
+  color: var(--wmk-green);
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 1.5rem 0;
+}
+
+.sidebar-nav-item {
+  margin: 0.25rem 1rem;
+}
+
+.sidebar-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  color: var(--wmk-white);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.8;
+}
+
+.sidebar-nav-link:hover {
+  background: var(--sidebar-accent);
+  color: var(--wmk-white);
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+.sidebar-nav-link.active {
+  background: var(--wmk-green);
+  color: var(--wmk-white);
+  opacity: 1;
+  box-shadow: 0 4px 12px rgba(77, 179, 102, 0.3);
+}
+
+.sidebar-nav-link i {
+  width: 20px;
+  text-align: center;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 280px;
+  min-height: 100vh;
+  background: var(--light-bg);
+}
+
+.content-header {
+  background: var(--wmk-white);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--wmk-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--wmk-white);
+  font-weight: 600;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 2px solid var(--border);
+  color: var(--dark-text);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.logout-btn:hover {
+  background: var(--danger-red);
+  border-color: var(--danger-red);
+  color: var(--wmk-white);
+}
+
+.sidebar-footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--sidebar-border);
+  margin-top: auto;
+}
+
+/* Modern Bootstrap overrides with brand colors */
 .navbar-brand {
   font-weight: 700;
   font-size: 1.5rem;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--wmk-green);
 }
 
 .navbar {
@@ -266,9 +411,9 @@
   border-radius: 8px;
 }
 
-/* Modern button styles */
+/* Wrap My Kitchen button styles */
 .btn {
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 500;
   padding: 0.75rem 1.5rem;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -277,29 +422,29 @@
 }
 
 .btn-primary {
-  background: var(--primary-gradient);
-  color: white;
-  box-shadow: 0 4px 12px rgba(119, 46, 195, 0.25);
+  background: var(--wmk-green);
+  color: var(--wmk-white);
+  box-shadow: 0 4px 12px rgba(77, 179, 102, 0.25);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, hsl(252 82% 50%) 0%, hsl(242 82% 60%) 100%);
-  box-shadow: 0 6px 20px rgba(119, 46, 195, 0.35);
+  background: var(--wmk-green-dark);
+  box-shadow: 0 6px 20px rgba(77, 179, 102, 0.35);
   transform: translateY(-2px);
-  color: white;
+  color: var(--wmk-white);
 }
 
 .btn-success {
-  background: var(--success-gradient);
-  color: white;
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+  background: var(--wmk-green);
+  color: var(--wmk-white);
+  box-shadow: 0 4px 12px rgba(77, 179, 102, 0.25);
 }
 
 .btn-success:hover {
-  background: linear-gradient(135deg, hsl(142 71% 30%) 0%, hsl(142 71% 40%) 100%);
-  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+  background: var(--wmk-green-dark);
+  box-shadow: 0 6px 20px rgba(77, 179, 102, 0.35);
   transform: translateY(-2px);
-  color: white;
+  color: var(--wmk-white);
 }
 
 .btn-warning {
@@ -343,30 +488,30 @@
 
 .btn-outline-primary {
   background: transparent;
-  border: 2px solid var(--primary-purple);
-  color: var(--primary-purple);
+  border: 2px solid var(--wmk-green);
+  color: var(--wmk-green);
 }
 
 .btn-outline-primary:hover {
-  background: var(--primary-gradient);
+  background: var(--wmk-green);
   border-color: transparent;
-  color: white;
+  color: var(--wmk-white);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(119, 46, 195, 0.25);
+  box-shadow: 0 6px 20px rgba(77, 179, 102, 0.25);
 }
 
 .btn-outline-success {
   background: transparent;
-  border: 2px solid var(--success-green);
-  color: var(--success-green);
+  border: 2px solid var(--wmk-green);
+  color: var(--wmk-green);
 }
 
 .btn-outline-success:hover {
-  background: var(--success-gradient);
+  background: var(--wmk-green);
   border-color: transparent;
-  color: white;
+  color: var(--wmk-white);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.25);
+  box-shadow: 0 6px 20px rgba(77, 179, 102, 0.25);
 }
 
 .btn-outline-warning {
@@ -409,13 +554,13 @@
   color: hsl(220.9 39.3% 11%);
 }
 
-/* Modern text and background utilities */
+/* Wrap My Kitchen text utilities */
 .text-primary {
-  color: var(--primary-purple) !important;
+  color: var(--wmk-green) !important;
 }
 
 .text-success {
-  color: var(--success-green) !important;
+  color: var(--wmk-green) !important;
 }
 
 .text-warning {
@@ -428,6 +573,14 @@
 
 .text-info {
   color: var(--info-blue) !important;
+}
+
+.text-brand {
+  color: var(--wmk-green) !important;
+}
+
+.text-dark {
+  color: var(--wmk-black) !important;
 }
 
 .bg-primary {
@@ -476,13 +629,13 @@
 }
 
 .form-control:focus {
-  border-color: var(--primary-purple);
-  box-shadow: 0 0 0 3px rgba(119, 46, 195, 0.1);
+  border-color: var(--wmk-green);
+  box-shadow: 0 0 0 3px rgba(77, 179, 102, 0.1);
   outline: none;
 }
 
 .form-select {
-  border-radius: 12px;
+  border-radius: 8px;
   border: 2px solid hsl(220 13% 91%);
   padding: 0.75rem 1rem;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -490,8 +643,8 @@
 }
 
 .form-select:focus {
-  border-color: var(--primary-purple);
-  box-shadow: 0 0 0 3px rgba(119, 46, 195, 0.1);
+  border-color: var(--wmk-green);
+  box-shadow: 0 0 0 3px rgba(77, 179, 102, 0.1);
   outline: none;
 }
 
