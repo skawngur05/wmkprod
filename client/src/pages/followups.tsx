@@ -51,17 +51,27 @@ export default function Followups() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data.updates),
       });
-      if (!response.ok) throw new Error('Failed to update lead');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Update failed:', errorData);
+        throw new Error(errorData.message || 'Failed to update lead');
+      }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
       queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
       toast({ title: 'Lead updated successfully' });
       setIsEditModalOpen(false);
     },
-    onError: () => {
-      toast({ title: 'Failed to update lead', variant: 'destructive' });
+    onError: (error: Error) => {
+      console.error('Update mutation error:', error);
+      toast({ 
+        title: 'Failed to update lead', 
+        description: error.message,
+        variant: 'destructive' 
+      });
     },
   });
   

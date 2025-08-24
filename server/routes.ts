@@ -125,8 +125,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(lead);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Lead update validation errors:", error.errors);
         return res.status(400).json({ message: "Invalid lead data", errors: error.errors });
       }
+      console.error("Lead update error:", error);
       res.status(500).json({ message: "Failed to update lead" });
     }
   });
