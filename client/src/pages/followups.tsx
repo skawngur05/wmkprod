@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Lead } from '@shared/schema';
 import { formatDate } from '@/lib/auth';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
 
 interface FollowupsData {
   overdue: Lead[];
@@ -27,6 +31,57 @@ export default function Followups() {
   }
 
   const { overdue = [], dueToday = [], upcoming = [] } = followupsData || {};
+
+  // Transform follow-up data into calendar events
+  const calendarEvents = [
+    ...overdue.filter(lead => lead.next_followup_date).map(lead => ({
+      id: `overdue-${lead.id}`,
+      title: `OVERDUE: ${lead.name}`,
+      start: lead.next_followup_date!,
+      backgroundColor: '#dc3545',
+      borderColor: '#dc3545',
+      textColor: '#fff',
+      extendedProps: {
+        type: 'overdue',
+        lead,
+        phone: lead.phone,
+        status: 'overdue'
+      }
+    })),
+    ...dueToday.filter(lead => lead.next_followup_date).map(lead => ({
+      id: `today-${lead.id}`,
+      title: `TODAY: ${lead.name}`,
+      start: lead.next_followup_date!,
+      backgroundColor: '#ffc107',
+      borderColor: '#ffc107',
+      textColor: '#000',
+      extendedProps: {
+        type: 'today',
+        lead,
+        phone: lead.phone,
+        status: 'due today'
+      }
+    })),
+    ...upcoming.filter(lead => lead.next_followup_date).map(lead => ({
+      id: `upcoming-${lead.id}`,
+      title: lead.name,
+      start: lead.next_followup_date!,
+      backgroundColor: '#28a745',
+      borderColor: '#28a745',
+      textColor: '#fff',
+      extendedProps: {
+        type: 'upcoming',
+        lead,
+        phone: lead.phone,
+        status: 'upcoming'
+      }
+    }))
+  ];
+
+  const handleEventClick = (info: any) => {
+    const { lead, phone, status } = info.event.extendedProps;
+    alert(`Follow-up: ${lead.name}\nPhone: ${phone}\nStatus: ${status}\n\nThis would open the lead details or call action.`);
+  };
 
   return (
     <div className="container-fluid py-4">
@@ -177,16 +232,49 @@ export default function Followups() {
           <h5 className="mb-0">
             <i className="fas fa-calendar-alt me-2"></i>Follow-up Calendar
           </h5>
-        </div>
-        <div className="card-body">
-          <div className="row">
-            <div className="col-12">
-              <div className="alert alert-info" data-testid="calendar-placeholder">
-                <i className="fas fa-info-circle me-2"></i>
-                Calendar integration would be implemented here using a library like FullCalendar.js
-              </div>
+          <div className="d-flex gap-3 mt-2">
+            <div className="d-flex align-items-center gap-2">
+              <div style={{ width: '12px', height: '12px', backgroundColor: '#dc3545', borderRadius: '50%' }}></div>
+              <small>Overdue</small>
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <div style={{ width: '12px', height: '12px', backgroundColor: '#ffc107', borderRadius: '50%' }}></div>
+              <small>Due Today</small>
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <div style={{ width: '12px', height: '12px', backgroundColor: '#28a745', borderRadius: '50%' }}></div>
+              <small>Upcoming</small>
             </div>
           </div>
+        </div>
+        <div className="card-body" data-testid="followup-calendar">
+          <FullCalendar
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView="dayGridMonth"
+            headerToolbar={{
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            }}
+            events={calendarEvents}
+            eventClick={handleEventClick}
+            height="auto"
+            eventDisplay="block"
+            dayMaxEvents={3}
+            moreLinkClick="popover"
+            eventTimeFormat={{
+              hour: 'numeric',
+              minute: '2-digit',
+              omitZeroMinute: true,
+              meridiem: 'short'
+            }}
+            slotLabelFormat={{
+              hour: 'numeric',
+              minute: '2-digit',
+              omitZeroMinute: true,
+              meridiem: 'short'
+            }}
+          />
         </div>
       </div>
     </div>

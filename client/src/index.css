@@ -728,3 +728,93 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
+
+/* FullCalendar styling */
+.fc {
+  font-family: 'Inter', sans-serif !important;
+}
+
+.fc-toolbar {
+  margin-bottom: 1.5rem !important;
+}
+
+.fc-toolbar-title {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  color: var(--wmk-black) !important;
+}
+
+.fc-button-primary {
+  background: var(--wmk-green) !important;
+  border-color: var(--wmk-green) !important;
+  color: var(--wmk-white) !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.fc-button-primary:hover {
+  background: var(--wmk-green-dark) !important;
+  border-color: var(--wmk-green-dark) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(77, 179, 102, 0.25) !important;
+}
+
+.fc-button-primary:not(:disabled):active,
+.fc-button-primary:not(:disabled).fc-button-active {
+  background: var(--wmk-green-dark) !important;
+  border-color: var(--wmk-green-dark) !important;
+}
+
+.fc-event {
+  border-radius: 6px !important;
+  border: none !important;
+  font-weight: 500 !important;
+  padding: 2px 6px !important;
+  font-size: 0.85rem !important;
+}
+
+.fc-event:hover {
+  cursor: pointer !important;
+  opacity: 0.9 !important;
+  transform: scale(1.02) !important;
+}
+
+.fc-daygrid-event {
+  margin: 1px 2px !important;
+}
+
+.fc-day-today {
+  background-color: rgba(77, 179, 102, 0.1) !important;
+}
+
+.fc-col-header-cell {
+  background: var(--wmk-gray-light) !important;
+  font-weight: 600 !important;
+  color: var(--wmk-black) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.fc-daygrid-day {
+  border: 1px solid var(--border) !important;
+}
+
+.fc-scrollgrid {
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: var(--border) !important;
+}
+
+.fc-more-link {
+  color: var(--wmk-green) !important;
+  font-weight: 500 !important;
+}
+
+.fc-more-link:hover {
+  color: var(--wmk-green-dark) !important;
+}
