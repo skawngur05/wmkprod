@@ -31,6 +31,8 @@ export default function Followups() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('');
+  const [editingDate, setEditingDate] = useState<string | null>(null);
+  const [tempDate, setTempDate] = useState<string>('');
   
   const overdueRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
@@ -59,6 +61,7 @@ export default function Followups() {
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
       toast({ title: 'Lead updated successfully' });
       setIsEditModalOpen(false);
+      setEditingDate(null);
     },
     onError: (error: Error) => {
       console.error('Update mutation error:', error);
@@ -74,6 +77,24 @@ export default function Followups() {
     setActiveSection(section);
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(() => setActiveSection(''), 2000);
+  };
+
+  const handleDateEdit = (leadId: string, currentDate: string | null) => {
+    setEditingDate(leadId);
+    setTempDate(currentDate ? new Date(currentDate).toISOString().split('T')[0] : '');
+  };
+
+  const handleDateSave = (leadId: string) => {
+    const newDate = tempDate ? new Date(tempDate).toISOString() : null;
+    updateLeadMutation.mutate({ 
+      id: leadId, 
+      updates: { next_followup_date: newDate } 
+    });
+  };
+
+  const handleDateCancel = () => {
+    setEditingDate(null);
+    setTempDate('');
   };
 
   if (isLoading) {
@@ -122,11 +143,13 @@ export default function Followups() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(parseFloat(amount));
   };
   
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Not set';
     return new Date(dateString).toLocaleDateString('en-US', { 
       weekday: 'short', 
       month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      year: 'numeric'
     });
   };
   
@@ -154,8 +177,172 @@ export default function Followups() {
     return names[assignee] || assignee;
   };
   
-  const getDaysOverdue = (date: string) => {
-    return Math.ceil((new Date().getTime() - new Date(date).getTime()) / (1000 * 3600 * 24));
+  const getLeadOriginDisplay = (origin: string) => {
+    return origin.charAt(0).toUpperCase() + origin.slice(1).replace('-', ' ');
+  };
+
+  const renderFollowupTable = (leads: Lead[], colorTheme: string, sectionType: string) => {
+    const themeClasses = {
+      red: {
+        headerBg: 'bg-red-50',
+        headerBorder: 'border-red-200',
+        headerText: 'text-red-900',
+        rowBorder: 'border-red-100',
+        rowHover: 'hover:bg-red-25',
+        rowAlt: 'bg-red-25',
+        text: 'text-red-700'
+      },
+      yellow: {
+        headerBg: 'bg-yellow-50',
+        headerBorder: 'border-yellow-200',
+        headerText: 'text-yellow-900',
+        rowBorder: 'border-yellow-100',
+        rowHover: 'hover:bg-yellow-25',
+        rowAlt: 'bg-yellow-25',
+        text: 'text-yellow-700'
+      },
+      blue: {
+        headerBg: 'bg-blue-50',
+        headerBorder: 'border-blue-200',
+        headerText: 'text-blue-900',
+        rowBorder: 'border-blue-100',
+        rowHover: 'hover:bg-blue-25',
+        rowAlt: 'bg-blue-25',
+        text: 'text-blue-700'
+      }
+    };
+
+    const theme = themeClasses[colorTheme as keyof typeof themeClasses];
+
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className={`${theme.headerBg} ${theme.headerBorder} border-b`}>
+            <tr>
+              <th className={`text-left py-4 px-6 font-semibold ${theme.headerText}`}>Date Created</th>
+              <th className={`text-left py-4 px-6 font-semibold ${theme.headerText}`}>Contact</th>
+              <th className={`text-left py-4 px-6 font-semibold ${theme.headerText}`}>Lead Origin</th>
+              <th className={`text-left py-4 px-6 font-semibold ${theme.headerText}`}>Next Follow-up Date</th>
+              <th className={`text-left py-4 px-6 font-semibold ${theme.headerText}`}>Status</th>
+              <th className={`text-left py-4 px-6 font-semibold ${theme.headerText}`}>Project Amount</th>
+              <th className={`text-left py-4 px-6 font-semibold ${theme.headerText}`}>Assigned To</th>
+              <th className={`text-center py-4 px-6 font-semibold ${theme.headerText}`}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leads.map((lead, index) => (
+              <tr key={lead.id} className={`${theme.rowBorder} border-b ${theme.rowHover} ${
+                index % 2 === 0 ? 'bg-white' : theme.rowAlt
+              }`} data-testid={`${sectionType}-lead-${lead.id}`}>
+                <td className="py-4 px-6">
+                  <span className={theme.text}>
+                    {formatDate(lead.date_created)}
+                  </span>
+                </td>
+                <td className="py-4 px-6">
+                  <div className={theme.text}>
+                    <p className="font-semibold">{lead.name}</p>
+                    <p className="text-sm">{lead.phone}</p>
+                    {lead.email && <p className="text-xs">{lead.email}</p>}
+                  </div>
+                </td>
+                <td className="py-4 px-6">
+                  <span className={`${theme.text} capitalize`}>
+                    {getLeadOriginDisplay(lead.lead_origin)}
+                  </span>
+                </td>
+                <td className="py-4 px-6">
+                  {editingDate === lead.id ? (
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        type="date"
+                        value={tempDate}
+                        onChange={(e) => setTempDate(e.target.value)}
+                        className="w-32"
+                        data-testid={`input-date-${lead.id}`}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleDateSave(lead.id)}
+                        className="px-2 py-1"
+                        data-testid={`button-save-date-${lead.id}`}
+                      >
+                        ✓
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleDateCancel}
+                        className="px-2 py-1"
+                        data-testid={`button-cancel-date-${lead.id}`}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className={`${theme.text} cursor-pointer hover:underline`}
+                      onClick={() => handleDateEdit(lead.id, lead.next_followup_date)}
+                      data-testid={`text-next-followup-${lead.id}`}
+                    >
+                      {formatDate(lead.next_followup_date)}
+                    </div>
+                  )}
+                </td>
+                <td className="py-4 px-6">
+                  <div>
+                    <Badge className={`${colorTheme === 'red' ? 'bg-red-200 text-red-800' : 
+                                     colorTheme === 'yellow' ? 'bg-yellow-200 text-yellow-800' : 
+                                     'bg-blue-200 text-blue-800'} capitalize`}>
+                      {lead.remarks}
+                    </Badge>
+                    {getPaymentStatusBadge(lead) && (
+                      <div className="mt-1">{getPaymentStatusBadge(lead)}</div>
+                    )}
+                  </div>
+                </td>
+                <td className="py-4 px-6">
+                  <span className={`font-medium ${theme.text}`}>
+                    {formatCurrency(lead.project_amount)}
+                  </span>
+                </td>
+                <td className="py-4 px-6">
+                  <span className={theme.text}>
+                    {getTeamMemberName(lead.assigned_to)}
+                  </span>
+                </td>
+                <td className="py-4 px-6">
+                  <div className="flex gap-2 justify-center">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className={`${colorTheme === 'red' ? 'border-red-300 text-red-700 hover:bg-red-100' : 
+                                 colorTheme === 'yellow' ? 'border-yellow-300 text-yellow-700 hover:bg-yellow-100' : 
+                                 'border-blue-300 text-blue-700 hover:bg-blue-100'}`}
+                      onClick={() => window.open(`tel:${lead.phone}`, '_self')}
+                      data-testid={`button-call-${sectionType}-${lead.id}`}
+                    >
+                      📞
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className={`${colorTheme === 'red' ? 'border-red-300 text-red-700 hover:bg-red-100' : 
+                                 colorTheme === 'yellow' ? 'border-yellow-300 text-yellow-700 hover:bg-yellow-100' : 
+                                 'border-blue-300 text-blue-700 hover:bg-blue-100'}`}
+                      onClick={() => handleQuickEdit(lead)}
+                      data-testid={`button-edit-${sectionType}-${lead.id}`}
+                    >
+                      ✏️
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   return (
@@ -270,83 +457,7 @@ export default function Followups() {
         ) : (
           <Card className="border-red-200">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-red-50 border-b border-red-200">
-                    <tr>
-                      <th className="text-left py-4 px-6 font-semibold text-red-900">Lead Info</th>
-                      <th className="text-left py-4 px-6 font-semibold text-red-900">Contact</th>
-                      <th className="text-left py-4 px-6 font-semibold text-red-900">Status</th>
-                      <th className="text-left py-4 px-6 font-semibold text-red-900">Days Overdue</th>
-                      <th className="text-left py-4 px-6 font-semibold text-red-900">Project Value</th>
-                      <th className="text-center py-4 px-6 font-semibold text-red-900">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeOverdue.map((lead, index) => (
-                      <tr key={lead.id} className={`border-b border-red-100 hover:bg-red-25 ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-red-25'
-                      }`} data-testid={`overdue-lead-${lead.id}`}>
-                        <td className="py-4 px-6">
-                          <div>
-                            <h3 className="font-semibold text-red-900">{lead.name}</h3>
-                            <p className="text-red-700 text-xs">Assigned: {getTeamMemberName(lead.assigned_to)}</p>
-                            {lead.notes && (
-                              <p className="text-red-600 text-xs italic mt-1">Notes: {lead.notes}</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="text-red-700">
-                            <p className="font-medium">{lead.phone}</p>
-                            {lead.email && <p className="text-xs">{lead.email}</p>}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div>
-                            <Badge className="bg-red-200 text-red-800 capitalize">{lead.remarks}</Badge>
-                            {getPaymentStatusBadge(lead) && (
-                              <div className="mt-1">{getPaymentStatusBadge(lead)}</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <Badge className="bg-red-100 text-red-800">
-                            {lead.next_followup_date ? `${getDaysOverdue(lead.next_followup_date)} days` : 'Not set'}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className="font-medium text-red-700">
-                            {lead.project_amount ? formatCurrency(lead.project_amount) : 'Not set'}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="flex gap-2 justify-center">
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-red-300 text-red-700 hover:bg-red-100"
-                              onClick={() => window.open(`tel:${lead.phone}`, '_self')}
-                              data-testid={`button-call-overdue-${lead.id}`}
-                            >
-                              📞
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-red-300 text-red-700 hover:bg-red-100"
-                              onClick={() => handleQuickEdit(lead)}
-                              data-testid={`button-edit-overdue-${lead.id}`}
-                            >
-                              ✏️
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {renderFollowupTable(activeOverdue, 'red', 'overdue')}
             </CardContent>
           </Card>
         )}
@@ -369,83 +480,7 @@ export default function Followups() {
         ) : (
           <Card className="border-yellow-200">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-yellow-50 border-b border-yellow-200">
-                    <tr>
-                      <th className="text-left py-4 px-6 font-semibold text-yellow-900">Lead Info</th>
-                      <th className="text-left py-4 px-6 font-semibold text-yellow-900">Contact</th>
-                      <th className="text-left py-4 px-6 font-semibold text-yellow-900">Status</th>
-                      <th className="text-left py-4 px-6 font-semibold text-yellow-900">Due Date</th>
-                      <th className="text-left py-4 px-6 font-semibold text-yellow-900">Project Value</th>
-                      <th className="text-center py-4 px-6 font-semibold text-yellow-900">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeDueToday.map((lead, index) => (
-                      <tr key={lead.id} className={`border-b border-yellow-100 hover:bg-yellow-25 ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-yellow-25'
-                      }`} data-testid={`today-lead-${lead.id}`}>
-                        <td className="py-4 px-6">
-                          <div>
-                            <h3 className="font-semibold text-yellow-900">{lead.name}</h3>
-                            <p className="text-yellow-700 text-xs">Assigned: {getTeamMemberName(lead.assigned_to)}</p>
-                            {lead.notes && (
-                              <p className="text-yellow-600 text-xs italic mt-1">Notes: {lead.notes}</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="text-yellow-700">
-                            <p className="font-medium">{lead.phone}</p>
-                            {lead.email && <p className="text-xs">{lead.email}</p>}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div>
-                            <Badge className="bg-yellow-200 text-yellow-800 capitalize">{lead.remarks}</Badge>
-                            {getPaymentStatusBadge(lead) && (
-                              <div className="mt-1">{getPaymentStatusBadge(lead)}</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <Badge className="bg-yellow-100 text-yellow-800">
-                            Due Today
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className="font-medium text-yellow-700">
-                            {lead.project_amount ? formatCurrency(lead.project_amount) : 'Not set'}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="flex gap-2 justify-center">
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                              onClick={() => window.open(`tel:${lead.phone}`, '_self')}
-                              data-testid={`button-call-today-${lead.id}`}
-                            >
-                              📞
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                              onClick={() => handleQuickEdit(lead)}
-                              data-testid={`button-edit-today-${lead.id}`}
-                            >
-                              ✏️
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {renderFollowupTable(activeDueToday, 'yellow', 'today')}
             </CardContent>
           </Card>
         )}
@@ -468,73 +503,94 @@ export default function Followups() {
         ) : (
           <Card className="border-blue-200">
             <CardContent className="p-0">
+              {renderFollowupTable(upcomingWeek, 'blue', 'upcoming')}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Scheduled Installations Table */}
+      <div ref={installationsRef} className="mb-12">
+        <h2 className="text-2xl font-bold text-green-800 mb-6 flex items-center">
+          <span className="w-3 h-3 bg-green-500 rounded-full mr-3"></span>
+          SCHEDULED INSTALLATIONS ({scheduledInstallations.length})
+        </h2>
+        
+        {scheduledInstallations.length === 0 ? (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="text-center py-12">
+              <div className="text-6xl text-green-300 mb-4">🏗️</div>
+              <p className="text-green-600 text-lg">No installations scheduled!</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-green-200">
+            <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-blue-50 border-b border-blue-200">
+                  <thead className="bg-green-50 border-b border-green-200">
                     <tr>
-                      <th className="text-left py-4 px-6 font-semibold text-blue-900">Lead Info</th>
-                      <th className="text-left py-4 px-6 font-semibold text-blue-900">Contact</th>
-                      <th className="text-left py-4 px-6 font-semibold text-blue-900">Status</th>
-                      <th className="text-left py-4 px-6 font-semibold text-blue-900">Due Date</th>
-                      <th className="text-left py-4 px-6 font-semibold text-blue-900">Project Value</th>
-                      <th className="text-center py-4 px-6 font-semibold text-blue-900">Actions</th>
+                      <th className="text-left py-4 px-6 font-semibold text-green-900">Customer</th>
+                      <th className="text-left py-4 px-6 font-semibold text-green-900">Contact</th>
+                      <th className="text-left py-4 px-6 font-semibold text-green-900">Installation Date</th>
+                      <th className="text-left py-4 px-6 font-semibold text-green-900">Installer</th>
+                      <th className="text-left py-4 px-6 font-semibold text-green-900">Project Value</th>
+                      <th className="text-left py-4 px-6 font-semibold text-green-900">Payment Status</th>
+                      <th className="text-center py-4 px-6 font-semibold text-green-900">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {upcomingWeek.map((lead, index) => (
-                      <tr key={lead.id} className={`border-b border-blue-100 hover:bg-blue-25 ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-blue-25'
-                      }`} data-testid={`upcoming-lead-${lead.id}`}>
+                    {scheduledInstallations.map((lead, index) => (
+                      <tr key={lead.id} className={`border-b border-green-100 hover:bg-green-25 ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-green-25'
+                      }`} data-testid={`installation-lead-${lead.id}`}>
                         <td className="py-4 px-6">
                           <div>
-                            <h3 className="font-semibold text-blue-900">{lead.name}</h3>
-                            <p className="text-blue-700 text-xs">Assigned: {getTeamMemberName(lead.assigned_to)}</p>
-                            {lead.notes && (
-                              <p className="text-blue-600 text-xs italic mt-1">Notes: {lead.notes}</p>
-                            )}
+                            <h3 className="font-semibold text-green-900">{lead.name}</h3>
+                            <p className="text-green-700 text-xs">Assigned: {getTeamMemberName(lead.assigned_to)}</p>
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <div className="text-blue-700">
+                          <div className="text-green-700">
                             <p className="font-medium">{lead.phone}</p>
                             {lead.email && <p className="text-xs">{lead.email}</p>}
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <div>
-                            <Badge className="bg-blue-200 text-blue-800 capitalize">{lead.remarks}</Badge>
-                            {getPaymentStatusBadge(lead) && (
-                              <div className="mt-1">{getPaymentStatusBadge(lead)}</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <Badge className="bg-blue-100 text-blue-800">
-                            {lead.next_followup_date ? formatDate(lead.next_followup_date) : 'Not set'}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className="font-medium text-blue-700">
-                            {lead.project_amount ? formatCurrency(lead.project_amount) : 'Not set'}
+                          <span className="text-green-700">
+                            {formatDate(lead.installation_date)}
                           </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="text-green-700 capitalize">
+                            {lead.assigned_installer || 'Not assigned'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="font-medium text-green-700">
+                            {formatCurrency(lead.project_amount)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          {getPaymentStatusBadge(lead)}
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex gap-2 justify-center">
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                              className="border-green-300 text-green-700 hover:bg-green-100"
                               onClick={() => window.open(`tel:${lead.phone}`, '_self')}
-                              data-testid={`button-call-upcoming-${lead.id}`}
+                              data-testid={`button-call-installation-${lead.id}`}
                             >
                               📞
                             </Button>
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                              className="border-green-300 text-green-700 hover:bg-green-100"
                               onClick={() => handleQuickEdit(lead)}
-                              data-testid={`button-edit-upcoming-${lead.id}`}
+                              data-testid={`button-edit-installation-${lead.id}`}
                             >
                               ✏️
                             </Button>
@@ -549,23 +605,14 @@ export default function Followups() {
           </Card>
         )}
       </div>
-      
+
       {/* Quick Edit Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {selectedLead?.remarks === 'sold' ? 'Manage Installation & Payment' : 'Update Follow-Up'}
-            </DialogTitle>
+            <DialogTitle>Quick Edit Lead</DialogTitle>
           </DialogHeader>
-          
-          {selectedLead && (
-            <QuickEditForm 
-              lead={selectedLead} 
-              onUpdate={handleQuickUpdate}
-              onClose={() => setIsEditModalOpen(false)}
-            />
-          )}
+          {selectedLead && <QuickEditForm lead={selectedLead} />}
         </DialogContent>
       </Dialog>
     </div>
@@ -573,185 +620,196 @@ export default function Followups() {
 }
 
 // Quick Edit Form Component
-function QuickEditForm({ lead, onUpdate, onClose }: {
-  lead: Lead;
-  onUpdate: (leadId: string, updates: Partial<Lead>) => void;
-  onClose: () => void;
-}) {
-  const [followupDate, setFollowupDate] = useState(
-    lead.next_followup_date ? new Date(lead.next_followup_date).toISOString().split('T')[0] : ''
-  );
-  const [assignedTo, setAssignedTo] = useState(lead.assigned_to);
-  const [notes, setNotes] = useState(lead.notes || '');
-  const [additionalNotes, setAdditionalNotes] = useState(lead.additional_notes || '');
-  const [status, setStatus] = useState(lead.remarks);
-  const [depositPaid, setDepositPaid] = useState(lead.deposit_paid || false);
-  const [balancePaid, setBalancePaid] = useState(lead.balance_paid || false);
-  const [installationDate, setInstallationDate] = useState(
-    lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : ''
-  );
-  const [assignedInstaller, setAssignedInstaller] = useState(lead.assigned_installer || '');
-  const [projectAmount, setProjectAmount] = useState(lead.project_amount || '');
-  
+function QuickEditForm({ lead }: { lead: Lead }) {
+  const [formData, setFormData] = useState({
+    next_followup_date: lead.next_followup_date ? new Date(lead.next_followup_date).toISOString().split('T')[0] : '',
+    remarks: lead.remarks,
+    notes: lead.notes || '',
+    project_amount: lead.project_amount || '',
+    assigned_to: lead.assigned_to,
+    installation_date: lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : '',
+    assigned_installer: lead.assigned_installer || '',
+    deposit_paid: lead.deposit_paid || false,
+    balance_paid: lead.balance_paid || false,
+  });
+
+  const { toast } = useToast();
+
+  const updateLeadMutation = useMutation({
+    mutationFn: async (updates: Partial<Lead>) => {
+      const response = await fetch('/api/leads/' + lead.id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update lead');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      toast({ title: 'Lead updated successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Failed to update lead', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     const updates: Partial<Lead> = {
-      next_followup_date: followupDate ? new Date(followupDate + 'T12:00:00') : null,
-      assigned_to: assignedTo,
-      notes,
-      additional_notes: additionalNotes,
-      remarks: status,
-      project_amount: projectAmount || null,
+      next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date).toISOString() : null,
+      remarks: formData.remarks,
+      notes: formData.notes || null,
+      project_amount: formData.project_amount || null,
+      assigned_to: formData.assigned_to,
+      installation_date: formData.installation_date ? new Date(formData.installation_date).toISOString() : null,
+      assigned_installer: formData.assigned_installer || null,
+      deposit_paid: formData.deposit_paid,
+      balance_paid: formData.balance_paid,
     };
-    
-    // Add payment and installation fields for sold leads
-    if (status === 'sold') {
-      updates.deposit_paid = depositPaid;
-      updates.balance_paid = balancePaid;
-      updates.installation_date = installationDate ? new Date(installationDate + 'T12:00:00') : null;
-      updates.assigned_installer = assignedInstaller || null;
-    }
-    
-    onUpdate(lead.id, updates);
+
+    updateLeadMutation.mutate(updates);
   };
-  
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="status">Lead Status</Label>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="new">New</SelectItem>
-              <SelectItem value="in-progress">In Progress</SelectItem>
-              <SelectItem value="quoted">Quoted</SelectItem>
-              <SelectItem value="sold">Sold</SelectItem>
-              <SelectItem value="not-interested">Not Interested</SelectItem>
-              <SelectItem value="not-service-area">Not Service Area</SelectItem>
-              <SelectItem value="not-compatible">Not Compatible</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <Label htmlFor="assignedTo">Assigned To</Label>
-          <Select value={assignedTo} onValueChange={setAssignedTo}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="kim">Kim</SelectItem>
-              <SelectItem value="patrick">Patrick</SelectItem>
-              <SelectItem value="lina">Lina</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
       <div>
-        <Label htmlFor="projectAmount">Project Amount ($)</Label>
-        <Input 
-          id="projectAmount"
-          type="number"
-          step="0.01"
-          value={projectAmount}
-          onChange={(e) => setProjectAmount(e.target.value)}
-          placeholder="0.00"
+        <Label htmlFor="next_followup_date">Next Follow-up Date</Label>
+        <Input
+          id="next_followup_date"
+          type="date"
+          value={formData.next_followup_date}
+          onChange={(e) => setFormData(prev => ({ ...prev, next_followup_date: e.target.value }))}
+          data-testid="input-next-followup-date"
         />
       </div>
-      
-      {status !== 'sold' && (
-        <div>
-          <Label htmlFor="followupDate">Next Follow-up Date</Label>
-          <Input 
-            id="followupDate"
-            type="date"
-            value={followupDate}
-            onChange={(e) => setFollowupDate(e.target.value)}
-          />
-        </div>
-      )}
-      
-      {status === 'sold' && (
+
+      <div>
+        <Label htmlFor="status">Status</Label>
+        <Select
+          value={formData.remarks}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, remarks: value }))}
+        >
+          <SelectTrigger data-testid="select-status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="new">New</SelectItem>
+            <SelectItem value="in-progress">In Progress</SelectItem>
+            <SelectItem value="quoted">Quoted</SelectItem>
+            <SelectItem value="sold">Sold</SelectItem>
+            <SelectItem value="not-interested">Not Interested</SelectItem>
+            <SelectItem value="not-service-area">Not Service Area</SelectItem>
+            <SelectItem value="not-compatible">Not Compatible</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="project_amount">Project Amount</Label>
+        <Input
+          id="project_amount"
+          type="number"
+          step="0.01"
+          placeholder="0.00"
+          value={formData.project_amount}
+          onChange={(e) => setFormData(prev => ({ ...prev, project_amount: e.target.value }))}
+          data-testid="input-project-amount"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="assigned_to">Assigned To</Label>
+        <Select
+          value={formData.assigned_to}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: value }))}
+        >
+          <SelectTrigger data-testid="select-assigned-to">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="kim">Kim</SelectItem>
+            <SelectItem value="patrick">Patrick</SelectItem>
+            <SelectItem value="lina">Lina</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="notes">Notes</Label>
+        <Textarea
+          id="notes"
+          value={formData.notes}
+          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+          data-testid="textarea-notes"
+        />
+      </div>
+
+      {formData.remarks === 'sold' && (
         <>
-          <div className="space-y-3">
-            <h4 className="font-medium text-green-800">Payment Tracking</h4>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="depositPaid" 
-                checked={depositPaid} 
-                onCheckedChange={(checked) => setDepositPaid(checked === true)}
-              />
-              <Label htmlFor="depositPaid">Deposit Received</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="balancePaid" 
-                checked={balancePaid} 
-                onCheckedChange={(checked) => setBalancePaid(checked === true)}
-              />
-              <Label htmlFor="balancePaid">Balance Received</Label>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="installationDate">Installation Date</Label>
-              <Input 
-                id="installationDate"
-                type="date"
-                value={installationDate}
-                onChange={(e) => setInstallationDate(e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="installer">Assigned Installer</Label>
-              <Select value={assignedInstaller} onValueChange={setAssignedInstaller}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select installer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="angel">Angel</SelectItem>
-                  <SelectItem value="brian">Brian</SelectItem>
-                  <SelectItem value="luis">Luis</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
           <div>
-            <Label htmlFor="installationNotes">Installation Notes</Label>
-            <Textarea 
-              id="installationNotes"
-              value={additionalNotes}
-              onChange={(e) => setAdditionalNotes(e.target.value)}
-              placeholder="Special requirements, materials needed, etc."
+            <Label htmlFor="installation_date">Installation Date</Label>
+            <Input
+              id="installation_date"
+              type="date"
+              value={formData.installation_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, installation_date: e.target.value }))}
+              data-testid="input-installation-date"
             />
+          </div>
+
+          <div>
+            <Label htmlFor="assigned_installer">Assigned Installer</Label>
+            <Select
+              value={formData.assigned_installer}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_installer: value }))}
+            >
+              <SelectTrigger data-testid="select-assigned-installer">
+                <SelectValue placeholder="Select installer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="angel">Angel</SelectItem>
+                <SelectItem value="brian">Brian</SelectItem>
+                <SelectItem value="luis">Luis</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="deposit_paid"
+              checked={formData.deposit_paid}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, deposit_paid: checked as boolean }))}
+              data-testid="checkbox-deposit-paid"
+            />
+            <Label htmlFor="deposit_paid">Deposit Paid</Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="balance_paid"
+              checked={formData.balance_paid}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, balance_paid: checked as boolean }))}
+              data-testid="checkbox-balance-paid"
+            />
+            <Label htmlFor="balance_paid">Balance Paid</Label>
           </div>
         </>
       )}
-      
-      <div>
-        <Label htmlFor="notes">General Notes</Label>
-        <Textarea 
-          id="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Call notes, customer preferences, etc."
-        />
-      </div>
-      
-      <div className="flex gap-2 justify-end">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit">
-          Update Lead
+
+      <div className="flex gap-3 pt-4">
+        <Button type="submit" disabled={updateLeadMutation.isPending} data-testid="button-save-lead">
+          {updateLeadMutation.isPending ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </form>
