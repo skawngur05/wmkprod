@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/auth-context';
 import { capitalizeFirst } from '@/lib/auth';
 import { Link, useLocation } from 'wouter';
-import logoPath from '@assets/og-logo (1)_1756054724582.jpg';
+import logoPath from '@assets/wmk-wh_1756056124487.png';
 
 export function Sidebar() {
   const { user, logout } = useAuth();
