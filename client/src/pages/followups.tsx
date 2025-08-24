@@ -85,7 +85,7 @@ export default function Followups() {
   };
 
   const handleDateSave = (leadId: string) => {
-    const newDate = tempDate ? new Date(tempDate).toISOString() : null;
+    const newDate = tempDate ? tempDate : null;
     updateLeadMutation.mutate({ 
       id: leadId, 
       updates: { next_followup_date: newDate } 
@@ -285,7 +285,7 @@ export default function Followups() {
                       onClick={() => handleDateEdit(lead.id, lead.next_followup_date)}
                       data-testid={`text-next-followup-${lead.id}`}
                     >
-                      {formatDate(lead.next_followup_date)}
+                      {formatDate(lead.next_followup_date ? lead.next_followup_date.toString() : null)}
                     </div>
                   )}
                 </td>
@@ -558,7 +558,7 @@ export default function Followups() {
                         </td>
                         <td className="py-4 px-6">
                           <span className="text-green-700">
-                            {formatDate(lead.installation_date)}
+                            {formatDate(lead.installation_date ? lead.installation_date.toString() : null)}
                           </span>
                         </td>
                         <td className="py-4 px-6">
@@ -667,12 +667,12 @@ function QuickEditForm({ lead }: { lead: Lead }) {
     e.preventDefault();
     
     const updates: Partial<Lead> = {
-      next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date).toISOString() : null,
+      next_followup_date: formData.next_followup_date ? formData.next_followup_date : null,
       remarks: formData.remarks,
       notes: formData.notes || null,
       project_amount: formData.project_amount || null,
       assigned_to: formData.assigned_to,
-      installation_date: formData.installation_date ? new Date(formData.installation_date).toISOString() : null,
+      installation_date: formData.installation_date ? formData.installation_date : null,
       assigned_installer: formData.assigned_installer || null,
       deposit_paid: formData.deposit_paid,
       balance_paid: formData.balance_paid,
