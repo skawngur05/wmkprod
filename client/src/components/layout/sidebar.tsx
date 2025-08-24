@@ -21,11 +21,7 @@ export function Sidebar() {
     <div className="sidebar">
       <div className="sidebar-header">
         <Link href="/dashboard" className="sidebar-brand" data-testid="sidebar-brand">
-          <img src={logoPath} alt="Wrap My Kitchen" style={{ width: '32px', height: '32px' }} />
-          <div>
-            <span className="brand-wrap">wrap</span>
-            <span className="brand-kitchen">kitchen</span>
-          </div>
+          <img src={logoPath} alt="Kitchen Logo" style={{ height: '40px', width: 'auto' }} />
         </Link>
       </div>
       
