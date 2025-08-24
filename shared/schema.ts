@@ -77,3 +77,47 @@ export const LEAD_STATUSES = [
 
 export const ASSIGNEES = ["kim", "patrick", "lina"] as const;
 export const INSTALLERS = ["angel", "brian", "luis"] as const;
+
+// Sample Booklets schema
+export const sampleBooklets = pgTable("sample_booklets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  order_number: text("order_number").notNull().unique(),
+  customer_name: text("customer_name").notNull(),
+  address: text("address").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  product_type: text("product_type").notNull(), // demo_kit_and_sample_booklet, sample_booklet_only, trial_kit, demo_kit_only
+  tracking_number: text("tracking_number"),
+  status: text("status").notNull().default("pending"), // pending, shipped, delivered
+  date_ordered: timestamp("date_ordered").notNull().defaultNow(),
+  date_shipped: timestamp("date_shipped"),
+  notes: text("notes"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertSampleBookletSchema = createInsertSchema(sampleBooklets).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const updateSampleBookletSchema = insertSampleBookletSchema.partial();
+
+export type InsertSampleBooklet = z.infer<typeof insertSampleBookletSchema>;
+export type UpdateSampleBooklet = z.infer<typeof updateSampleBookletSchema>;
+export type SampleBooklet = typeof sampleBooklets.$inferSelect;
+
+// Sample Booklets enums
+export const PRODUCT_TYPES = [
+  "demo_kit_and_sample_booklet",
+  "sample_booklet_only", 
+  "trial_kit",
+  "demo_kit_only"
+] as const;
+
+export const BOOKLET_STATUSES = [
+  "pending",
+  "shipped", 
+  "delivered"
+] as const;

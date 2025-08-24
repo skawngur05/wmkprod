@@ -15,6 +15,7 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Leads from "@/pages/leads";
 import Followups from "@/pages/followups";
+import SampleBooklets from "@/pages/sample-booklets";
 import Installations from "@/pages/installations";
 import Reports from "@/pages/reports";
 
@@ -80,6 +81,12 @@ function AppRouter() {
       <Route path="/followups">
         <ProtectedRoute>
           <Followups />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/sample-booklets">
+        <ProtectedRoute>
+          <SampleBooklets />
         </ProtectedRoute>
       </Route>
       

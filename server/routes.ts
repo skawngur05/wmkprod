@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertLeadSchema, updateLeadSchema } from "@shared/schema";
+import { insertLeadSchema, updateLeadSchema, insertSampleBookletSchema, updateSampleBookletSchema } from "@shared/schema";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -183,6 +183,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(installations);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch installations" });
+    }
+  });
+
+  // Sample Booklets endpoints
+  app.get("/api/sample-booklets", async (req, res) => {
+    try {
+      const { status } = req.query;
+      let booklets = await storage.getSampleBooklets();
+
+      if (status) {
+        booklets = await storage.getSampleBookletsByStatus(status as string);
+      }
+
+      res.json(booklets);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch sample booklets" });
+    }
+  });
+
+  app.get("/api/sample-booklets/:id", async (req, res) => {
+    try {
+      const booklet = await storage.getSampleBooklet(req.params.id);
+      if (!booklet) {
+        return res.status(404).json({ message: "Sample booklet not found" });
+      }
+      res.json(booklet);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch sample booklet" });
+    }
+  });
+
+  app.post("/api/sample-booklets", async (req, res) => {
+    try {
+      const bookletData = insertSampleBookletSchema.parse(req.body);
+      const booklet = await storage.createSampleBooklet(bookletData);
+      res.status(201).json(booklet);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid booklet data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create sample booklet" });
+    }
+  });
+
+  app.put("/api/sample-booklets/:id", async (req, res) => {
+    try {
+      const updates = updateSampleBookletSchema.parse(req.body);
+      const booklet = await storage.updateSampleBooklet(req.params.id, updates);
+      
+      if (!booklet) {
+        return res.status(404).json({ message: "Sample booklet not found" });
+      }
+      
+      res.json(booklet);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid booklet data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update sample booklet" });
+    }
+  });
+
+  app.delete("/api/sample-booklets/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteSampleBooklet(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Sample booklet not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete sample booklet" });
+    }
+  });
+
+  // Sample Booklets dashboard stats
+  app.get("/api/sample-booklets/stats/dashboard", async (req, res) => {
+    try {
+      const allBooklets = await storage.getSampleBooklets();
+      const pending = allBooklets.filter(b => b.status === "pending").length;
+      const shipped = allBooklets.filter(b => b.status === "shipped").length;
+      const delivered = allBooklets.filter(b => b.status === "delivered").length;
+      const thisWeek = allBooklets.filter(b => {
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        return new Date(b.date_ordered) > weekAgo;
+      }).length;
+
+      res.json({
+        totalOrders: allBooklets.length,
+        pendingOrders: pending,
+        shippedOrders: shipped,
+        deliveredOrders: delivered,
+        thisWeekOrders: thisWeek
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch booklet stats" });
     }
   });
 

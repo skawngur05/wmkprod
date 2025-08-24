@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead } from "@shared/schema";
+import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -14,15 +14,25 @@ export interface IStorage {
   getLeadsByAssignee(assignee: string): Promise<Lead[]>;
   getLeadsWithFollowupsDue(date: Date): Promise<Lead[]>;
   getLeadsCreatedAfter(date: Date): Promise<Lead[]>;
+
+  // Sample Booklets operations
+  getSampleBooklets(): Promise<SampleBooklet[]>;
+  getSampleBooklet(id: string): Promise<SampleBooklet | undefined>;
+  createSampleBooklet(booklet: InsertSampleBooklet): Promise<SampleBooklet>;
+  updateSampleBooklet(id: string, updates: UpdateSampleBooklet): Promise<SampleBooklet | undefined>;
+  deleteSampleBooklet(id: string): Promise<boolean>;
+  getSampleBookletsByStatus(status: string): Promise<SampleBooklet[]>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private leads: Map<string, Lead>;
+  private sampleBooklets: Map<string, SampleBooklet>;
 
   constructor() {
     this.users = new Map();
     this.leads = new Map();
+    this.sampleBooklets = new Map();
     this.initializeDefaultData();
   }
 
@@ -36,7 +46,7 @@ export class MemStorage implements IStorage {
 
     defaultUsers.forEach(userData => {
       const id = randomUUID();
-      const user: User = { ...userData, id };
+      const user: User = { ...userData, id, role: userData.role };
       this.users.set(id, user);
     });
 
@@ -97,8 +107,70 @@ export class MemStorage implements IStorage {
 
     sampleLeads.forEach(leadData => {
       const id = randomUUID();
-      const lead: Lead = { ...leadData, id };
+      const lead: Lead = { 
+        ...leadData, 
+        id,
+        email: leadData.email || null,
+        next_followup_date: leadData.next_followup_date || null,
+        notes: leadData.notes || null,
+        additional_notes: leadData.additional_notes || null,
+        installation_date: leadData.installation_date || null,
+        assigned_installer: leadData.assigned_installer || null
+      };
       this.leads.set(id, lead);
+    });
+
+    // Create sample booklets for demonstration
+    const sampleBooklets = [
+      {
+        order_number: "BK001",
+        customer_name: "John Smith",
+        address: "123 Main St, Anytown, ST 12345",
+        email: "john@email.com",
+        phone: "(555) 111-1111",
+        product_type: "demo_kit_and_sample_booklet",
+        status: "pending",
+        notes: "Rush order requested"
+      },
+      {
+        order_number: "BK002", 
+        customer_name: "Jane Doe",
+        address: "456 Oak Ave, Somewhere, ST 67890",
+        email: "jane@email.com",
+        phone: "(555) 222-2222",
+        product_type: "sample_booklet_only",
+        tracking_number: "1Z12345E0291980793",
+        status: "shipped",
+        date_shipped: new Date("2024-01-16"),
+        notes: "Standard shipment"
+      },
+      {
+        order_number: "BK003",
+        customer_name: "Bob Johnson", 
+        address: "789 Pine Rd, Elsewhere, ST 54321",
+        email: "bob@email.com",
+        phone: "(555) 333-3333",
+        product_type: "trial_kit",
+        tracking_number: "1Z12345E0392857735",
+        status: "delivered",
+        date_shipped: new Date("2024-01-14"),
+        notes: "Customer requested expedited delivery"
+      }
+    ];
+
+    sampleBooklets.forEach(bookletData => {
+      const id = randomUUID();
+      const booklet: SampleBooklet = { 
+        ...bookletData, 
+        id,
+        date_ordered: new Date("2024-01-15"),
+        tracking_number: bookletData.tracking_number || null,
+        date_shipped: bookletData.date_shipped || null,
+        notes: bookletData.notes || null,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+      this.sampleBooklets.set(id, booklet);
     });
   }
 
@@ -175,6 +247,53 @@ export class MemStorage implements IStorage {
   async getLeadsCreatedAfter(date: Date): Promise<Lead[]> {
     return Array.from(this.leads.values()).filter(lead => 
       new Date(lead.date_created) > date
+    );
+  }
+
+  // Sample Booklets methods
+  async getSampleBooklets(): Promise<SampleBooklet[]> {
+    return Array.from(this.sampleBooklets.values()).sort((a, b) => 
+      new Date(b.date_ordered).getTime() - new Date(a.date_ordered).getTime()
+    );
+  }
+
+  async getSampleBooklet(id: string): Promise<SampleBooklet | undefined> {
+    return this.sampleBooklets.get(id);
+  }
+
+  async createSampleBooklet(insertBooklet: InsertSampleBooklet): Promise<SampleBooklet> {
+    const id = randomUUID();
+    const booklet: SampleBooklet = { 
+      ...insertBooklet, 
+      id,
+      date_ordered: new Date(),
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+    this.sampleBooklets.set(id, booklet);
+    return booklet;
+  }
+
+  async updateSampleBooklet(id: string, updates: UpdateSampleBooklet): Promise<SampleBooklet | undefined> {
+    const existingBooklet = this.sampleBooklets.get(id);
+    if (!existingBooklet) return undefined;
+
+    const updatedBooklet: SampleBooklet = { 
+      ...existingBooklet, 
+      ...updates,
+      updated_at: new Date()
+    };
+    this.sampleBooklets.set(id, updatedBooklet);
+    return updatedBooklet;
+  }
+
+  async deleteSampleBooklet(id: string): Promise<boolean> {
+    return this.sampleBooklets.delete(id);
+  }
+
+  async getSampleBookletsByStatus(status: string): Promise<SampleBooklet[]> {
+    return Array.from(this.sampleBooklets.values()).filter(
+      booklet => booklet.status === status
     );
   }
 }
