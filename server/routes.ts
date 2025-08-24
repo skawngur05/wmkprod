@@ -439,6 +439,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch available years" });
     }
   });
+  
+  // Installation Email Notification API
+  app.post("/api/installations/email", async (req, res) => {
+    try {
+      const { installationId, type, customMessage } = req.body;
+      
+      if (!installationId || !type) {
+        return res.status(400).json({ message: "Installation ID and email type are required" });
+      }
+      
+      if (!['client', 'installer'].includes(type)) {
+        return res.status(400).json({ message: "Email type must be 'client' or 'installer'" });
+      }
+      
+      const installation = await storage.getLead(installationId);
+      if (!installation) {
+        return res.status(404).json({ message: "Installation not found" });
+      }
+      
+      if (!installation.installation_date) {
+        return res.status(400).json({ message: "Installation date not set" });
+      }
+      
+      // Format installation date
+      const installDate = new Date(installation.installation_date);
+      const formattedDate = installDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      let emailContent = '';
+      let subject = '';
+      let recipient = '';
+      
+      if (type === 'client') {
+        if (!installation.email) {
+          return res.status(400).json({ message: "Client email not available" });
+        }
+        
+        recipient = installation.email;
+        subject = `Installation Confirmation - ${formattedDate}`;
+        emailContent = `
+Dear ${installation.name},
+
+Your kitchen installation is scheduled for ${formattedDate} at 9:00 AM.
+
+Installation Details:
+- Customer: ${installation.name}
+- Phone: ${installation.phone}
+- Project Value: ${installation.project_amount ? `$${installation.project_amount}` : 'N/A'}
+- Installer: ${installation.assigned_installer || 'TBD'}
+
+What to expect:
+- Our team will arrive promptly at 9:00 AM
+- Installation typically takes 4-6 hours
+- Please ensure the work area is clear and accessible
+- Someone should be present during the installation
+
+If you have any questions or need to reschedule, please contact us immediately.
+
+${customMessage ? `\nAdditional Notes:\n${customMessage}` : ''}
+
+Thank you for choosing us for your kitchen project!
+
+Best regards,
+Installation Team
+        `.trim();
+        
+      } else if (type === 'installer') {
+        if (!installation.assigned_installer) {
+          return res.status(400).json({ message: "No installer assigned" });
+        }
+        
+        // For demo purposes, using a generic installer email
+        // In production, you'd have installer email addresses in your system
+        const installerEmails: Record<string, string> = {
+          'angel': 'angel@company.com',
+          'brian': 'brian@company.com', 
+          'luis': 'luis@company.com'
+        };
+        
+        recipient = installerEmails[installation.assigned_installer] || 'installer@company.com';
+        subject = `Installation Assignment - ${formattedDate}`;
+        emailContent = `
+Hi ${installation.assigned_installer?.charAt(0).toUpperCase()}${installation.assigned_installer?.slice(1)},
+
+You have been assigned an installation for ${formattedDate} at 9:00 AM.
+
+Job Details:
+- Customer: ${installation.name}
+- Phone: ${installation.phone}
+- Email: ${installation.email || 'N/A'}
+- Project Value: ${installation.project_amount ? `$${installation.project_amount}` : 'N/A'}
+- Installation Date: ${formattedDate} at 9:00 AM
+
+Payment Status:
+- Deposit: ${installation.deposit_paid ? 'Paid ✓' : 'Pending'}
+- Balance: ${installation.balance_paid ? 'Paid ✓' : 'Pending'}
+
+${installation.additional_notes ? `Installation Notes:\n${installation.additional_notes}\n` : ''}
+${customMessage ? `\nAdditional Instructions:\n${customMessage}` : ''}
+
+Please contact the customer 24 hours before installation to confirm timing.
+
+Questions? Contact the office.
+
+Thanks!
+Installation Management
+        `.trim();
+      }
+      
+      // In a real application, you would integrate with an email service like:
+      // - SendGrid
+      // - AWS SES 
+      // - Nodemailer with SMTP
+      // - Mailgun
+      // etc.
+      
+      // For now, we'll simulate sending the email
+      console.log('=== EMAIL NOTIFICATION ===');
+      console.log('To:', recipient);
+      console.log('Subject:', subject);
+      console.log('Content:', emailContent);
+      console.log('========================');
+      
+      // Simulate email sending delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      res.json({ 
+        message: "Email sent successfully", 
+        recipient,
+        subject,
+        type
+      });
+    } catch (error) {
+      console.error('Email sending error:', error);
+      res.status(500).json({ message: "Failed to send email notification" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

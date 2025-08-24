@@ -1,11 +1,81 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Lead } from '@shared/schema';
 import { formatCurrency, formatDate } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { queryClient } from '@/lib/queryClient';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useState } from 'react';
 
 export default function Installations() {
   const { data: installations, isLoading } = useQuery<Lead[]>({
     queryKey: ['/api/installations'],
   });
+  
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [selectedInstallation, setSelectedInstallation] = useState<Lead | null>(null);
+  const [emailType, setEmailType] = useState<'client' | 'installer'>('client');
+  const [customMessage, setCustomMessage] = useState('');
+  
+  const { toast } = useToast();
+  
+  const sendEmailMutation = useMutation({
+    mutationFn: async (data: { 
+      installationId: string; 
+      type: 'client' | 'installer'; 
+      customMessage?: string 
+    }) => {
+      const response = await fetch('/api/installations/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to send email');
+      }
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      toast({ 
+        title: 'Email sent successfully', 
+        description: `${variables.type === 'client' ? 'Client' : 'Installer'} has been notified about the installation.`
+      });
+      setEmailModalOpen(false);
+      setCustomMessage('');
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Failed to send email', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    },
+  });
+  
+  const handleEmailClient = (installation: Lead) => {
+    setSelectedInstallation(installation);
+    setEmailType('client');
+    setEmailModalOpen(true);
+  };
+  
+  const handleEmailInstaller = (installation: Lead) => {
+    setSelectedInstallation(installation);
+    setEmailType('installer');
+    setEmailModalOpen(true);
+  };
+  
+  const handleSendEmail = () => {
+    if (!selectedInstallation) return;
+    
+    sendEmailMutation.mutate({
+      installationId: selectedInstallation.id,
+      type: emailType,
+      customMessage: customMessage.trim() || undefined
+    });
+  };
 
   if (isLoading) {
     return (
@@ -157,12 +227,35 @@ export default function Installations() {
                         </span>
                       </td>
                       <td>
-                        <button 
-                          className="btn btn-sm btn-outline-primary"
-                          data-testid={`button-edit-installation-${install.id}`}
-                        >
-                          <i className="fas fa-edit"></i>
-                        </button>
+                        <div className="d-flex gap-1">
+                          <button 
+                            className="btn btn-sm btn-outline-primary"
+                            data-testid={`button-edit-installation-${install.id}`}
+                            title="Edit Installation"
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                          {install.email && install.installation_date && (
+                            <button 
+                              className="btn btn-sm btn-outline-success"
+                              onClick={() => handleEmailClient(install)}
+                              data-testid={`button-email-client-${install.id}`}
+                              title="Email Client"
+                            >
+                              <i className="fas fa-envelope"></i>
+                            </button>
+                          )}
+                          {install.assigned_installer && install.installation_date && (
+                            <button 
+                              className="btn btn-sm btn-outline-info"
+                              onClick={() => handleEmailInstaller(install)}
+                              data-testid={`button-email-installer-${install.id}`}
+                              title="Email Installer"
+                            >
+                              <i className="fas fa-hard-hat"></i>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -181,6 +274,89 @@ export default function Installations() {
           </div>
         </div>
       </div>
+      
+      {/* Email Modal */}
+      <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Email {emailType === 'client' ? 'Client' : 'Installer'} - Installation Notification
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedInstallation && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-semibold mb-2">Installation Details:</h4>
+                <p><strong>Customer:</strong> {selectedInstallation.name}</p>
+                <p><strong>Date:</strong> {selectedInstallation.installation_date ? formatDate(selectedInstallation.installation_date) : 'Not set'}</p>
+                <p><strong>Phone:</strong> {selectedInstallation.phone}</p>
+                {emailType === 'client' && selectedInstallation.email && (
+                  <p><strong>Email:</strong> {selectedInstallation.email}</p>
+                )}
+                {emailType === 'installer' && selectedInstallation.assigned_installer && (
+                  <p><strong>Installer:</strong> {selectedInstallation.assigned_installer}</p>
+                )}
+                {selectedInstallation.project_amount && (
+                  <p><strong>Project Value:</strong> {formatCurrency(selectedInstallation.project_amount)}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label htmlFor="customMessage">
+                  Custom Message (Optional)
+                </Label>
+                <Textarea 
+                  id="customMessage"
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  placeholder={`Add any additional notes for the ${emailType}...`}
+                  className="mt-2"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
+                <p><strong>Email Preview:</strong></p>
+                <p>
+                  {emailType === 'client' 
+                    ? `The client will receive installation details, timing, and what to expect on installation day.`
+                    : `The installer will receive job details, customer contact info, and any special requirements.`
+                  }
+                  {customMessage && ' Your custom message will be included.'}
+                </p>
+              </div>
+              
+              <div className="flex gap-2 justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setEmailModalOpen(false)}
+                  disabled={sendEmailMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSendEmail}
+                  disabled={sendEmailMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {sendEmailMutation.isPending ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin mr-2"></i>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-paper-plane mr-2"></i>
+                      Send Email
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
