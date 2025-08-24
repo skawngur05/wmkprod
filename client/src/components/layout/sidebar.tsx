@@ -50,10 +50,10 @@ export function Sidebar() {
             {user?.username?.charAt(0).toUpperCase()}
           </div>
           <div className="flex-fill">
-            <div className="text-white fw-medium">
+            <div className="fw-medium" style={{ color: 'var(--wmk-black)' }}>
               {user ? capitalizeFirst(user.username) : 'User'}
             </div>
-            <div className="text-muted small">
+            <div className="small" style={{ color: 'var(--wmk-gray)' }}>
               {user?.role === 'admin' ? 'Administrator' : 'Sales Rep'}
             </div>
           </div>
