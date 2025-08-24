@@ -19,7 +19,7 @@ export const leads = pgTable("leads", {
   date_created: timestamp("date_created").notNull().defaultNow(),
   next_followup_date: timestamp("next_followup_date"),
   remarks: text("remarks").notNull().default("new"), // status field
-  assigned_to: text("assigned_to").notNull(),
+  assigned_to: text("assigned_to"),
   project_amount: decimal("project_amount", { precision: 10, scale: 2 }),
   notes: text("notes"),
   additional_notes: text("additional_notes"),
