@@ -54,7 +54,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         lead_origin: lead.lead_origin || '',
         remarks: lead.remarks || '',
         assigned_to: lead.assigned_to || '',
-        project_amount: lead.project_amount || '',
+        project_amount: lead.project_amount ? lead.project_amount.toString() : '',
         next_followup_date: lead.next_followup_date ? 
           new Date(lead.next_followup_date).toISOString().split('T')[0] : '',
         notes: lead.notes || ''
@@ -66,9 +66,15 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     e.preventDefault();
     
     const updates = {
-      ...formData,
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email || null,
+      lead_origin: formData.lead_origin,
+      remarks: formData.remarks,
+      assigned_to: formData.assigned_to,
       project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null,
-      next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date) : null
+      next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date) : null,
+      notes: formData.notes || null
     };
 
     updateLeadMutation.mutate(updates);

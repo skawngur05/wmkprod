@@ -55,9 +55,27 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate required fields
+    if (!formData.name || !formData.phone || !formData.lead_origin || !formData.assigned_to) {
+      toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    
     const leadData = {
-      ...formData,
-      project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email || null,
+      lead_origin: formData.lead_origin,
+      assigned_to: formData.assigned_to,
+      project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null,
+      notes: formData.notes || null,
+      remarks: "new", // Default status for new leads
+      next_followup_date: null,
+      additional_notes: null,
+      deposit_paid: false,
+      balance_paid: false,
+      installation_date: null,
+      assigned_installer: null
     };
 
     createLeadMutation.mutate(leadData);
