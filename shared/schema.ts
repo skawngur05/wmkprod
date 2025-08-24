@@ -38,7 +38,10 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   date_created: true,
 });
 
-export const updateLeadSchema = insertLeadSchema.partial();
+export const updateLeadSchema = insertLeadSchema.partial().extend({
+  next_followup_date: z.union([z.date(), z.string().datetime(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
+  installation_date: z.union([z.date(), z.string().datetime(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
+});
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
