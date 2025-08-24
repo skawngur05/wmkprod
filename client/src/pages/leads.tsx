@@ -23,6 +23,23 @@ export default function Leads() {
 
   const { data: leads, isLoading } = useQuery<Lead[]>({
     queryKey: ['/api/leads', filters],
+    queryFn: async () => {
+      // Build query parameters from filters
+      const params = new URLSearchParams();
+      if (filters.search) params.append('search', filters.search);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.origin) params.append('origin', filters.origin);
+      if (filters.assigned_to) params.append('assigned_to', filters.assigned_to);
+      
+      const url = `/api/leads${params.toString() ? '?' + params.toString() : ''}`;
+      const res = await fetch(url, { credentials: "include" });
+      
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${res.statusText}`);
+      }
+      
+      return res.json();
+    },
   });
 
   const deleteLeadMutation = useMutation({
