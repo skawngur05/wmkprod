@@ -131,142 +131,227 @@ export default function Installations() {
   const installers = ['angel', 'brian', 'luis'];
 
   return (
-    <div className="container-fluid py-4">
-      <div className="row mb-4">
+    <div className="container-fluid py-4" style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)', minHeight: '100vh' }}>
+      {/* Enhanced Header */}
+      <div className="row mb-5">
         <div className="col">
-          <h1 className="h3 fw-bold" data-testid="installations-title">Installation Management</h1>
-          <p className="text-muted">Schedule and track kitchen installations</p>
-        </div>
-      </div>
-
-      {/* Installation Stats */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <div className="card text-center" data-testid="stat-this-week">
-            <div className="card-body">
-              <i className="fas fa-calendar-day fa-2x text-primary mb-2"></i>
-              <h4>{thisWeekInstallations.length}</h4>
-              <p className="text-muted">This Week</p>
+          <div className="d-flex align-items-center justify-content-between">
+            <div>
+              <h1 className="h2 fw-bold mb-2" data-testid="installations-title" style={{ color: '#2c3e50' }}>
+                <i className="fas fa-tools text-primary me-3"></i>
+                Installation Management Hub
+              </h1>
+              <p className="text-muted fs-5">Streamlined scheduling and tracking for kitchen transformations</p>
             </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card text-center" data-testid="stat-completed">
-            <div className="card-body">
-              <i className="fas fa-check-circle fa-2x text-success mb-2"></i>
-              <h4>{completedProjects.length}</h4>
-              <p className="text-muted">Completed</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card text-center" data-testid="stat-repairs">
-            <div className="card-body">
-              <i className="fas fa-wrench fa-2x text-danger mb-2"></i>
-              <h4>{repairJobs.length}</h4>
-              <p className="text-muted">Repairs</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card text-center" data-testid="stat-installers">
-            <div className="card-body">
-              <i className="fas fa-user-hard-hat fa-2x text-info mb-2"></i>
-              <h4>{installers.length}</h4>
-              <p className="text-muted">Installers</p>
+            <div className="d-flex gap-2">
+              <button className="btn btn-outline-primary btn-lg">
+                <i className="fas fa-plus me-2"></i>Schedule Installation
+              </button>
+              <button className="btn btn-primary btn-lg">
+                <i className="fas fa-calendar-alt me-2"></i>View Calendar
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Upcoming Installations */}
-      <div className="card mb-4">
-        <div className="card-header bg-primary text-white">
-          <h5 className="mb-0">
-            <i className="fas fa-calendar-plus me-2"></i>
-            Upcoming Installations ({upcomingInstallations.length})
-          </h5>
+      {/* Enhanced Installation Stats with Premium Design */}
+      <div className="row mb-5">
+        <div className="col-lg-3 col-md-6 mb-3">
+          <div className="card border-0 shadow-lg h-100" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }} data-testid="stat-this-week">
+            <div className="card-body text-center text-white p-4">
+              <div className="d-flex justify-content-center align-items-center mb-3">
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <i className="fas fa-calendar-week fa-2x"></i>
+                </div>
+              </div>
+              <h2 className="fw-bold mb-1">{thisWeekInstallations.length}</h2>
+              <p className="mb-0 opacity-75 fw-medium">This Week</p>
+              <small className="opacity-50">Upcoming installs</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-3 col-md-6 mb-3">
+          <div className="card border-0 shadow-lg h-100" style={{ background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' }} data-testid="stat-completed">
+            <div className="card-body text-center text-white p-4">
+              <div className="d-flex justify-content-center align-items-center mb-3">
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <i className="fas fa-check-double fa-2x"></i>
+                </div>
+              </div>
+              <h2 className="fw-bold mb-1">{completedProjects.length}</h2>
+              <p className="mb-0 opacity-75 fw-medium">Completed</p>
+              <small className="opacity-50">Successful projects</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-3 col-md-6 mb-3">
+          <div className="card border-0 shadow-lg h-100" style={{ background: 'linear-gradient(135deg, #ee5a24 0%, #ffc048 100%)' }} data-testid="stat-repairs">
+            <div className="card-body text-center text-white p-4">
+              <div className="d-flex justify-content-center align-items-center mb-3">
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <i className="fas fa-tools fa-2x"></i>
+                </div>
+              </div>
+              <h2 className="fw-bold mb-1">{repairJobs.length}</h2>
+              <p className="mb-0 opacity-75 fw-medium">Repair Jobs</p>
+              <small className="opacity-50">Service calls</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-3 col-md-6 mb-3">
+          <div className="card border-0 shadow-lg h-100" style={{ background: 'linear-gradient(135deg, #3742fa 0%, #2f3542 100%)' }} data-testid="stat-installers">
+            <div className="card-body text-center text-white p-4">
+              <div className="d-flex justify-content-center align-items-center mb-3">
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <i className="fas fa-users-cog fa-2x"></i>
+                </div>
+              </div>
+              <h2 className="fw-bold mb-1">{installers.length}</h2>
+              <p className="mb-0 opacity-75 fw-medium">Active Installers</p>
+              <small className="opacity-50">Team members</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Upcoming Installations with Enhanced Design */}
+      <div className="card border-0 shadow-lg mb-5">
+        <div className="card-header border-0 py-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+          <div className="d-flex justify-content-between align-items-center">
+            <h4 className="mb-0 text-white fw-bold">
+              <i className="fas fa-calendar-check me-3"></i>
+              Upcoming Installations 
+              <span className="badge bg-white text-primary ms-2 fs-6">{upcomingInstallations.length}</span>
+            </h4>
+            <div className="d-flex gap-2">
+              <button className="btn btn-light btn-sm">
+                <i className="fas fa-filter me-1"></i>Filter
+              </button>
+              <button className="btn btn-outline-light btn-sm">
+                <i className="fas fa-download me-1"></i>Export
+              </button>
+            </div>
+          </div>
         </div>
         <div className="card-body p-0">
           {upcomingInstallations.length > 0 ? (
             <div className="table-responsive">
-              <table className="table table-hover mb-0" data-testid="upcoming-installations-table">
-                <thead className="table-light">
+              <table className="table table-hover mb-0 align-middle" data-testid="upcoming-installations-table">
+                <thead style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
                   <tr>
-                    <th>Customer</th>
-                    <th>Installation Date</th>
-                    <th>Installer</th>
-                    <th>Project Value</th>
-                    <th>Payment Status</th>
-                    <th>Actions</th>
+                    <th className="py-3 px-4 fw-semibold text-dark">
+                      <i className="fas fa-user me-2 text-primary"></i>Customer
+                    </th>
+                    <th className="py-3 px-4 fw-semibold text-dark">
+                      <i className="fas fa-calendar me-2 text-success"></i>Installation Date
+                    </th>
+                    <th className="py-3 px-4 fw-semibold text-dark">
+                      <i className="fas fa-hard-hat me-2 text-warning"></i>Installer
+                    </th>
+                    <th className="py-3 px-4 fw-semibold text-dark">
+                      <i className="fas fa-dollar-sign me-2 text-info"></i>Project Value
+                    </th>
+                    <th className="py-3 px-4 fw-semibold text-dark">
+                      <i className="fas fa-credit-card me-2 text-secondary"></i>Payment Status
+                    </th>
+                    <th className="py-3 px-4 fw-semibold text-dark text-center">
+                      <i className="fas fa-cog me-2"></i>Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {upcomingInstallations.map((install) => (
-                    <tr key={install.id} data-testid={`upcoming-installation-${install.id}`}>
-                      <td>
-                        <strong>{install.name}</strong>
-                        <br />
-                        <small className="text-muted">{install.phone}</small>
+                  {upcomingInstallations.map((install, index) => (
+                    <tr key={install.id} data-testid={`upcoming-installation-${install.id}`} 
+                        style={{ borderLeft: index % 2 === 0 ? '4px solid #667eea' : '4px solid #764ba2' }}
+                        className="border-start">
+                      <td className="py-4 px-4">
+                        <div className="d-flex align-items-center">
+                          <div className="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+                            <i className="fas fa-user text-primary"></i>
+                          </div>
+                          <div>
+                            <div className="fw-bold text-dark mb-1">{install.name}</div>
+                            <small className="text-muted">
+                              <i className="fas fa-phone me-1"></i>{install.phone}
+                            </small>
+                          </div>
+                        </div>
                       </td>
-                      <td>
+                      <td className="py-4 px-4">
                         {install.installation_date ? (
-                          <>
-                            <strong>{formatDate(install.installation_date)}</strong>
-                            <br />
-                            <small className="text-muted">9:00 AM</small>
-                          </>
+                          <div>
+                            <div className="fw-bold text-success mb-1">
+                              {formatDate(install.installation_date)}
+                            </div>
+                            <span className="badge bg-success bg-opacity-10 text-success">
+                              <i className="fas fa-clock me-1"></i>9:00 AM
+                            </span>
+                          </div>
                         ) : (
-                          <span className="text-muted">Not scheduled</span>
+                          <span className="badge bg-warning">
+                            <i className="fas fa-calendar-times me-1"></i>Not scheduled
+                          </span>
                         )}
                       </td>
-                      <td>
+                      <td className="py-4 px-4">
                         {install.assigned_installer ? (
-                          <span className="badge bg-primary">
-                            {install.assigned_installer}
-                          </span>
+                          <div className="d-flex align-items-center">
+                            <div className="rounded-circle bg-warning bg-opacity-10 p-2 me-2">
+                              <i className="fas fa-hard-hat text-warning"></i>
+                            </div>
+                            <span className="fw-medium text-capitalize">
+                              {install.assigned_installer}
+                            </span>
+                          </div>
                         ) : (
-                          <span className="text-muted">Not assigned</span>
+                          <span className="badge bg-secondary bg-opacity-50">
+                            <i className="fas fa-user-times me-1"></i>Unassigned
+                          </span>
                         )}
                       </td>
-                      <td>
-                        {install.project_amount ? formatCurrency(install.project_amount) : '-'}
+                      <td className="py-4 px-4">
+                        <div className="fw-bold text-success fs-5">
+                          {install.project_amount ? formatCurrency(install.project_amount) : '-'}
+                        </div>
                       </td>
-                      <td>
-                        <div className="d-flex gap-1">
-                          <span className={`badge ${install.deposit_paid ? 'bg-success' : 'bg-warning'}`}>
-                            Deposit {install.deposit_paid ? '✓' : 'Pending'}
+                      <td className="py-4 px-4">
+                        <div className="d-flex flex-column gap-1">
+                          <span className={`badge ${install.deposit_paid ? 'bg-success' : 'bg-warning text-dark'} d-flex align-items-center justify-content-between`}>
+                            <span>Deposit</span>
+                            <i className={`fas ${install.deposit_paid ? 'fa-check-circle' : 'fa-clock'} ms-1`}></i>
                           </span>
-                          <span className={`badge ${install.balance_paid ? 'bg-success' : 'bg-warning'}`}>
-                            Balance {install.balance_paid ? '✓' : 'Pending'}
+                          <span className={`badge ${install.balance_paid ? 'bg-success' : 'bg-warning text-dark'} d-flex align-items-center justify-content-between`}>
+                            <span>Balance</span>
+                            <i className={`fas ${install.balance_paid ? 'fa-check-circle' : 'fa-clock'} ms-1`}></i>
                           </span>
                         </div>
                       </td>
-                      <td>
-                        <div className="d-flex gap-1">
+                      <td className="py-4 px-4">
+                        <div className="d-flex gap-1 justify-content-center">
                           <button 
-                            className="btn btn-sm btn-outline-primary"
-                            data-testid={`button-edit-upcoming-${install.id}`}
-                            title="Edit Installation"
+                            className="btn btn-sm btn-outline-primary rounded-pill"
+                            data-testid={`button-view-upcoming-${install.id}`}
+                            title="View Installation Details"
                           >
-                            <i className="fas fa-edit"></i>
+                            <i className="fas fa-eye"></i>
                           </button>
                           {install.email && install.installation_date && (
                             <button 
-                              className="btn btn-sm btn-outline-success"
+                              className="btn btn-sm btn-outline-success rounded-pill"
                               onClick={() => handleEmailClient(install)}
                               data-testid={`button-email-upcoming-client-${install.id}`}
-                              title="Email Client"
+                              title="Email Client Confirmation"
                             >
                               <i className="fas fa-envelope"></i>
                             </button>
                           )}
                           {install.assigned_installer && install.installation_date && (
                             <button 
-                              className="btn btn-sm btn-outline-info"
+                              className="btn btn-sm btn-outline-info rounded-pill"
                               onClick={() => handleEmailInstaller(install)}
                               data-testid={`button-email-upcoming-installer-${install.id}`}
-                              title="Email Installer"
+                              title="Notify Installer"
                             >
                               <i className="fas fa-hard-hat"></i>
                             </button>
@@ -279,21 +364,38 @@ export default function Installations() {
               </table>
             </div>
           ) : (
-            <div className="text-center py-4">
-              <i className="fas fa-calendar-plus fa-3x text-muted mb-3"></i>
-              <p className="text-muted">No upcoming installations scheduled</p>
+            <div className="text-center py-5">
+              <div className="rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style={{ width: '120px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="fas fa-calendar-plus fa-3x text-primary"></i>
+              </div>
+              <h5 className="text-muted mb-2">No Installations Scheduled</h5>
+              <p className="text-muted">Ready to schedule new kitchen transformations!</p>
+              <button className="btn btn-primary mt-3">
+                <i className="fas fa-plus me-2"></i>Schedule Installation
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Repairs Section */}
-      <div className="card mb-4">
-        <div className="card-header bg-danger text-white">
-          <h5 className="mb-0">
-            <i className="fas fa-wrench me-2"></i>
-            Repair Jobs ({repairJobs.length})
-          </h5>
+      {/* Enhanced Repairs Section */}
+      <div className="card border-0 shadow-lg mb-5">
+        <div className="card-header border-0 py-4" style={{ background: 'linear-gradient(135deg, #ee5a24 0%, #ffc048 100%)' }}>
+          <div className="d-flex justify-content-between align-items-center">
+            <h4 className="mb-0 text-white fw-bold">
+              <i className="fas fa-tools me-3"></i>
+              Service & Repair Jobs 
+              <span className="badge bg-white text-warning ms-2 fs-6">{repairJobs.length}</span>
+            </h4>
+            <div className="d-flex gap-2">
+              <button className="btn btn-light btn-sm">
+                <i className="fas fa-sort me-1"></i>Priority
+              </button>
+              <button className="btn btn-outline-light btn-sm">
+                <i className="fas fa-plus me-1"></i>Add Repair
+              </button>
+            </div>
+          </div>
         </div>
         <div className="card-body p-0">
           {repairJobs.length > 0 ? (
@@ -378,21 +480,35 @@ export default function Installations() {
               </table>
             </div>
           ) : (
-            <div className="text-center py-4">
-              <i className="fas fa-tools fa-3x text-muted mb-3"></i>
-              <p className="text-muted">No repair jobs scheduled</p>
+            <div className="text-center py-5">
+              <div className="rounded-circle bg-warning bg-opacity-10 p-4 mx-auto mb-4" style={{ width: '120px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="fas fa-tools fa-3x text-warning"></i>
+              </div>
+              <h5 className="text-muted mb-2">No Service Calls</h5>
+              <p className="text-muted">All installations are running smoothly!</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Completed Projects */}
-      <div className="card">
-        <div className="card-header bg-success text-white">
-          <h5 className="mb-0">
-            <i className="fas fa-check-circle me-2"></i>
-            Completed Projects ({completedProjects.length})
-          </h5>
+      {/* Enhanced Completed Projects */}
+      <div className="card border-0 shadow-lg">
+        <div className="card-header border-0 py-4" style={{ background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' }}>
+          <div className="d-flex justify-content-between align-items-center">
+            <h4 className="mb-0 text-white fw-bold">
+              <i className="fas fa-check-double me-3"></i>
+              Completed Projects 
+              <span className="badge bg-white text-success ms-2 fs-6">{completedProjects.length}</span>
+            </h4>
+            <div className="d-flex gap-2">
+              <button className="btn btn-light btn-sm">
+                <i className="fas fa-chart-bar me-1"></i>Analytics
+              </button>
+              <button className="btn btn-outline-light btn-sm">
+                <i className="fas fa-star me-1"></i>Reviews
+              </button>
+            </div>
+          </div>
         </div>
         <div className="card-body p-0">
           {completedProjects.length > 0 ? (
@@ -470,9 +586,12 @@ export default function Installations() {
               </table>
             </div>
           ) : (
-            <div className="text-center py-4">
-              <i className="fas fa-check-circle fa-3x text-muted mb-3"></i>
-              <p className="text-muted">No completed projects yet</p>
+            <div className="text-center py-5">
+              <div className="rounded-circle bg-success bg-opacity-10 p-4 mx-auto mb-4" style={{ width: '120px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="fas fa-check-double fa-3x text-success"></i>
+              </div>
+              <h5 className="text-muted mb-2">No Completed Projects</h5>
+              <p className="text-muted">Project completions will appear here!</p>
             </div>
           )}
         </div>
