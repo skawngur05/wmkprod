@@ -342,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Team Performance Metrics
       const teamStats = filteredLeads.reduce((acc, lead) => {
-        const member = lead.assigned_to;
+        const member = lead.assigned_to || 'unassigned';
         if (!acc[member]) {
           acc[member] = { total: 0, sold: 0, revenue: 0 };
         }
