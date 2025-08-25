@@ -12,6 +12,7 @@ export function Sidebar() {
   const navItems = [
     { path: '/dashboard', icon: 'fas fa-tachometer-alt', label: 'Dashboard', testId: 'nav-dashboard' },
     { path: '/leads', icon: 'fas fa-users', label: 'Leads', testId: 'nav-leads' },
+    { path: '/add-lead', icon: 'fas fa-user-plus', label: 'Add Lead', testId: 'nav-add-lead' },
     { path: '/followups', icon: 'fas fa-calendar-check', label: 'Follow-ups', testId: 'nav-followups' },
     { path: '/sample-booklets', icon: 'fas fa-book', label: 'Sample Booklets', testId: 'nav-sample-booklets' },
     { path: '/installations', icon: 'fas fa-tools', label: 'Installations', testId: 'nav-installations' },

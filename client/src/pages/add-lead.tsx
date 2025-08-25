@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES, insertLeadSchema } from '@shared/schema';
+import { LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, User, Phone, Mail, Share2, Flag, Users, DollarSign, Calendar, FileText, Save, X } from 'lucide-react';
 
 export default function AddLead() {
   const [formData, setFormData] = useState({
@@ -77,215 +84,268 @@ export default function AddLead() {
   };
 
   return (
-    <div className="container-fluid py-4">
-      <div className="row">
-        <div className="col-lg-8 mx-auto">
-          <div className="card">
-            <div className="card-header">
-              <div className="d-flex justify-content-between align-items-center">
-                <h4 className="mb-0">
-                  <i className="fas fa-user-plus text-success me-2"></i>
-                  Add New Lead
-                </h4>
-                <button 
-                  type="button" 
-                  className="btn btn-outline-secondary"
-                  onClick={handleCancel}
-                  data-testid="button-back-to-leads"
-                >
-                  <i className="fas fa-arrow-left me-1"></i>Back to Leads
-                </button>
-              </div>
-            </div>
-            <div className="card-body">
-              <form onSubmit={handleSubmit} data-testid="add-lead-form">
-                <div className="row">
-                  {/* Basic Information */}
-                  <div className="col-12 mb-4">
-                    <h5 className="text-primary border-bottom pb-2">
-                      <i className="fas fa-user me-2"></i>Basic Information
-                    </h5>
-                  </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              className="flex items-center gap-2"
+              data-testid="button-back-to-leads"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Leads
+            </Button>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Add New Lead
+          </h1>
+          <p className="text-gray-600">Create a new lead and start building your pipeline</p>
+        </div>
 
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label required">
-                      <i className="fas fa-user me-1"></i>Full Name
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      required
-                      data-testid="input-lead-name"
-                      placeholder="Enter customer's full name"
-                    />
+        {/* Form Card */}
+        <div className="max-w-4xl mx-auto">
+          <Card className="shadow-lg border-0">
+            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Lead Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8">
+              <form onSubmit={handleSubmit} data-testid="add-lead-form" className="space-y-8">
+                
+                {/* Basic Information Section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
+                    <User className="h-5 w-5 text-blue-500" />
+                    <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
                   </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="flex items-center gap-2 font-medium">
+                        <User className="h-4 w-4" />
+                        Full Name *
+                      </Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        required
+                        data-testid="input-lead-name"
+                        placeholder="Enter customer's full name"
+                        className="h-11"
+                      />
+                    </div>
 
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label required">
-                      <i className="fas fa-phone me-1"></i>Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      className="form-control"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      required
-                      data-testid="input-lead-phone"
-                      placeholder="(555) 123-4567"
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="flex items-center gap-2 font-medium">
+                        <Phone className="h-4 w-4" />
+                        Phone Number *
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        required
+                        data-testid="input-lead-phone"
+                        placeholder="(555) 123-4567"
+                        className="h-11"
+                      />
+                    </div>
 
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">
-                      <i className="fas fa-envelope me-1"></i>Email Address
-                    </label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      data-testid="input-lead-email"
-                      placeholder="customer@example.com"
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="flex items-center gap-2 font-medium">
+                        <Mail className="h-4 w-4" />
+                        Email Address
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        data-testid="input-lead-email"
+                        placeholder="customer@example.com"
+                        className="h-11"
+                      />
+                    </div>
 
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label required">
-                      <i className="fas fa-share-alt me-1"></i>Lead Origin
-                    </label>
-                    <select
-                      className="form-select"
-                      value={formData.lead_origin}
-                      onChange={(e) => handleInputChange('lead_origin', e.target.value)}
-                      required
-                      data-testid="select-lead-origin"
-                    >
-                      {LEAD_ORIGINS.map(origin => (
-                        <option key={origin} value={origin}>
-                          {origin.charAt(0).toUpperCase() + origin.slice(1).replace('-', ' ')}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Lead Management */}
-                  <div className="col-12 mb-4 mt-4">
-                    <h5 className="text-primary border-bottom pb-2">
-                      <i className="fas fa-tasks me-2"></i>Lead Management
-                    </h5>
-                  </div>
-
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label">
-                      <i className="fas fa-flag me-1"></i>Status
-                    </label>
-                    <select
-                      className="form-select"
-                      value={formData.remarks}
-                      onChange={(e) => handleInputChange('remarks', e.target.value)}
-                      data-testid="select-lead-status"
-                    >
-                      {LEAD_STATUSES.map(status => (
-                        <option key={status} value={status}>
-                          {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label">
-                      <i className="fas fa-user-tag me-1"></i>Assigned To
-                    </label>
-                    <select
-                      className="form-select"
-                      value={formData.assigned_to}
-                      onChange={(e) => handleInputChange('assigned_to', e.target.value)}
-                      data-testid="select-lead-assigned"
-                    >
-                      {ASSIGNEES.map(assignee => (
-                        <option key={assignee} value={assignee}>
-                          {assignee.charAt(0).toUpperCase() + assignee.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label">
-                      <i className="fas fa-dollar-sign me-1"></i>Project Amount
-                    </label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      step="0.01"
-                      min="0"
-                      value={formData.project_amount}
-                      onChange={(e) => handleInputChange('project_amount', e.target.value)}
-                      data-testid="input-lead-amount"
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">
-                      <i className="fas fa-calendar-alt me-1"></i>Next Follow-up Date
-                    </label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={formData.next_followup_date}
-                      onChange={(e) => handleInputChange('next_followup_date', e.target.value)}
-                      data-testid="input-lead-followup"
-                    />
-                  </div>
-
-                  <div className="col-12 mb-3">
-                    <label className="form-label">
-                      <i className="fas fa-sticky-note me-1"></i>Initial Notes
-                    </label>
-                    <textarea
-                      className="form-control"
-                      rows={4}
-                      value={formData.notes}
-                      onChange={(e) => handleInputChange('notes', e.target.value)}
-                      data-testid="textarea-lead-notes"
-                      placeholder="Enter any initial notes about this lead..."
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="lead_origin" className="flex items-center gap-2 font-medium">
+                        <Share2 className="h-4 w-4" />
+                        Lead Origin *
+                      </Label>
+                      <Select
+                        value={formData.lead_origin}
+                        onValueChange={(value) => handleInputChange('lead_origin', value)}
+                      >
+                        <SelectTrigger data-testid="select-lead-origin" className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LEAD_ORIGINS.map(origin => (
+                            <SelectItem key={origin} value={origin}>
+                              {origin.charAt(0).toUpperCase() + origin.slice(1).replace('-', ' ')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
-                <div className="d-flex justify-content-end gap-2 mt-4">
-                  <button 
+                {/* Lead Management Section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
+                    <Flag className="h-5 w-5 text-blue-500" />
+                    <h3 className="text-lg font-semibold text-gray-900">Lead Management</h3>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="status" className="flex items-center gap-2 font-medium">
+                        <Flag className="h-4 w-4" />
+                        Status
+                      </Label>
+                      <Select
+                        value={formData.remarks}
+                        onValueChange={(value) => handleInputChange('remarks', value)}
+                      >
+                        <SelectTrigger data-testid="select-lead-status" className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LEAD_STATUSES.map(status => (
+                            <SelectItem key={status} value={status}>
+                              {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="assigned_to" className="flex items-center gap-2 font-medium">
+                        <Users className="h-4 w-4" />
+                        Assigned To
+                      </Label>
+                      <Select
+                        value={formData.assigned_to}
+                        onValueChange={(value) => handleInputChange('assigned_to', value)}
+                      >
+                        <SelectTrigger data-testid="select-lead-assigned" className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ASSIGNEES.map(assignee => (
+                            <SelectItem key={assignee} value={assignee}>
+                              {assignee.charAt(0).toUpperCase() + assignee.slice(1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="project_amount" className="flex items-center gap-2 font-medium">
+                        <DollarSign className="h-4 w-4" />
+                        Project Amount
+                      </Label>
+                      <Input
+                        id="project_amount"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.project_amount}
+                        onChange={(e) => handleInputChange('project_amount', e.target.value)}
+                        data-testid="input-lead-amount"
+                        placeholder="0.00"
+                        className="h-11"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Information Section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
+                    <Calendar className="h-5 w-5 text-blue-500" />
+                    <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="next_followup_date" className="flex items-center gap-2 font-medium">
+                        <Calendar className="h-4 w-4" />
+                        Next Follow-up Date
+                      </Label>
+                      <Input
+                        id="next_followup_date"
+                        type="date"
+                        value={formData.next_followup_date}
+                        onChange={(e) => handleInputChange('next_followup_date', e.target.value)}
+                        data-testid="input-lead-followup"
+                        className="h-11"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="notes" className="flex items-center gap-2 font-medium">
+                        <FileText className="h-4 w-4" />
+                        Initial Notes
+                      </Label>
+                      <Textarea
+                        id="notes"
+                        rows={4}
+                        value={formData.notes}
+                        onChange={(e) => handleInputChange('notes', e.target.value)}
+                        data-testid="textarea-lead-notes"
+                        placeholder="Enter any initial notes about this lead..."
+                        className="resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
+                  <Button 
                     type="button" 
-                    className="btn btn-outline-secondary"
+                    variant="outline"
                     onClick={handleCancel}
                     data-testid="button-cancel-add-lead"
+                    className="flex items-center gap-2"
                   >
-                    <i className="fas fa-times me-1"></i>Cancel
-                  </button>
-                  <button
+                    <X className="h-4 w-4" />
+                    Cancel
+                  </Button>
+                  <Button
                     type="submit"
-                    className="btn btn-success"
                     disabled={createLeadMutation.isPending || !formData.name || !formData.phone}
                     data-testid="button-submit-add-lead"
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
                   >
                     {createLeadMutation.isPending ? (
                       <>
-                        <i className="fas fa-spinner fa-spin me-2"></i>Creating Lead...
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Creating Lead...
                       </>
                     ) : (
                       <>
-                        <i className="fas fa-save me-2"></i>Create Lead
+                        <Save className="h-4 w-4" />
+                        Create Lead
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
               </form>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

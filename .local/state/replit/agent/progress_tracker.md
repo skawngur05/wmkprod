@@ -16,3 +16,4 @@
 [x] 16. FINAL VERIFICATION: Login working, all CRM features operational
 [x] 17. Redesigned follow-up management page with modern card-based layout
 [x] 18. Redesigned installations page with the same modern card-based design
+[x] 19. Added "Add Lead" to navigation sidebar and redesigned the page with modern styling
