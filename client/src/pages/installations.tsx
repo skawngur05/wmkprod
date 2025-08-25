@@ -95,6 +95,30 @@ export default function Installations() {
     );
   }
 
+  // Categorize installations
+  const isRepair = (install: Lead) => {
+    const notesText = (install.notes || '').toLowerCase();
+    const additionalNotesText = (install.additional_notes || '').toLowerCase();
+    return notesText.includes('repair') || notesText.includes('fix') || 
+           additionalNotesText.includes('repair') || additionalNotesText.includes('fix');
+  };
+
+  const upcomingInstallations = installations?.filter(install => 
+    install.installation_date && 
+    new Date(install.installation_date) >= new Date() &&
+    !isRepair(install)
+  ) || [];
+
+  const repairJobs = installations?.filter(install => 
+    isRepair(install)
+  ) || [];
+
+  const completedProjects = installations?.filter(install => 
+    install.installation_date && 
+    new Date(install.installation_date) < new Date() &&
+    !isRepair(install)
+  ) || [];
+
   const thisWeekInstallations = installations?.filter(install => {
     if (!install.installation_date) return false;
     const installDate = new Date(install.installation_date);
@@ -103,14 +127,6 @@ export default function Installations() {
     const endOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 6));
     return installDate >= startOfWeek && installDate <= endOfWeek;
   }) || [];
-
-  const completedInstallations = installations?.filter(install => 
-    install.installation_date && new Date(install.installation_date) < new Date()
-  ) || [];
-
-  const pendingInstallations = installations?.filter(install => 
-    install.installation_date && new Date(install.installation_date) >= new Date()
-  ) || [];
 
   const installers = ['angel', 'brian', 'luis'];
 
@@ -137,18 +153,18 @@ export default function Installations() {
         <div className="col-md-3">
           <div className="card text-center" data-testid="stat-completed">
             <div className="card-body">
-              <i className="fas fa-tools fa-2x text-success mb-2"></i>
-              <h4>{completedInstallations.length}</h4>
+              <i className="fas fa-check-circle fa-2x text-success mb-2"></i>
+              <h4>{completedProjects.length}</h4>
               <p className="text-muted">Completed</p>
             </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card text-center" data-testid="stat-pending">
+          <div className="card text-center" data-testid="stat-repairs">
             <div className="card-body">
-              <i className="fas fa-clock fa-2x text-warning mb-2"></i>
-              <h4>{pendingInstallations.length}</h4>
-              <p className="text-muted">Pending</p>
+              <i className="fas fa-wrench fa-2x text-danger mb-2"></i>
+              <h4>{repairJobs.length}</h4>
+              <p className="text-muted">Repairs</p>
             </div>
           </div>
         </div>
@@ -163,29 +179,31 @@ export default function Installations() {
         </div>
       </div>
 
-      {/* Installations Table */}
-      <div className="card">
-        <div className="card-header">
-          <h5 className="mb-0">Scheduled Installations</h5>
+      {/* Upcoming Installations */}
+      <div className="card mb-4">
+        <div className="card-header bg-primary text-white">
+          <h5 className="mb-0">
+            <i className="fas fa-calendar-plus me-2"></i>
+            Upcoming Installations ({upcomingInstallations.length})
+          </h5>
         </div>
         <div className="card-body p-0">
-          <div className="table-responsive">
-            <table className="table table-hover mb-0" data-testid="installations-table">
-              <thead className="table-light">
-                <tr>
-                  <th>Customer</th>
-                  <th>Installation Date</th>
-                  <th>Installer</th>
-                  <th>Project Value</th>
-                  <th>Payment Status</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {installations && installations.length > 0 ? (
-                  installations.map((install) => (
-                    <tr key={install.id} data-testid={`installation-row-${install.id}`}>
+          {upcomingInstallations.length > 0 ? (
+            <div className="table-responsive">
+              <table className="table table-hover mb-0" data-testid="upcoming-installations-table">
+                <thead className="table-light">
+                  <tr>
+                    <th>Customer</th>
+                    <th>Installation Date</th>
+                    <th>Installer</th>
+                    <th>Project Value</th>
+                    <th>Payment Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {upcomingInstallations.map((install) => (
+                    <tr key={install.id} data-testid={`upcoming-installation-${install.id}`}>
                       <td>
                         <strong>{install.name}</strong>
                         <br />
@@ -225,17 +243,10 @@ export default function Installations() {
                         </div>
                       </td>
                       <td>
-                        <span className={`badge ${
-                          install.deposit_paid && install.balance_paid ? 'bg-info' : 'bg-warning'
-                        }`}>
-                          {install.deposit_paid && install.balance_paid ? 'Scheduled' : 'Pending Payment'}
-                        </span>
-                      </td>
-                      <td>
                         <div className="d-flex gap-1">
                           <button 
                             className="btn btn-sm btn-outline-primary"
-                            data-testid={`button-edit-installation-${install.id}`}
+                            data-testid={`button-edit-upcoming-${install.id}`}
                             title="Edit Installation"
                           >
                             <i className="fas fa-edit"></i>
@@ -244,7 +255,7 @@ export default function Installations() {
                             <button 
                               className="btn btn-sm btn-outline-success"
                               onClick={() => handleEmailClient(install)}
-                              data-testid={`button-email-client-${install.id}`}
+                              data-testid={`button-email-upcoming-client-${install.id}`}
                               title="Email Client"
                             >
                               <i className="fas fa-envelope"></i>
@@ -254,7 +265,7 @@ export default function Installations() {
                             <button 
                               className="btn btn-sm btn-outline-info"
                               onClick={() => handleEmailInstaller(install)}
-                              data-testid={`button-email-installer-${install.id}`}
+                              data-testid={`button-email-upcoming-installer-${install.id}`}
                               title="Email Installer"
                             >
                               <i className="fas fa-hard-hat"></i>
@@ -263,20 +274,207 @@ export default function Installations() {
                         </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <i className="fas fa-calendar-plus fa-3x text-muted mb-3"></i>
+              <p className="text-muted">No upcoming installations scheduled</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Repairs Section */}
+      <div className="card mb-4">
+        <div className="card-header bg-danger text-white">
+          <h5 className="mb-0">
+            <i className="fas fa-wrench me-2"></i>
+            Repair Jobs ({repairJobs.length})
+          </h5>
+        </div>
+        <div className="card-body p-0">
+          {repairJobs.length > 0 ? (
+            <div className="table-responsive">
+              <table className="table table-hover mb-0" data-testid="repairs-table">
+                <thead className="table-light">
                   <tr>
-                    <td colSpan={7} className="text-center py-4">
-                      <div className="text-muted">
-                        <i className="fas fa-calendar fa-3x mb-3"></i>
-                        <p>No installations scheduled</p>
-                      </div>
-                    </td>
+                    <th>Customer</th>
+                    <th>Scheduled Date</th>
+                    <th>Installer</th>
+                    <th>Issue</th>
+                    <th>Priority</th>
+                    <th>Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {repairJobs.map((repair) => (
+                    <tr key={repair.id} data-testid={`repair-job-${repair.id}`}>
+                      <td>
+                        <strong>{repair.name}</strong>
+                        <br />
+                        <small className="text-muted">{repair.phone}</small>
+                      </td>
+                      <td>
+                        {repair.installation_date ? (
+                          <>
+                            <strong>{formatDate(repair.installation_date)}</strong>
+                            <br />
+                            <small className="text-muted">Service Call</small>
+                          </>
+                        ) : (
+                          <span className="badge bg-warning">Not Scheduled</span>
+                        )}
+                      </td>
+                      <td>
+                        {repair.assigned_installer ? (
+                          <span className="badge bg-danger">
+                            {repair.assigned_installer}
+                          </span>
+                        ) : (
+                          <span className="text-muted">Not assigned</span>
+                        )}
+                      </td>
+                      <td>
+                        <small className="text-muted">
+                          {repair.notes ? repair.notes.substring(0, 50) + '...' : 'No details'}
+                        </small>
+                      </td>
+                      <td>
+                        <span className={`badge ${
+                          repair.installation_date && new Date(repair.installation_date) <= new Date() 
+                            ? 'bg-danger' : 'bg-warning'
+                        }`}>
+                          {repair.installation_date && new Date(repair.installation_date) <= new Date() 
+                            ? 'Urgent' : 'Scheduled'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <button 
+                            className="btn btn-sm btn-outline-primary"
+                            data-testid={`button-edit-repair-${repair.id}`}
+                            title="Edit Repair"
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                          {repair.email && (
+                            <button 
+                              className="btn btn-sm btn-outline-success"
+                              onClick={() => handleEmailClient(repair)}
+                              data-testid={`button-email-repair-client-${repair.id}`}
+                              title="Email Client"
+                            >
+                              <i className="fas fa-envelope"></i>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <i className="fas fa-tools fa-3x text-muted mb-3"></i>
+              <p className="text-muted">No repair jobs scheduled</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Completed Projects */}
+      <div className="card">
+        <div className="card-header bg-success text-white">
+          <h5 className="mb-0">
+            <i className="fas fa-check-circle me-2"></i>
+            Completed Projects ({completedProjects.length})
+          </h5>
+        </div>
+        <div className="card-body p-0">
+          {completedProjects.length > 0 ? (
+            <div className="table-responsive">
+              <table className="table table-hover mb-0" data-testid="completed-projects-table">
+                <thead className="table-light">
+                  <tr>
+                    <th>Customer</th>
+                    <th>Completion Date</th>
+                    <th>Installer</th>
+                    <th>Project Value</th>
+                    <th>Payment Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {completedProjects.map((project) => (
+                    <tr key={project.id} data-testid={`completed-project-${project.id}`}>
+                      <td>
+                        <strong>{project.name}</strong>
+                        <br />
+                        <small className="text-muted">{project.phone}</small>
+                      </td>
+                      <td>
+                        <strong>{formatDate(project.installation_date!)}</strong>
+                        <br />
+                        <small className="text-success">Completed</small>
+                      </td>
+                      <td>
+                        {project.assigned_installer ? (
+                          <span className="badge bg-success">
+                            {project.assigned_installer}
+                          </span>
+                        ) : (
+                          <span className="text-muted">Not recorded</span>
+                        )}
+                      </td>
+                      <td>
+                        {project.project_amount ? formatCurrency(project.project_amount) : '-'}
+                      </td>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <span className={`badge ${project.deposit_paid ? 'bg-success' : 'bg-secondary'}`}>
+                            Deposit {project.deposit_paid ? '✓' : 'N/A'}
+                          </span>
+                          <span className={`badge ${project.balance_paid ? 'bg-success' : 'bg-warning'}`}>
+                            Balance {project.balance_paid ? '✓' : 'Pending'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <button 
+                            className="btn btn-sm btn-outline-secondary"
+                            data-testid={`button-view-completed-${project.id}`}
+                            title="View Details"
+                          >
+                            <i className="fas fa-eye"></i>
+                          </button>
+                          {project.email && (
+                            <button 
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => handleEmailClient(project)}
+                              data-testid={`button-email-completed-client-${project.id}`}
+                              title="Send Follow-up Email"
+                            >
+                              <i className="fas fa-envelope"></i>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <i className="fas fa-check-circle fa-3x text-muted mb-3"></i>
+              <p className="text-muted">No completed projects yet</p>
+            </div>
+          )}
         </div>
       </div>
       
