@@ -20,6 +20,207 @@ interface FollowupsData {
   upcoming: Lead[];
 }
 
+// Quick Edit Form Component
+function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+  const [formData, setFormData] = useState({
+    next_followup_date: lead.next_followup_date ? new Date(lead.next_followup_date).toISOString().split('T')[0] : '',
+    remarks: lead.remarks,
+    notes: lead.notes || '',
+    project_amount: lead.project_amount || '',
+    assigned_to: lead.assigned_to,
+    installation_date: lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : '',
+    assigned_installer: lead.assigned_installer || '',
+    deposit_paid: lead.deposit_paid || false,
+    balance_paid: lead.balance_paid || false,
+  });
+
+  const { toast } = useToast();
+
+  const updateLeadMutation = useMutation({
+    mutationFn: async (updates: Partial<Lead>) => {
+      const response = await fetch('/api/leads/' + lead.id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update lead');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      toast({ title: 'Lead updated successfully' });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Failed to update lead', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const updates: Partial<Lead> = {
+      next_followup_date: formData.next_followup_date || null,
+      remarks: formData.remarks,
+      notes: formData.notes || null,
+      project_amount: formData.project_amount || null,
+      assigned_to: formData.assigned_to,
+      installation_date: formData.installation_date || null,
+      assigned_installer: formData.assigned_installer || null,
+      deposit_paid: formData.deposit_paid,
+      balance_paid: formData.balance_paid,
+    };
+
+    updateLeadMutation.mutate(updates);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="next_followup_date">Next Follow-up Date</Label>
+        <Input
+          id="next_followup_date"
+          type="date"
+          value={formData.next_followup_date}
+          onChange={(e) => setFormData(prev => ({ ...prev, next_followup_date: e.target.value }))}
+          data-testid="input-next-followup-date"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="status">Status</Label>
+        <Select
+          value={formData.remarks}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, remarks: value }))}
+        >
+          <SelectTrigger data-testid="select-status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="new">New</SelectItem>
+            <SelectItem value="in-progress">In Progress</SelectItem>
+            <SelectItem value="quoted">Quoted</SelectItem>
+            <SelectItem value="sold">Sold</SelectItem>
+            <SelectItem value="not-interested">Not Interested</SelectItem>
+            <SelectItem value="not-service-area">Not Service Area</SelectItem>
+            <SelectItem value="not-compatible">Not Compatible</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="project_amount">Project Amount</Label>
+        <Input
+          id="project_amount"
+          type="number"
+          step="0.01"
+          placeholder="0.00"
+          value={formData.project_amount}
+          onChange={(e) => setFormData(prev => ({ ...prev, project_amount: e.target.value }))}
+          data-testid="input-project-amount"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="assigned_to">Assigned To</Label>
+        <Select
+          value={formData.assigned_to}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: value }))}
+        >
+          <SelectTrigger data-testid="select-assigned-to">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="kim">Kim</SelectItem>
+            <SelectItem value="patrick">Patrick</SelectItem>
+            <SelectItem value="lina">Lina</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="notes">Notes</Label>
+        <Textarea
+          id="notes"
+          value={formData.notes}
+          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+          data-testid="textarea-notes"
+        />
+      </div>
+
+      {formData.remarks === 'sold' && (
+        <>
+          <div>
+            <Label htmlFor="installation_date">Installation Date</Label>
+            <Input
+              id="installation_date"
+              type="date"
+              value={formData.installation_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, installation_date: e.target.value }))}
+              data-testid="input-installation-date"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="assigned_installer">Assigned Installer</Label>
+            <Select
+              value={formData.assigned_installer}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_installer: value }))}
+            >
+              <SelectTrigger data-testid="select-assigned-installer">
+                <SelectValue placeholder="Select installer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="angel">Angel</SelectItem>
+                <SelectItem value="brian">Brian</SelectItem>
+                <SelectItem value="luis">Luis</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="deposit_paid"
+              checked={formData.deposit_paid}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, deposit_paid: checked as boolean }))}
+              data-testid="checkbox-deposit-paid"
+            />
+            <Label htmlFor="deposit_paid">Deposit Paid</Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="balance_paid"
+              checked={formData.balance_paid}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, balance_paid: checked as boolean }))}
+              data-testid="checkbox-balance-paid"
+            />
+            <Label htmlFor="balance_paid">Balance Paid</Label>
+          </div>
+        </>
+      )}
+
+      <div className="flex gap-3 pt-4">
+        <Button type="submit" disabled={updateLeadMutation.isPending} data-testid="button-save-lead">
+          {updateLeadMutation.isPending ? 'Saving...' : 'Save Changes'}
+        </Button>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export default function Followups() {
   const { data: followupsData, isLoading } = useQuery<FollowupsData>({
     queryKey: ['/api/followups'],
@@ -660,11 +861,7 @@ export default function Followups() {
             <DialogHeader>
               <DialogTitle>Quick Edit Lead</DialogTitle>
             </DialogHeader>
-            {selectedLead && (
-              <div className="space-y-4">
-                <p>Quick edit functionality</p>
-              </div>
-            )}
+            {selectedLead && <QuickEditForm lead={selectedLead} onClose={() => setIsEditModalOpen(false)} />}
           </DialogContent>
         </Dialog>
 
