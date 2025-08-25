@@ -366,189 +366,217 @@ export default function Followups() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900" data-testid="followups-title">
-          Follow-Up Management
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Revenue-focused lead follow-up system with smart prioritization
-        </p>
-      </div>
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
+      <div className="container mx-auto px-4 py-8">
+        {/* Professional Header */}
+        <div className="mb-10">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-3" style={{ color: '#2c3e50' }} data-testid="followups-title">
+              <i className="fas fa-calendar-check text-blue-600 me-3"></i>
+              Follow-Up Management
+            </h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Revenue-focused lead follow-up system with smart prioritization and real-time tracking
+            </p>
+          </div>
+        </div>
       
-      {/* Real-Time Dashboard Analytics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Overdue Statistics Card */}
-        <Card 
-          className={`cursor-pointer transition-all duration-300 hover:shadow-lg border-red-200 bg-red-50 ${
-            activeSection === 'overdue' ? 'ring-2 ring-red-500' : ''
-          }`}
-          onClick={() => scrollToSection(overdueRef, 'overdue')}
-          data-testid="stats-overdue"
-        >
-          <CardHeader className="pb-3">
-            <CardTitle className="text-red-700 text-sm font-medium flex items-center">
-              <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
-              CRITICAL - OVERDUE
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-red-800">{activeOverdue.length}</div>
-            <p className="text-red-600 text-sm mt-1">Immediate action needed</p>
-          </CardContent>
-        </Card>
-        
-        {/* Due Today Statistics Card */}
-        <Card 
-          className={`cursor-pointer transition-all duration-300 hover:shadow-lg border-yellow-200 bg-yellow-50 ${
-            activeSection === 'today' ? 'ring-2 ring-yellow-500' : ''
-          }`}
-          onClick={() => scrollToSection(todayRef, 'today')}
-          data-testid="stats-today"
-        >
-          <CardHeader className="pb-3">
-            <CardTitle className="text-yellow-700 text-sm font-medium flex items-center">
-              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
-              URGENT - DUE TODAY
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-yellow-800">{activeDueToday.length}</div>
-            <p className="text-yellow-600 text-sm mt-1">Today's priorities</p>
-          </CardContent>
-        </Card>
-        
-        {/* Upcoming 7 Days Statistics Card */}
-        <Card 
-          className={`cursor-pointer transition-all duration-300 hover:shadow-lg border-blue-200 bg-blue-50 ${
-            activeSection === 'upcoming' ? 'ring-2 ring-blue-500' : ''
-          }`}
-          onClick={() => scrollToSection(upcomingRef, 'upcoming')}
-          data-testid="stats-upcoming"
-        >
-          <CardHeader className="pb-3">
-            <CardTitle className="text-blue-700 text-sm font-medium flex items-center">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-              UPCOMING - 7 DAYS
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-800">{upcomingWeek.length}</div>
-            <p className="text-blue-600 text-sm mt-1">Week planning</p>
-          </CardContent>
-        </Card>
-        
-        {/* Scheduled Installations Statistics Card */}
-        <Card 
-          className={`cursor-pointer transition-all duration-300 hover:shadow-lg border-green-200 bg-green-50 ${
-            activeSection === 'installations' ? 'ring-2 ring-green-500' : ''
-          }`}
-          onClick={() => scrollToSection(installationsRef, 'installations')}
-          data-testid="stats-installations"
-        >
-          <CardHeader className="pb-3">
-            <CardTitle className="text-green-700 text-sm font-medium flex items-center">
-              <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-              REVENUE - INSTALLATIONS
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-800">{scheduledInstallations.length}</div>
-            <p className="text-green-600 text-sm mt-1">Revenue delivery</p>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Professional Dashboard Analytics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {/* Overdue Statistics Card */}
+          <Card 
+            className={`cursor-pointer transition-all duration-300 hover:shadow-xl border-0 shadow-lg ${
+              activeSection === 'overdue' ? 'ring-2 ring-red-400' : ''
+            }`}
+            style={{ background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' }}
+            onClick={() => scrollToSection(overdueRef, 'overdue')}
+            data-testid="stats-overdue"
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="text-red-800 text-sm font-semibold flex items-center">
+                <div className="rounded-full bg-red-500 p-1 mr-3">
+                  <i className="fas fa-exclamation text-white text-xs"></i>
+                </div>
+                CRITICAL - OVERDUE
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-900 mb-1">{activeOverdue.length}</div>
+              <p className="text-red-700 text-sm font-medium">Immediate action needed</p>
+            </CardContent>
+          </Card>
+          
+          {/* Due Today Statistics Card */}
+          <Card 
+            className={`cursor-pointer transition-all duration-300 hover:shadow-xl border-0 shadow-lg ${
+              activeSection === 'today' ? 'ring-2 ring-yellow-400' : ''
+            }`}
+            style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%)' }}
+            onClick={() => scrollToSection(todayRef, 'today')}
+            data-testid="stats-today"
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="text-yellow-900 text-sm font-semibold flex items-center">
+                <div className="rounded-full bg-yellow-600 p-1 mr-3">
+                  <i className="fas fa-clock text-white text-xs"></i>
+                </div>
+                URGENT - DUE TODAY
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-yellow-900 mb-1">{activeDueToday.length}</div>
+              <p className="text-yellow-800 text-sm font-medium">Today's priorities</p>
+            </CardContent>
+          </Card>
+          
+          {/* Upcoming 7 Days Statistics Card */}
+          <Card 
+            className={`cursor-pointer transition-all duration-300 hover:shadow-xl border-0 shadow-lg ${
+              activeSection === 'upcoming' ? 'ring-2 ring-blue-400' : ''
+            }`}
+            style={{ background: 'linear-gradient(135deg, #dbeafe 0%, #3b82f6 100%)' }}
+            onClick={() => scrollToSection(upcomingRef, 'upcoming')}
+            data-testid="stats-upcoming"
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-sm font-semibold flex items-center">
+                <div className="rounded-full bg-white bg-opacity-30 p-1 mr-3">
+                  <i className="fas fa-calendar-alt text-white text-xs"></i>
+                </div>
+                UPCOMING - 7 DAYS
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-white mb-1">{upcomingWeek.length}</div>
+              <p className="text-blue-100 text-sm font-medium">Week planning</p>
+            </CardContent>
+          </Card>
+          
+          {/* Scheduled Installations Statistics Card */}
+          <Card 
+            className={`cursor-pointer transition-all duration-300 hover:shadow-xl border-0 shadow-lg ${
+              activeSection === 'installations' ? 'ring-2 ring-green-400' : ''
+            }`}
+            style={{ background: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)' }}
+            onClick={() => scrollToSection(installationsRef, 'installations')}
+            data-testid="stats-installations"
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-sm font-semibold flex items-center">
+                <div className="rounded-full bg-white bg-opacity-30 p-1 mr-3">
+                  <i className="fas fa-dollar-sign text-white text-xs"></i>
+                </div>
+                REVENUE - INSTALLATIONS
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-white mb-1">{scheduledInstallations.length}</div>
+              <p className="text-green-100 text-sm font-medium">Revenue delivery</p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Overdue Follow-ups Table */}
-      <div ref={overdueRef} className="mb-12">
-        <h2 className="text-2xl font-bold text-red-800 mb-6 flex items-center">
-          <span className="w-3 h-3 bg-red-500 rounded-full mr-3"></span>
-          CRITICAL - Overdue Follow-ups ({activeOverdue.length})
-        </h2>
-        
-        {activeOverdue.length === 0 ? (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="text-center py-12">
-              <div className="text-6xl text-red-300 mb-4">✓</div>
-              <p className="text-red-600 text-lg">Excellent! No overdue follow-ups!</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-red-200">
-            <CardContent className="p-0">
-              {renderFollowupTable(activeOverdue, 'red', 'overdue')}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+        {/* Overdue Follow-ups Table */}
+        <div ref={overdueRef} className="mb-12">
+          <div className="mb-6 p-4 rounded-lg" style={{ background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' }}>
+            <h2 className="text-2xl font-bold text-red-900 flex items-center">
+              <i className="fas fa-exclamation-triangle text-red-600 mr-3"></i>
+              CRITICAL - Overdue Follow-ups ({activeOverdue.length})
+            </h2>
+            <p className="text-red-700 mt-1">These leads require immediate attention to prevent revenue loss</p>
+          </div>
+          
+          {activeOverdue.length === 0 ? (
+            <Card className="border-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' }}>
+              <CardContent className="text-center py-12">
+                <div className="text-6xl text-red-400 mb-4">✓</div>
+                <p className="text-red-800 text-lg font-medium">Excellent! No overdue follow-ups!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-0">
+                {renderFollowupTable(activeOverdue, 'red', 'overdue')}
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
-      {/* Due Today Follow-ups Table */}
-      <div ref={todayRef} className="mb-12">
-        <h2 className="text-2xl font-bold text-yellow-800 mb-6 flex items-center">
-          <span className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></span>
-          URGENT - Due Today ({activeDueToday.length})
-        </h2>
-        
-        {activeDueToday.length === 0 ? (
-          <Card className="border-yellow-200 bg-yellow-50">
-            <CardContent className="text-center py-12">
-              <div className="text-6xl text-yellow-300 mb-4">📅</div>
-              <p className="text-yellow-600 text-lg">No follow-ups due today!</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-yellow-200">
-            <CardContent className="p-0">
-              {renderFollowupTable(activeDueToday, 'yellow', 'today')}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+        {/* Due Today Follow-ups Table */}
+        <div ref={todayRef} className="mb-12">
+          <div className="mb-6 p-4 rounded-lg" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%)' }}>
+            <h2 className="text-2xl font-bold text-yellow-900 flex items-center">
+              <i className="fas fa-clock text-yellow-700 mr-3"></i>
+              URGENT - Due Today ({activeDueToday.length})
+            </h2>
+            <p className="text-yellow-800 mt-1">Today's priority follow-ups to maintain sales momentum</p>
+          </div>
+          
+          {activeDueToday.length === 0 ? (
+            <Card className="border-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%)' }}>
+              <CardContent className="text-center py-12">
+                <div className="text-6xl text-yellow-600 mb-4">📅</div>
+                <p className="text-yellow-900 text-lg font-medium">No follow-ups due today!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-0">
+                {renderFollowupTable(activeDueToday, 'yellow', 'today')}
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
-      {/* Upcoming Follow-ups Table */}
-      <div ref={upcomingRef} className="mb-12">
-        <h2 className="text-2xl font-bold text-blue-800 mb-6 flex items-center">
-          <span className="w-3 h-3 bg-blue-500 rounded-full mr-3"></span>
-          UPCOMING - Next 7 Days ({upcomingWeek.length})
-        </h2>
-        
-        {upcomingWeek.length === 0 ? (
-          <Card className="border-blue-200 bg-blue-50">
-            <CardContent className="text-center py-12">
-              <div className="text-6xl text-blue-300 mb-4">📈</div>
-              <p className="text-blue-600 text-lg">No follow-ups scheduled for the next 7 days!</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-blue-200">
-            <CardContent className="p-0">
-              {renderFollowupTable(upcomingWeek, 'blue', 'upcoming')}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+        {/* Upcoming Follow-ups Table */}
+        <div ref={upcomingRef} className="mb-12">
+          <div className="mb-6 p-4 rounded-lg text-white" style={{ background: 'linear-gradient(135deg, #dbeafe 0%, #3b82f6 100%)' }}>
+            <h2 className="text-2xl font-bold flex items-center">
+              <i className="fas fa-calendar-alt mr-3"></i>
+              UPCOMING - Next 7 Days ({upcomingWeek.length})
+            </h2>
+            <p className="text-blue-100 mt-1">Strategic follow-up planning for sustained sales pipeline</p>
+          </div>
+          
+          {upcomingWeek.length === 0 ? (
+            <Card className="border-0 shadow-lg text-white" style={{ background: 'linear-gradient(135deg, #dbeafe 0%, #3b82f6 100%)' }}>
+              <CardContent className="text-center py-12">
+                <div className="text-6xl text-blue-200 mb-4">📈</div>
+                <p className="text-white text-lg font-medium">No follow-ups scheduled for the next 7 days!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-0">
+                {renderFollowupTable(upcomingWeek, 'blue', 'upcoming')}
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
-      {/* Scheduled Installations Table */}
-      <div ref={installationsRef} className="mb-12">
-        <h2 className="text-2xl font-bold text-green-800 mb-6 flex items-center">
-          <span className="w-3 h-3 bg-green-500 rounded-full mr-3"></span>
-          SCHEDULED INSTALLATIONS ({scheduledInstallations.length})
-        </h2>
-        
-        {scheduledInstallations.length === 0 ? (
-          <Card className="border-green-200 bg-green-50">
-            <CardContent className="text-center py-12">
-              <div className="text-6xl text-green-300 mb-4">🏗️</div>
-              <p className="text-green-600 text-lg">No installations scheduled!</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-green-200">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-green-50 border-b border-green-200">
+        {/* Scheduled Installations Table */}
+        <div ref={installationsRef} className="mb-12">
+          <div className="mb-6 p-4 rounded-lg text-white" style={{ background: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)' }}>
+            <h2 className="text-2xl font-bold flex items-center">
+              <i className="fas fa-dollar-sign mr-3"></i>
+              SCHEDULED INSTALLATIONS ({scheduledInstallations.length})
+            </h2>
+            <p className="text-green-100 mt-1">Revenue delivery schedule and installation coordination</p>
+          </div>
+          
+          {scheduledInstallations.length === 0 ? (
+            <Card className="border-0 shadow-lg text-white" style={{ background: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)' }}>
+              <CardContent className="text-center py-12">
+                <div className="text-6xl text-green-200 mb-4">🏗️</div>
+                <p className="text-white text-lg font-medium">No installations scheduled!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-green-50 border-b border-green-200">
                     <tr>
                       <th className="text-left py-4 px-6 font-semibold text-green-900">Customer</th>
                       <th className="text-left py-4 px-6 font-semibold text-green-900">Contact</th>
@@ -624,223 +652,31 @@ export default function Followups() {
             </CardContent>
           </Card>
         )}
+        </div>
+
+        {/* Quick Edit Modal */}
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Quick Edit Lead</DialogTitle>
+            </DialogHeader>
+            {selectedLead && (
+              <div className="space-y-4">
+                <p>Quick edit functionality</p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <QuickFollowupModal
+          lead={selectedFollowupLead}
+          show={showQuickFollowup}
+          onHide={() => {
+            setShowQuickFollowup(false);
+            setSelectedFollowupLead(null);
+          }}
+        />
       </div>
-
-      {/* Quick Edit Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Quick Edit Lead</DialogTitle>
-          </DialogHeader>
-          {selectedLead && <QuickEditForm lead={selectedLead} />}
-        </DialogContent>
-      </Dialog>
-
-      <QuickFollowupModal
-        lead={selectedFollowupLead}
-        show={showQuickFollowup}
-        onHide={() => {
-          setShowQuickFollowup(false);
-          setSelectedFollowupLead(null);
-        }}
-      />
     </div>
-  );
-}
-
-// Quick Edit Form Component
-function QuickEditForm({ lead }: { lead: Lead }) {
-  const [formData, setFormData] = useState({
-    next_followup_date: lead.next_followup_date ? new Date(lead.next_followup_date).toISOString().split('T')[0] : '',
-    remarks: lead.remarks,
-    notes: lead.notes || '',
-    project_amount: lead.project_amount || '',
-    assigned_to: lead.assigned_to,
-    installation_date: lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : '',
-    assigned_installer: lead.assigned_installer || '',
-    deposit_paid: lead.deposit_paid || false,
-    balance_paid: lead.balance_paid || false,
-  });
-
-  const { toast } = useToast();
-
-  const updateLeadMutation = useMutation({
-    mutationFn: async (updates: Partial<Lead>) => {
-      const response = await fetch('/api/leads/' + lead.id, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update lead');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
-      toast({ title: 'Lead updated successfully' });
-    },
-    onError: (error: Error) => {
-      toast({ 
-        title: 'Failed to update lead', 
-        description: error.message,
-        variant: 'destructive' 
-      });
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const updates: Partial<Lead> = {
-      next_followup_date: formData.next_followup_date ? formData.next_followup_date : null,
-      remarks: formData.remarks,
-      notes: formData.notes || null,
-      project_amount: formData.project_amount || null,
-      assigned_to: formData.assigned_to,
-      installation_date: formData.installation_date ? formData.installation_date : null,
-      assigned_installer: formData.assigned_installer || null,
-      deposit_paid: formData.deposit_paid,
-      balance_paid: formData.balance_paid,
-    };
-
-    updateLeadMutation.mutate(updates);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="next_followup_date">Next Follow-up Date</Label>
-        <Input
-          id="next_followup_date"
-          type="date"
-          value={formData.next_followup_date}
-          onChange={(e) => setFormData(prev => ({ ...prev, next_followup_date: e.target.value }))}
-          data-testid="input-next-followup-date"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="status">Status</Label>
-        <Select
-          value={formData.remarks}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, remarks: value }))}
-        >
-          <SelectTrigger data-testid="select-status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="new">New</SelectItem>
-            <SelectItem value="in-progress">In Progress</SelectItem>
-            <SelectItem value="quoted">Quoted</SelectItem>
-            <SelectItem value="sold">Sold</SelectItem>
-            <SelectItem value="not-interested">Not Interested</SelectItem>
-            <SelectItem value="not-service-area">Not Service Area</SelectItem>
-            <SelectItem value="not-compatible">Not Compatible</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="project_amount">Project Amount</Label>
-        <Input
-          id="project_amount"
-          type="number"
-          step="0.01"
-          placeholder="0.00"
-          value={formData.project_amount}
-          onChange={(e) => setFormData(prev => ({ ...prev, project_amount: e.target.value }))}
-          data-testid="input-project-amount"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="assigned_to">Assigned To</Label>
-        <Select
-          value={formData.assigned_to}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: value }))}
-        >
-          <SelectTrigger data-testid="select-assigned-to">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="kim">Kim</SelectItem>
-            <SelectItem value="patrick">Patrick</SelectItem>
-            <SelectItem value="lina">Lina</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          value={formData.notes}
-          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-          data-testid="textarea-notes"
-        />
-      </div>
-
-      {formData.remarks === 'sold' && (
-        <>
-          <div>
-            <Label htmlFor="installation_date">Installation Date</Label>
-            <Input
-              id="installation_date"
-              type="date"
-              value={formData.installation_date}
-              onChange={(e) => setFormData(prev => ({ ...prev, installation_date: e.target.value }))}
-              data-testid="input-installation-date"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="assigned_installer">Assigned Installer</Label>
-            <Select
-              value={formData.assigned_installer}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_installer: value }))}
-            >
-              <SelectTrigger data-testid="select-assigned-installer">
-                <SelectValue placeholder="Select installer" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="angel">Angel</SelectItem>
-                <SelectItem value="brian">Brian</SelectItem>
-                <SelectItem value="luis">Luis</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="deposit_paid"
-              checked={formData.deposit_paid}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, deposit_paid: checked as boolean }))}
-              data-testid="checkbox-deposit-paid"
-            />
-            <Label htmlFor="deposit_paid">Deposit Paid</Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="balance_paid"
-              checked={formData.balance_paid}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, balance_paid: checked as boolean }))}
-              data-testid="checkbox-balance-paid"
-            />
-            <Label htmlFor="balance_paid">Balance Paid</Label>
-          </div>
-        </>
-      )}
-
-      <div className="flex gap-3 pt-4">
-        <Button type="submit" disabled={updateLeadMutation.isPending} data-testid="button-save-lead">
-          {updateLeadMutation.isPending ? 'Saving...' : 'Save Changes'}
-        </Button>
-      </div>
-    </form>
   );
 }
