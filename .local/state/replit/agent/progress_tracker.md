@@ -15,3 +15,4 @@
 [x] 15. Created default users (kim, patrick, lina) with working credentials
 [x] 16. FINAL VERIFICATION: Login working, all CRM features operational
 [x] 17. Redesigned follow-up management page with modern card-based layout
+[x] 18. Redesigned installations page with the same modern card-based design

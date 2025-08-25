@@ -70,12 +70,12 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
     e.preventDefault();
     
     const updates: Partial<Lead> = {
-      next_followup_date: formData.next_followup_date || null,
+      next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date) : null,
       remarks: formData.remarks,
       notes: formData.notes || null,
       project_amount: formData.project_amount || null,
       assigned_to: formData.assigned_to,
-      installation_date: formData.installation_date || null,
+      installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
       assigned_installer: formData.assigned_installer || null,
       deposit_paid: formData.deposit_paid,
       balance_paid: formData.balance_paid,
@@ -134,7 +134,7 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
       <div>
         <Label htmlFor="assigned_to">Assigned To</Label>
         <Select
-          value={formData.assigned_to}
+          value={formData.assigned_to || ''}
           onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: value }))}
         >
           <SelectTrigger data-testid="select-assigned-to">
@@ -641,11 +641,12 @@ export default function Followups() {
           </DialogContent>
         </Dialog>
 
-        <QuickFollowupModal
-          lead={selectedFollowupLead}
-          isOpen={showQuickFollowup}
-          onClose={() => setShowQuickFollowup(false)}
-        />
+        {selectedFollowupLead && showQuickFollowup && (
+          <QuickFollowupModal
+            lead={selectedFollowupLead}
+            onClose={() => setShowQuickFollowup(false)}
+          />
+        )}
       </div>
     </div>
   );
