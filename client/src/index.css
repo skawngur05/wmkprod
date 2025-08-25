@@ -819,3 +819,15 @@
 .fc-more-link:hover {
   color: var(--wmk-green-dark) !important;
 }
+
+@media (max-width: 992px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
+
+/* Required field indicator */
+.required::after {
+  content: " *";
+  color: #dc3545;
+}

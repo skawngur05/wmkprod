@@ -14,6 +14,7 @@ import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Leads from "@/pages/leads";
+import AddLead from "@/pages/add-lead";
 import Followups from "@/pages/followups";
 import SampleBooklets from "@/pages/sample-booklets";
 import Installations from "@/pages/installations";
@@ -75,6 +76,12 @@ function AppRouter() {
       <Route path="/leads">
         <ProtectedRoute>
           <Leads />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/add-lead">
+        <ProtectedRoute>
+          <AddLead />
         </ProtectedRoute>
       </Route>
       

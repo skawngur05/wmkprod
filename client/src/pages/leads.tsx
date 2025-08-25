@@ -4,6 +4,7 @@ import { Lead } from '@shared/schema';
 import { formatCurrency, formatDate, getStatusColor, getOriginColor } from '@/lib/auth';
 import { AddLeadModal } from '@/components/modals/add-lead-modal';
 import { QuickEditModal } from '@/components/modals/quick-edit-modal';
+import { QuickFollowupModal } from '@/components/modals/quick-followup-modal';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -18,6 +19,8 @@ export default function Leads() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showQuickEdit, setShowQuickEdit] = useState(false);
+  const [selectedFollowupLead, setSelectedFollowupLead] = useState<Lead | null>(null);
+  const [showQuickFollowup, setShowQuickFollowup] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -124,6 +127,11 @@ export default function Leads() {
     setShowQuickEdit(true);
   };
 
+  const openQuickFollowup = (lead: Lead) => {
+    setSelectedFollowupLead(lead);
+    setShowQuickFollowup(true);
+  };
+
   const isOverdue = (date: string | Date | null) => {
     if (!date) return false;
     const today = new Date();
@@ -165,7 +173,7 @@ export default function Leads() {
             <div>
               <button
                 className="btn btn-success me-2"
-                onClick={() => setShowAddModal(true)}
+                onClick={() => window.location.href = '/add-lead'}
                 data-testid="button-add-lead"
               >
                 <i className="fas fa-plus me-1"></i>Add Lead
@@ -330,8 +338,17 @@ export default function Leads() {
                       </td>
                       <td>
                         <button
+                          className="btn btn-circle btn-outline-success btn-sm me-1"
+                          onClick={() => openQuickFollowup(lead)}
+                          title="Quick Follow-up Update"
+                          data-testid={`button-followup-lead-${lead.id}`}
+                        >
+                          <i className="fas fa-calendar-alt"></i>
+                        </button>
+                        <button
                           className="btn btn-circle btn-outline-primary btn-sm me-1"
                           onClick={() => openQuickEdit(lead)}
+                          title="Edit Lead Details"
                           data-testid={`button-edit-lead-${lead.id}`}
                         >
                           <i className="fas fa-edit"></i>
@@ -340,6 +357,7 @@ export default function Leads() {
                           className="btn btn-circle btn-outline-danger btn-sm"
                           onClick={() => handleDelete(lead.id)}
                           disabled={deleteLeadMutation.isPending}
+                          title="Delete Lead"
                           data-testid={`button-delete-lead-${lead.id}`}
                         >
                           <i className="fas fa-trash"></i>
@@ -430,6 +448,15 @@ export default function Leads() {
           }}
         />
       )}
+
+      <QuickFollowupModal
+        lead={selectedFollowupLead}
+        show={showQuickFollowup}
+        onHide={() => {
+          setShowQuickFollowup(false);
+          setSelectedFollowupLead(null);
+        }}
+      />
     </div>
   );
 }

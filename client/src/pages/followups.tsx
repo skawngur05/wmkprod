@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
+import { QuickFollowupModal } from '@/components/modals/quick-followup-modal';
 
 interface FollowupsData {
   overdue: Lead[];
@@ -33,6 +34,8 @@ export default function Followups() {
   const [activeSection, setActiveSection] = useState<string>('');
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [tempDate, setTempDate] = useState<string>('');
+  const [selectedFollowupLead, setSelectedFollowupLead] = useState<Lead | null>(null);
+  const [showQuickFollowup, setShowQuickFollowup] = useState(false);
   
   const overdueRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
@@ -136,6 +139,11 @@ export default function Followups() {
   
   const handleQuickUpdate = (leadId: string, updates: Partial<Lead>) => {
     updateLeadMutation.mutate({ id: leadId, updates });
+  };
+
+  const openQuickFollowup = (lead: Lead) => {
+    setSelectedFollowupLead(lead);
+    setShowQuickFollowup(true);
   };
   
   const formatCurrency = (amount: string | null) => {
@@ -313,6 +321,18 @@ export default function Followups() {
                 </td>
                 <td className="py-4 px-6">
                   <div className="flex gap-2 justify-center">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className={`${colorTheme === 'red' ? 'border-red-300 text-red-700 hover:bg-red-100' : 
+                                 colorTheme === 'yellow' ? 'border-yellow-300 text-yellow-700 hover:bg-yellow-100' : 
+                                 'border-blue-300 text-blue-700 hover:bg-blue-100'}`}
+                      onClick={() => openQuickFollowup(lead)}
+                      title="Quick Follow-up Update"
+                      data-testid={`button-followup-${sectionType}-${lead.id}`}
+                    >
+                      📅
+                    </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
@@ -615,6 +635,15 @@ export default function Followups() {
           {selectedLead && <QuickEditForm lead={selectedLead} />}
         </DialogContent>
       </Dialog>
+
+      <QuickFollowupModal
+        lead={selectedFollowupLead}
+        show={showQuickFollowup}
+        onHide={() => {
+          setShowQuickFollowup(false);
+          setSelectedFollowupLead(null);
+        }}
+      />
     </div>
   );
 }
