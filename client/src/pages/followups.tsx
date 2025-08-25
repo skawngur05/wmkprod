@@ -351,9 +351,9 @@ export default function Followups() {
                                  colorTheme === 'yellow' ? 'border-yellow-300 text-yellow-700 hover:bg-yellow-100' : 
                                  'border-blue-300 text-blue-700 hover:bg-blue-100'}`}
                       onClick={() => handleQuickEdit(lead)}
-                      data-testid={`button-edit-${sectionType}-${lead.id}`}
+                      data-testid={`button-view-${sectionType}-${lead.id}`}
                     >
-                      ✏️
+                      👁️
                     </Button>
                   </div>
                 </td>

@@ -348,10 +348,10 @@ export default function Leads() {
                         <button
                           className="btn btn-circle btn-outline-primary btn-sm me-1"
                           onClick={() => openQuickEdit(lead)}
-                          title="Edit Lead Details"
-                          data-testid={`button-edit-lead-${lead.id}`}
+                          title="View Lead Details"
+                          data-testid={`button-view-lead-${lead.id}`}
                         >
-                          <i className="fas fa-edit"></i>
+                          <i className="fas fa-eye"></i>
                         </button>
                         <button
                           className="btn btn-circle btn-outline-danger btn-sm"

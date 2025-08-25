@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Lead } from '@shared/schema';
+import { Lead, ASSIGNEES } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,7 +12,7 @@ interface QuickFollowupModalProps {
 
 const quickNoteTemplates = [
   "Sent a text message",
-  "Sent an email",
+  "Sent an email", 
   "Talked to client - interested",
   "Talked to client - needs time to decide", 
   "Left voicemail",
@@ -20,11 +20,17 @@ const quickNoteTemplates = [
   "Sent quote",
   "Meeting scheduled",
   "Waiting for approval",
+  "Follow-up call completed",
+  "Site visit scheduled",
+  "Quote requested",
+  "Contract sent",
+  "Payment discussion needed",
   "Custom note..."
 ];
 
 export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalProps) {
   const [nextFollowupDate, setNextFollowupDate] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
   const [quickNote, setQuickNote] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [customNote, setCustomNote] = useState('');
@@ -55,11 +61,13 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
     if (lead) {
       setNextFollowupDate(lead.next_followup_date ? 
         new Date(lead.next_followup_date).toISOString().split('T')[0] : '');
+      setAssignedTo(lead.assigned_to || '');
     }
   }, [lead]);
 
   const resetForm = () => {
     setNextFollowupDate('');
+    setAssignedTo('');
     setQuickNote('');
     setSelectedTemplate('');
     setCustomNote('');
@@ -95,6 +103,7 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
 
     const updates = {
       next_followup_date: nextFollowupDate ? new Date(nextFollowupDate) : null,
+      assigned_to: assignedTo || null,
       notes: updatedNotes || null
     };
 
@@ -116,102 +125,161 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
     >
       <div className="modal-dialog">
         <div className="modal-content">
-          <div className="modal-header">
+          <div className="modal-header bg-primary text-white">
             <h5 className="modal-title">
-              <i className="fas fa-calendar-alt text-primary me-2"></i>
-              Quick Follow-up Update - {lead.name}
+              <i className="fas fa-calendar-check me-2"></i>
+              Follow-up Manager - {lead.name}
             </h5>
             <button 
               type="button" 
-              className="btn-close" 
+              className="btn-close btn-close-white" 
               onClick={handleClose}
               data-testid="button-close-followup-modal"
             ></button>
           </div>
           <div className="modal-body">
             <form onSubmit={handleSubmit}>
+              {/* Current Follow-up Date Display */}
+              <div className="mb-3 p-3 bg-light border-start border-info border-4">
+                <label className="form-label text-muted mb-1">
+                  <i className="fas fa-history me-1"></i>Current Follow-up Date
+                </label>
+                <div className="fw-bold text-dark">
+                  {lead.next_followup_date ? 
+                    new Date(lead.next_followup_date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric', 
+                      month: 'long',
+                      day: 'numeric'
+                    }) : 
+                    'No follow-up date set'
+                  }
+                </div>
+              </div>
+
+              {/* New Follow-up Date */}
               <div className="mb-3">
-                <label className="form-label">
-                  <i className="fas fa-clock me-1"></i>Next Follow-up Date
+                <label className="form-label fw-semibold">
+                  <i className="fas fa-calendar-plus text-primary me-1"></i>New Follow-up Date
                 </label>
                 <input
                   type="date"
-                  className="form-control"
+                  className="form-control form-control-lg"
                   value={nextFollowupDate}
                   onChange={(e) => setNextFollowupDate(e.target.value)}
                   data-testid="input-followup-date"
                 />
               </div>
 
+              {/* Assign To */}
               <div className="mb-3">
-                <label className="form-label">
-                  <i className="fas fa-sticky-note me-1"></i>Quick Note Template
+                <label className="form-label fw-semibold">
+                  <i className="fas fa-user-tag text-success me-1"></i>Assign To
                 </label>
                 <select
-                  className="form-select"
+                  className="form-select form-select-lg"
+                  value={assignedTo}
+                  onChange={(e) => setAssignedTo(e.target.value)}
+                  data-testid="select-assigned-to"
+                >
+                  <option value="">Select team member...</option>
+                  {ASSIGNEES.map(member => (
+                    <option key={member} value={member}>
+                      {member.charAt(0).toUpperCase() + member.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Quick Note Templates */}
+              <div className="mb-3">
+                <label className="form-label fw-semibold">
+                  <i className="fas fa-sticky-note text-warning me-1"></i>Quick Note Templates
+                </label>
+                <select
+                  className="form-select form-select-lg"
                   value={selectedTemplate}
                   onChange={(e) => handleTemplateChange(e.target.value)}
                   data-testid="select-note-template"
                 >
-                  <option value="">Select a template...</option>
+                  <option value="">Choose a quick note template...</option>
                   {quickNoteTemplates.map(template => (
                     <option key={template} value={template}>{template}</option>
                   ))}
                 </select>
               </div>
 
+              {/* Custom Note or Note Preview */}
               {selectedTemplate === 'Custom note...' ? (
                 <div className="mb-3">
-                  <label className="form-label">Custom Note</label>
+                  <label className="form-label fw-semibold">
+                    <i className="fas fa-pen text-info me-1"></i>Custom Note
+                  </label>
                   <textarea
                     className="form-control"
-                    rows={3}
+                    rows={4}
                     value={customNote}
                     onChange={(e) => setCustomNote(e.target.value)}
-                    placeholder="Enter your custom note here..."
+                    placeholder="Write your custom follow-up note here..."
                     data-testid="textarea-custom-note"
                   />
                 </div>
               ) : selectedTemplate ? (
                 <div className="mb-3">
-                  <label className="form-label">Note Preview</label>
-                  <div className="form-control bg-light" style={{ minHeight: '38px' }}>
-                    <small className="text-muted">
-                      [{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}] {quickNote}
-                    </small>
+                  <label className="form-label fw-semibold text-success">
+                    <i className="fas fa-eye me-1"></i>Note Preview
+                  </label>
+                  <div className="p-3 bg-success-subtle border border-success-subtle rounded">
+                    <div className="d-flex align-items-center">
+                      <i className="fas fa-quote-left text-success me-2"></i>
+                      <span className="fw-medium">
+                        [{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}] {quickNote}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ) : null}
 
-              <div className="alert alert-info">
-                <i className="fas fa-info-circle me-2"></i>
-                <strong>Note:</strong> This quick note will be added to the existing notes with today's date.
+              {/* Info Alert */}
+              <div className="alert alert-info border-0 bg-info-subtle">
+                <div className="d-flex align-items-center">
+                  <i className="fas fa-lightbulb text-info me-3 fs-5"></i>
+                  <div>
+                    <strong>Quick Tip:</strong> Your note will be timestamped and added to the lead's history. 
+                    {assignedTo && assignedTo !== lead.assigned_to && (
+                      <>
+                        <br />
+                        <small>Lead will be reassigned to <strong>{assignedTo.charAt(0).toUpperCase() + assignedTo.slice(1)}</strong>.</small>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             </form>
           </div>
-          <div className="modal-footer">
+          <div className="modal-footer bg-light">
             <button 
               type="button" 
-              className="btn btn-secondary" 
+              className="btn btn-outline-secondary btn-lg me-2" 
               onClick={handleClose}
               data-testid="button-cancel-followup"
             >
-              Cancel
+              <i className="fas fa-times me-2"></i>Cancel
             </button>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary btn-lg px-4"
               onClick={handleSubmit}
-              disabled={updateLeadMutation.isPending || (!nextFollowupDate && !quickNote && !customNote)}
+              disabled={updateLeadMutation.isPending || (!nextFollowupDate && !quickNote && !customNote && !assignedTo)}
               data-testid="button-save-followup"
             >
               {updateLeadMutation.isPending ? (
                 <>
-                  <i className="fas fa-spinner fa-spin me-2"></i>Updating...
+                  <i className="fas fa-spinner fa-spin me-2"></i>Updating Follow-up...
                 </>
               ) : (
                 <>
-                  <i className="fas fa-save me-2"></i>Update Follow-up
+                  <i className="fas fa-calendar-check me-2"></i>Update Follow-up
                 </>
               )}
             </button>
