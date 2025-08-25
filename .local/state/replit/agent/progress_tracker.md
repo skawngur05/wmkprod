@@ -17,3 +17,4 @@
 [x] 17. Redesigned follow-up management page with modern card-based layout
 [x] 18. Redesigned installations page with the same modern card-based design
 [x] 19. Added "Add Lead" to navigation sidebar and redesigned the page with modern styling
+[x] 20. Implemented email auto enrichment feature with company data, job titles, and professional information
