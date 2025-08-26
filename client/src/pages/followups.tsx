@@ -480,7 +480,7 @@ function FollowupsTable({
                         navigator.clipboard.writeText(lead.phone);
                         // Toast notification would go here if needed
                       }}
-                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-all opacity-0 group-hover:opacity-100"
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100"
                       title="Copy phone number"
                     >
                       <Copy className="h-3 w-3 text-gray-500 hover:text-gray-700" />
@@ -495,7 +495,7 @@ function FollowupsTable({
                           navigator.clipboard.writeText(lead.email);
                           // Toast notification would go here if needed
                         }}
-                        className="ml-2 p-1 hover:bg-gray-100 rounded transition-all opacity-0 group-hover:opacity-100"
+                        className="ml-2 p-1 hover:bg-gray-100 rounded transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100"
                         title="Copy email address"
                       >
                         <Copy className="h-3 w-3 text-gray-500 hover:text-gray-700" />
