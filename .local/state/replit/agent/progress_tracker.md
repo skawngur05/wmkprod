@@ -18,5 +18,8 @@
 [x] 18. Redesigned installations page with the same modern card-based design
 [x] 19. Added "Add Lead" to navigation sidebar and redesigned the page with modern styling
 [x] 20. Implemented email auto enrichment feature with company data, job titles, and professional information
-[•] 21. Fixed login validation error and debugged authentication endpoint
-[•] 22. Redesigned login page with modern split-screen layout (keeping WMK branding)
+[x] 21. Fixed login validation error and debugged authentication endpoint
+[x] 22. Redesigned login page with modern split-screen layout (keeping WMK branding)
+[x] 23. Updated login form labels - changed "Email Address" to "Username"
+[x] 24. Removed "Back to login options" button as requested
+[x] 25. Added signup popup modal with administrator contact message

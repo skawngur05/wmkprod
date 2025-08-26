@@ -9,6 +9,7 @@ export default function Login() {
   const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showSignupModal, setShowSignupModal] = useState(false);
   
   const { login } = useAuth();
   const [, setLocation] = useLocation();
@@ -74,14 +75,6 @@ export default function Login() {
       {/* Right Side - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 p-6">
         <div className="w-full max-w-md">
-          {/* Back Link */}
-          <div className="mb-6">
-            <button className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
-              <i className="fas fa-arrow-left mr-2"></i>
-              Back to login options
-            </button>
-          </div>
-
           {/* Form Header */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -94,10 +87,10 @@ export default function Login() {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email/Username Field */}
+            {/* Username Field */}
             <div>
               <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Address
+                Username
               </label>
               <div className="relative">
                 <input
@@ -105,12 +98,12 @@ export default function Login() {
                   id="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your email address"
+                  placeholder="Enter your username"
                   className="w-full px-4 py-3 pl-12 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                   required
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i className="fas fa-envelope text-gray-400"></i>
+                  <i className="fas fa-user text-gray-400"></i>
                 </div>
               </div>
             </div>
@@ -169,7 +162,11 @@ export default function Login() {
             <div className="text-center">
               <span className="text-gray-600 text-sm">
                 Don't have an account?{' '}
-                <button type="button" className="text-green-600 hover:text-green-700 font-medium">
+                <button 
+                  type="button" 
+                  onClick={() => setShowSignupModal(true)}
+                  className="text-green-600 hover:text-green-700 font-medium"
+                >
                   Sign up
                 </button>
               </span>
@@ -185,6 +182,31 @@ export default function Login() {
           </form>
         </div>
       </div>
+
+      {/* Signup Modal */}
+      {showSignupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="mb-4">
+                <i className="fas fa-info-circle text-green-600 text-4xl"></i>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Account Registration
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Please reach out to the website administrator to create a new account.
+              </p>
+              <button
+                onClick={() => setShowSignupModal(false)}
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
