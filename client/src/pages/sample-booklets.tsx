@@ -87,6 +87,11 @@ export default function SampleBooklets() {
     }
   };
 
+  const handleEdit = (booklet: SampleBooklet) => {
+    setSelectedBooklet(booklet);
+    setShowEditModal(true);
+  };
+
   const getProductTypeBadge = (productType: string) => {
     const badges: Record<string, string> = {
       'demo_kit_and_sample_booklet': 'success',
