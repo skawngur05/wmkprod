@@ -28,17 +28,26 @@ import {
 } from 'lucide-react';
 import { Redirect } from 'wouter';
 
+// Define user role hierarchy (higher number = higher authority)
+const ROLE_HIERARCHY = {
+  'installer': 1,
+  'sales_rep': 2,
+  'manager': 3,
+  'owner': 4,
+  'admin': 5
+} as const;
+
 // Define all available permissions
 const AVAILABLE_PERMISSIONS = [
-  { id: 'dashboard', label: 'Dashboard', description: 'View main dashboard and statistics' },
-  { id: 'leads', label: 'Leads Management', description: 'View, create, edit and manage leads' },
-  { id: 'followups', label: 'Follow-ups', description: 'View and manage follow-up tasks' },
-  { id: 'installations', label: 'Installations', description: 'View and manage installation schedules' },
-  { id: 'sample-booklets', label: 'Sample Booklets', description: 'Manage sample booklet orders' },
-  { id: 'reports', label: 'Reports & Analytics', description: 'View reports and business analytics' },
-  { id: 'admin', label: 'Admin Panel', description: 'Access administrative functions' },
-  { id: 'user-management', label: 'User Management', description: 'Create and manage user accounts' },
-  { id: 'system-settings', label: 'System Settings', description: 'Configure system-wide settings' },
+  { id: 'dashboard', label: 'Dashboard', description: 'View main dashboard and statistics', minRole: 1 },
+  { id: 'leads', label: 'Leads Management', description: 'View, create, edit and manage leads', minRole: 2 },
+  { id: 'followups', label: 'Follow-ups', description: 'View and manage follow-up tasks', minRole: 2 },
+  { id: 'installations', label: 'Installations', description: 'View and manage installation schedules', minRole: 1 },
+  { id: 'sample-booklets', label: 'Sample Booklets', description: 'Manage sample booklet orders', minRole: 2 },
+  { id: 'reports', label: 'Reports & Analytics', description: 'View reports and business analytics', minRole: 3 },
+  { id: 'admin', label: 'Admin Panel', description: 'Access administrative functions', minRole: 4 },
+  { id: 'user-management', label: 'User Management', description: 'Create and manage user accounts', minRole: 4 },
+  { id: 'system-settings', label: 'System Settings', description: 'Configure system-wide settings', minRole: 5 },
 ] as const;
 
 interface User {
@@ -158,14 +167,16 @@ export default function UserManagement() {
   };
 
   const handleRoleChange = (role: string, isEditing = false) => {
+    const roleLevel = ROLE_HIERARCHY[role as keyof typeof ROLE_HIERARCHY];
+    // Auto-assign permissions based on role hierarchy
+    const defaultPermissions = AVAILABLE_PERMISSIONS
+      .filter(p => roleLevel >= p.minRole)
+      .map(p => p.id);
+
     if (isEditing && editingUser) {
-      // Admin gets all permissions by default
-      const permissions = role === 'admin' ? AVAILABLE_PERMISSIONS.map(p => p.id) : [];
-      setEditingUser({ ...editingUser, role, permissions });
+      setEditingUser({ ...editingUser, role, permissions: defaultPermissions });
     } else {
-      // Admin gets all permissions by default
-      const permissions = role === 'admin' ? AVAILABLE_PERMISSIONS.map(p => p.id) : [];
-      setNewUser({ ...newUser, role, permissions });
+      setNewUser({ ...newUser, role, permissions: defaultPermissions });
     }
   };
 
@@ -249,7 +260,10 @@ export default function UserManagement() {
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="installer">Installer</SelectItem>
                       <SelectItem value="sales_rep">Sales Representative</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
                       <SelectItem value="admin">Administrator</SelectItem>
                     </SelectContent>
                   </Select>
@@ -275,7 +289,7 @@ export default function UserManagement() {
                         id={permission.id}
                         checked={newUser.permissions.includes(permission.id)}
                         onCheckedChange={() => handlePermissionToggle(permission.id)}
-                        disabled={newUser.role === 'admin'} // Admins get all permissions
+                        disabled={newUser.role === 'admin' || newUser.role === 'owner'} // Admins and Owners get all permissions
                         data-testid={`checkbox-${permission.id}`}
                       />
                       <div className="flex-1">
@@ -287,10 +301,15 @@ export default function UserManagement() {
                     </div>
                   ))}
                 </div>
-                {newUser.role === 'admin' && (
+                {(newUser.role === 'admin' || newUser.role === 'owner') && (
                   <p className="text-sm text-blue-600 mt-2">
                     <Shield className="h-4 w-4 inline mr-1" />
-                    Administrators have access to all pages by default
+                    {newUser.role === 'admin' ? 'Administrators' : 'Owners'} have access to all pages by default
+                  </p>
+                )}
+                {newUser.role && newUser.role !== 'admin' && newUser.role !== 'owner' && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Permissions automatically assigned based on role hierarchy. You can customize them below.
                   </p>
                 )}
               </div>
@@ -342,17 +361,22 @@ export default function UserManagement() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>
-                      {user.role === 'admin' ? (
-                        <><Shield className="h-3 w-3 mr-1" />Administrator</>
-                      ) : (
-                        <><User className="h-3 w-3 mr-1" />Sales Rep</>
-                      )}
+                    <Badge variant={
+                      user.role === 'admin' ? 'destructive' : 
+                      user.role === 'owner' ? 'destructive' :
+                      user.role === 'manager' ? 'default' :
+                      'secondary'
+                    }>
+                      {user.role === 'admin' && <><Shield className="h-3 w-3 mr-1" />Administrator</>}
+                      {user.role === 'owner' && <><Key className="h-3 w-3 mr-1" />Owner</>}
+                      {user.role === 'manager' && <><Settings className="h-3 w-3 mr-1" />Manager</>}
+                      {user.role === 'sales_rep' && <><User className="h-3 w-3 mr-1" />Sales Rep</>}
+                      {user.role === 'installer' && <><User className="h-3 w-3 mr-1" />Installer</>}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {user.role === 'admin' ? (
+                      {(user.role === 'admin' || user.role === 'owner') ? (
                         <Badge variant="outline" className="text-xs">All Permissions</Badge>
                       ) : (
                         (user.permissions || []).slice(0, 2).map(perm => (
@@ -361,7 +385,7 @@ export default function UserManagement() {
                           </Badge>
                         ))
                       )}
-                      {user.permissions && user.permissions.length > 2 && user.role !== 'admin' && (
+                      {user.permissions && user.permissions.length > 2 && user.role !== 'admin' && user.role !== 'owner' && (
                         <Badge variant="outline" className="text-xs">
                           +{user.permissions.length - 2} more
                         </Badge>
@@ -386,7 +410,7 @@ export default function UserManagement() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {user.id !== user.id && ( // Don't allow deleting current user
+                      {user.username !== user?.username && ( // Don't allow deleting current user
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -424,7 +448,10 @@ export default function UserManagement() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="installer">Installer</SelectItem>
                       <SelectItem value="sales_rep">Sales Representative</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
                       <SelectItem value="admin">Administrator</SelectItem>
                     </SelectContent>
                   </Select>
@@ -447,7 +474,7 @@ export default function UserManagement() {
                       <Checkbox
                         checked={(editingUser.permissions || []).includes(permission.id)}
                         onCheckedChange={() => handlePermissionToggle(permission.id, true)}
-                        disabled={editingUser.role === 'admin'} // Admins get all permissions
+                        disabled={editingUser.role === 'admin' || editingUser.role === 'owner'} // Admins and Owners get all permissions
                       />
                       <div className="flex-1">
                         <Label className="font-medium cursor-pointer">
@@ -458,10 +485,15 @@ export default function UserManagement() {
                     </div>
                   ))}
                 </div>
-                {editingUser.role === 'admin' && (
+                {(editingUser.role === 'admin' || editingUser.role === 'owner') && (
                   <p className="text-sm text-blue-600 mt-2">
                     <Shield className="h-4 w-4 inline mr-1" />
-                    Administrators have access to all pages by default
+                    {editingUser.role === 'admin' ? 'Administrators' : 'Owners'} have access to all pages by default
+                  </p>
+                )}
+                {editingUser.role && editingUser.role !== 'admin' && editingUser.role !== 'owner' && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Permissions automatically assigned based on role hierarchy. You can customize them below.
                   </p>
                 )}
               </div>

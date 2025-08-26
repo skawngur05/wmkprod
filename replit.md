@@ -26,9 +26,15 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Simple session handling with localStorage (production-ready session management to be implemented)
 
 ### Authentication System
-- **Authentication**: Username/password based authentication with role-based access control
-- **Roles**: Admin and Sales Rep roles with different permission levels
-- **Default Users**: Pre-configured users (kim, patrick, lina) with "password" as default password
+- **Authentication**: Username/password based authentication with hierarchical role-based access control
+- **Role Hierarchy**: 5-tier system with automatic permission assignment:
+  1. **Installer** (Level 1): Dashboard, Installation access
+  2. **Sales Representative** (Level 2): Leads, Follow-ups, Sample Booklets access
+  3. **Manager** (Level 3): All Sales Rep permissions + Reports & Analytics
+  4. **Owner** (Level 4): All Manager permissions + Admin Panel, User Management
+  5. **Administrator** (Level 5): Full system access including System Settings
+- **Permission System**: 9 granular page-level permissions with role-based defaults
+- **Default Admin**: Username "admin", Password "admin123"
 - **Session Persistence**: Client-side session storage with automatic session restoration
 
 ### Data Models
