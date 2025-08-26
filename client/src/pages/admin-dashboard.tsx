@@ -118,7 +118,7 @@ export default function AdminDashboard() {
     {
       title: "System Settings",
       description: "Global system configuration",
-      icon: Tools,
+      icon: Wrench,
       value: "Config",
       subtext: "Application settings",
       href: "/admin/settings",
