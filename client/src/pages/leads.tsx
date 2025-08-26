@@ -248,6 +248,9 @@ export default function Leads() {
                     <SelectItem value="facebook">Facebook</SelectItem>
                     <SelectItem value="google">Google</SelectItem>
                     <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="trade-show">Trade Show</SelectItem>
+                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                    <SelectItem value="commercial">Commercial</SelectItem>
                     <SelectItem value="referral">Referral</SelectItem>
                   </SelectContent>
                 </Select>
@@ -269,18 +272,10 @@ export default function Leads() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="md:col-span-2 flex items-end gap-2">
-                <Button className="flex-1" data-testid="button-filter">
+              <div className="md:col-span-2 flex items-end">
+                <Button className="w-full" data-testid="button-filter">
                   <Search className="h-4 w-4 mr-2" />
                   Filter
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => updateFilters({ search: '', status: 'all', origin: 'all', assigned_to: 'all' })}
-                  data-testid="button-clear-filters"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear
                 </Button>
               </div>
             </div>
@@ -331,9 +326,9 @@ export default function Leads() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="capitalize">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border capitalize ${getOriginColor(lead.lead_origin)}`}>
                             {lead.lead_origin.replace('-', ' ')}
-                          </Badge>
+                          </span>
                         </TableCell>
                         <TableCell>
                           {lead.next_followup_date ? (
