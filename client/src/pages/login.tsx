@@ -77,14 +77,6 @@ export default function Login() {
         <div className="w-full max-w-md">
           {/* Form Container */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
-            {/* Back Link */}
-            <div className="mb-6">
-              <button className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
-                <i className="fas fa-arrow-left mr-2"></i>
-                Back to login options
-              </button>
-            </div>
-
             {/* Form Header */}
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
