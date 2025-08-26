@@ -63,9 +63,6 @@ export default function Login() {
             </div>
             
             {/* Brand Text */}
-            <h1 className="text-4xl font-bold mb-4">
-              Wrap My Kitchen
-            </h1>
             <p className="text-xl font-medium mb-6 text-green-100">
               Your Kitchen Solutions Partner
             </p>
