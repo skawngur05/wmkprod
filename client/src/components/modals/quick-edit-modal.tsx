@@ -111,12 +111,13 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
 
   return (
     <Dialog open={show} onOpenChange={onHide}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden" data-testid="quick-edit-modal">
-        <DialogHeader className="pb-4">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col" data-testid="quick-edit-modal">
+        <DialogHeader className="pb-4 flex-shrink-0">
           <DialogTitle>Edit Lead</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex-1 overflow-y-auto pr-2">
+          <form onSubmit={handleSubmit} className="space-y-4">
           {/* Two Column Layout - Always two columns */}
           <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem'}}>
             {/* Left Column */}
@@ -388,7 +389,8 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
               {updateLeadMutation.isPending ? 'Saving...' : 'Update Lead'}
             </Button>
           </div>
-        </form>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
