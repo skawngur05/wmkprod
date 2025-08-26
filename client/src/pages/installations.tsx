@@ -166,13 +166,17 @@ function InstallationCard({
                 </div>
               </div>
 
-              {installation.assigned_installer && (
+              {installation.assigned_installer && installation.assigned_installer.length > 0 && (
                 <div className="flex items-center space-x-2">
                   <HardHat className="h-4 w-4 text-blue-600" />
                   <div>
-                    <p className="text-xs font-medium text-gray-600 uppercase">Installer</p>
+                    <p className="text-xs font-medium text-gray-600 uppercase">
+                      {Array.isArray(installation.assigned_installer) && installation.assigned_installer.length > 1 ? 'Installers' : 'Installer'}
+                    </p>
                     <p className="text-sm font-medium text-gray-900 capitalize">
-                      {installation.assigned_installer}
+                      {Array.isArray(installation.assigned_installer) 
+                        ? installation.assigned_installer.join(', ') 
+                        : installation.assigned_installer}
                     </p>
                   </div>
                 </div>

@@ -31,7 +31,7 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
     project_amount: lead.project_amount || '',
     assigned_to: lead.assigned_to,
     installation_date: lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : '',
-    assigned_installer: lead.assigned_installer || '',
+    assigned_installer: lead.assigned_installer || [],
     deposit_paid: lead.deposit_paid || false,
     balance_paid: lead.balance_paid || false,
   });
@@ -77,7 +77,7 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
       project_amount: formData.project_amount || null,
       assigned_to: formData.assigned_to,
       installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
-      assigned_installer: formData.assigned_installer || null,
+      assigned_installer: formData.assigned_installer,
       deposit_paid: formData.deposit_paid,
       balance_paid: formData.balance_paid,
     };
@@ -184,22 +184,30 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
 
           {formData.remarks === 'sold' && (
             <div className="space-y-1">
-              <Label htmlFor="assigned_installer" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                ASSIGNED INSTALLER
+              <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                ASSIGNED INSTALLERS (Select Multiple)
               </Label>
-              <Select
-                value={formData.assigned_installer}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_installer: value }))}
-              >
-                <SelectTrigger data-testid="select-assigned-installer" className="h-11 text-base">
-                  <SelectValue placeholder="Select installer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="angel">Angel</SelectItem>
-                  <SelectItem value="brian">Brian</SelectItem>
-                  <SelectItem value="luis">Luis</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-1 gap-3 p-3 border rounded-lg bg-gray-50">
+                {['angel', 'brian', 'luis'].map((installer) => (
+                  <div key={installer} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`installer-${installer}`}
+                      checked={Array.isArray(formData.assigned_installer) ? formData.assigned_installer.includes(installer) : false}
+                      onCheckedChange={(checked) => {
+                        const currentInstallers = Array.isArray(formData.assigned_installer) ? formData.assigned_installer : [];
+                        const newInstallers = checked
+                          ? [...currentInstallers, installer]
+                          : currentInstallers.filter(i => i !== installer);
+                        setFormData(prev => ({ ...prev, assigned_installer: newInstallers }));
+                      }}
+                      data-testid={`checkbox-installer-${installer}`}
+                    />
+                    <Label htmlFor={`installer-${installer}`} className="text-sm font-medium capitalize cursor-pointer">
+                      {installer}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

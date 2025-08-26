@@ -29,7 +29,7 @@ export const leads = pgTable("leads", {
   deposit_paid: boolean("deposit_paid").notNull().default(false),
   balance_paid: boolean("balance_paid").notNull().default(false),
   installation_date: timestamp("installation_date"),
-  assigned_installer: varchar("assigned_installer", { length: 255 }), // angel, brian, luis
+  assigned_installer: text("assigned_installer").array(), // array of installer names: angel, brian, luis
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
