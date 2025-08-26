@@ -566,7 +566,14 @@ function FollowupsTable({
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-700 mb-1">Notes:</p>
-                    <p className="text-sm text-gray-600 line-clamp-2">{lead.notes}</p>
+                    <p className="text-sm text-gray-600 line-clamp-2">
+                      {(() => {
+                        const notes = lead.notes.split('\n').filter(line => line.trim());
+                        if (notes.length === 0) return lead.notes;
+                        // Get the most recent note (last in the array)
+                        return notes[notes.length - 1];
+                      })()}
+                    </p>
                   </div>
                 </div>
               </div>
