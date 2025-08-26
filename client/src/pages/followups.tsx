@@ -425,24 +425,23 @@ function FollowupsTable({
                 <div className="flex flex-col gap-2">
                   <Button 
                     size="sm" 
-                    variant="outline" 
-                    className="w-full h-8 text-xs"
+                    className="w-full h-9 text-xs font-medium bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm hover:shadow-md transition-all duration-200 border-0"
                     onClick={() => onQuickFollowup(lead)}
                     data-testid={`button-followup-${lead.id}`}
                     title="Schedule Follow-up"
                   >
-                    <Calendar className="h-3 w-3 mr-1" />
+                    <Calendar className="h-3.5 w-3.5 mr-1.5" />
                     Follow-up
                   </Button>
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    className="w-full h-8 text-xs"
+                    className="w-full h-9 text-xs font-medium border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
                     onClick={() => onQuickEdit(lead)}
                     data-testid={`button-view-${lead.id}`}
                     title="Edit Lead"
                   >
-                    <Edit className="h-3 w-3 mr-1" />
+                    <Edit className="h-3.5 w-3.5 mr-1.5" />
                     Edit
                   </Button>
                 </div>
@@ -705,6 +704,9 @@ export default function Followups() {
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Lead Details</DialogTitle>
+              <DialogDescription>
+                Update lead information, status, and follow-up details
+              </DialogDescription>
             </DialogHeader>
             {selectedLead && (
               <QuickEditForm 
