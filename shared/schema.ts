@@ -188,6 +188,7 @@ export const BOOKLET_STATUSES = [
   "in-transit",
   "out-for-delivery",
   "delivered",
+  "refunded",
   "unknown"
 ] as const;
 

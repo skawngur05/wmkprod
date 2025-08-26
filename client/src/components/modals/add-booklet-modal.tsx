@@ -181,6 +181,7 @@ export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProp
                     <option value="pending">Pending</option>
                     <option value="shipped">Shipped</option>
                     <option value="delivered">Delivered</option>
+                    <option value="refunded">Refunded</option>
                   </select>
                 </div>
 

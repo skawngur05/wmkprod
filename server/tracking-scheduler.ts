@@ -43,6 +43,7 @@ export class TrackingScheduler {
       const bookletsWithTracking = allBooklets.filter(b => 
         b.tracking_number && 
         b.status !== 'delivered' && 
+        b.status !== 'refunded' &&
         b.status !== 'unknown'
       );
 

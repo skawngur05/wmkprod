@@ -188,6 +188,7 @@ export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookl
                     <option value="pending">Pending</option>
                     <option value="shipped">Shipped</option>
                     <option value="delivered">Delivered</option>
+                    <option value="refunded">Refunded</option>
                   </select>
                 </div>
 

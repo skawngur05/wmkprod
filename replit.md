@@ -72,7 +72,8 @@ Preferred communication style: Simple, everyday language.
 - **USPS API**: Real-time package tracking integration for sample booklets
 - **Credentials**: Stored securely in environment variables (USPS_CONSUMER_KEY, USPS_CONSUMER_SECRET)
 - **Features**: Automatic status synchronization every 15 minutes, background tracking scheduler, mock data fallback for development
-- **Status Types**: pending, shipped, in-transit, out-for-delivery, delivered, unknown
+- **Status Types**: pending, shipped, in-transit, out-for-delivery, delivered, refunded, unknown
+- **Business Workflow**: Door compatibility check with refund option for non-compatible flat surface requirements
 
 ### UI & Styling
 - **Radix UI**: Comprehensive component library for accessible, unstyled components

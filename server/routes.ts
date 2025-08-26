@@ -317,6 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const inTransit = allBooklets.filter(b => b.status === "in-transit").length;
       const outForDelivery = allBooklets.filter(b => b.status === "out-for-delivery").length;
       const delivered = allBooklets.filter(b => b.status === "delivered").length;
+      const refunded = allBooklets.filter(b => b.status === "refunded").length;
       const thisWeek = allBooklets.filter(b => {
         const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         return new Date(b.date_ordered) > weekAgo;
@@ -329,6 +330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inTransitOrders: inTransit,
         outForDeliveryOrders: outForDelivery,
         deliveredOrders: delivered,
+        refundedOrders: refunded,
         thisWeekOrders: thisWeek
       });
     } catch (error) {

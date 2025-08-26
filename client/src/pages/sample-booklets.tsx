@@ -119,6 +119,7 @@ export default function SampleBooklets() {
       'in-transit': 'primary',
       'out-for-delivery': 'info',
       'delivered': 'success',
+      'refunded': 'danger',
       'unknown': 'secondary'
     };
     return badges[status] || 'secondary';
@@ -131,6 +132,7 @@ export default function SampleBooklets() {
       'in-transit': 'In Transit',
       'out-for-delivery': 'Out for Delivery',
       'delivered': 'Delivered',
+      'refunded': 'Refunded',
       'unknown': 'Unknown'
     };
     return labels[status] || status;
@@ -219,6 +221,14 @@ export default function SampleBooklets() {
           <div className="col-md-2 mb-3">
             <div className="stats-card card text-center">
               <div className="card-body">
+                <h3 className="text-danger">{stats.refundedOrders || 0}</h3>
+                <p className="mb-0">Refunded</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2 mb-3">
+            <div className="stats-card card text-center">
+              <div className="card-body">
                 <h3 className="text-primary">{stats.thisWeekOrders}</h3>
                 <p className="mb-0">This Week</p>
               </div>
@@ -245,6 +255,7 @@ export default function SampleBooklets() {
                 <option value="in-transit">In Transit</option>
                 <option value="out-for-delivery">Out for Delivery</option>
                 <option value="delivered">Delivered</option>
+                <option value="refunded">Refunded</option>
               </select>
             </div>
             <div className="col-md-3 d-flex align-items-end">
