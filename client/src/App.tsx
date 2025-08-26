@@ -92,6 +92,12 @@ function AppRouter() {
         </ProtectedRoute>
       </Route>
       
+      <Route path="/admin/users">
+        <ProtectedRoute>
+          <UserManagement />
+        </ProtectedRoute>
+      </Route>
+      
       <Route path="/admin/installers">
         <ProtectedRoute>
           <AdminDashboard />
