@@ -44,6 +44,7 @@ const AVAILABLE_PERMISSIONS = [
   { id: 'leads', label: 'Leads Management', description: 'View, create, edit and manage leads', minRole: 2 },
   { id: 'followups', label: 'Follow-ups', description: 'View and manage follow-up tasks', minRole: 2 },
   { id: 'installations', label: 'Installations', description: 'View and manage installation schedules', minRole: 1 },
+  { id: 'installers', label: 'Installers Management', description: 'Manage installer personnel and assignments', minRole: 3 },
   { id: 'sample-booklets', label: 'Sample Booklets', description: 'Manage sample booklet orders', minRole: 2 },
   { id: 'reports', label: 'Reports & Analytics', description: 'View reports and business analytics', minRole: 3 },
   { id: 'admin', label: 'Admin Panel', description: 'Access administrative functions', minRole: 4 },
