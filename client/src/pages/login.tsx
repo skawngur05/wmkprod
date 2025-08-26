@@ -75,111 +75,122 @@ export default function Login() {
       {/* Right Side - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 p-6">
         <div className="w-full max-w-md">
-          {/* Form Header */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              Sign In
-            </h2>
-            <p className="text-gray-600">
-              Welcome back to Wrap My Kitchen
-            </p>
-          </div>
-
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Address Field */}
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your @wrapmykitchen.com email"
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                  required
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i className="fas fa-envelope text-gray-400 text-sm"></i>
-                </div>
-              </div>
+          {/* Form Container */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
+            {/* Back Link */}
+            <div className="mb-6">
+              <button className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
+                <i className="fas fa-arrow-left mr-2"></i>
+                Back to login options
+              </button>
             </div>
 
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                  required
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i className="fas fa-lock text-gray-400 text-sm"></i>
-                </div>
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                  <i className="fas fa-eye-slash text-gray-400 cursor-pointer hover:text-gray-600 text-sm"></i>
-                </div>
-              </div>
+            {/* Form Header */}
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Sign In
+              </h2>
+              <p className="text-gray-600">
+                Welcome back to Wrap My Kitchen
+              </p>
             </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                <div className="flex">
-                  <i className="fas fa-exclamation-circle text-red-400 mr-2 mt-0.5 text-sm"></i>
-                  <span className="text-red-800 text-sm">{error}</span>
+            {/* Login Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Username Field */}
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                  Username
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter your username"
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                    required
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i className="fas fa-envelope text-gray-400 text-sm"></i>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <i className="fas fa-spinner fa-spin mr-2"></i>
-                  Signing In...
+              {/* Password Field */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full pl-10 pr-10 py-3 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                    required
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i className="fas fa-lock text-gray-400 text-sm"></i>
+                  </div>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <i className="fas fa-eye-slash text-gray-400 cursor-pointer hover:text-gray-600 text-sm"></i>
+                  </div>
                 </div>
-              ) : (
-                'Sign In'
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <div className="flex">
+                    <i className="fas fa-exclamation-circle text-red-400 mr-2 mt-0.5 text-sm"></i>
+                    <span className="text-red-800 text-sm">{error}</span>
+                  </div>
+                </div>
               )}
-            </button>
 
-            {/* Sign Up Link */}
-            <div className="text-center">
-              <span className="text-gray-600 text-sm">
-                Don't have an account?{' '}
-                <button 
-                  type="button" 
-                  onClick={() => setShowSignupModal(true)}
-                  className="text-green-600 hover:text-green-700 font-medium"
-                >
-                  Sign up
-                </button>
-              </span>
-            </div>
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <i className="fas fa-spinner fa-spin mr-2"></i>
+                    Signing In...
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
+              </button>
 
-            {/* Debug Info */}
-            <div className="text-center mt-4">
-              <div className="text-xs text-gray-500 bg-gray-100 rounded p-2">
-                <strong>Test Accounts:</strong><br />
-                kim, patrick, lina (password: password)
+              {/* Sign Up Link */}
+              <div className="text-center">
+                <span className="text-gray-600 text-sm">
+                  Don't have an account?{' '}
+                  <button 
+                    type="button" 
+                    onClick={() => setShowSignupModal(true)}
+                    className="text-green-600 hover:text-green-700 font-medium"
+                  >
+                    Sign up
+                  </button>
+                </span>
               </div>
-            </div>
-          </form>
+
+              {/* Debug Info */}
+              <div className="text-center mt-4">
+                <div className="text-xs text-gray-500 bg-gray-100 rounded p-2">
+                  <strong>Test Accounts:</strong><br />
+                  kim, patrick, lina (password: password)
+                </div>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 
