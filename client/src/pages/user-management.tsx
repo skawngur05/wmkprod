@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -81,17 +81,14 @@ export default function UserManagement() {
     return <Redirect to="/dashboard" />;
   }
 
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ['/api/admin/users'],
   });
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: typeof newUser) => {
-      return apiRequest('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
-      });
+      const response = await apiRequest('POST', '/api/admin/users', userData);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -111,11 +108,8 @@ export default function UserManagement() {
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<User> }) => {
-      return apiRequest(`/api/admin/users/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+      const response = await apiRequest('PUT', `/api/admin/users/${id}`, data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -128,10 +122,8 @@ export default function UserManagement() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/admin/users/${id}`, { 
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await apiRequest('DELETE', `/api/admin/users/${id}`);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -215,6 +207,9 @@ export default function UserManagement() {
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
+              <DialogDescription>
+                Create a new user account with role-based permissions
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -410,7 +405,7 @@ export default function UserManagement() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {user.username !== user?.username && ( // Don't allow deleting current user
+                      {user.username !== 'admin' && ( // Don't allow deleting admin user
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -434,6 +429,9 @@ export default function UserManagement() {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Edit User: {editingUser?.username}</DialogTitle>
+            <DialogDescription>
+              Modify user role and permissions
+            </DialogDescription>
           </DialogHeader>
           {editingUser && (
             <div className="space-y-6">
