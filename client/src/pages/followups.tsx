@@ -425,12 +425,13 @@ function FollowupsTable({
                 <div className="flex flex-col gap-2">
                   <Button 
                     size="sm" 
-                    className="w-full h-9 text-xs font-medium bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm hover:shadow-md transition-all duration-200 border-0"
+                    variant="outline" 
+                    className="w-full h-8 text-xs"
                     onClick={() => onQuickFollowup(lead)}
                     data-testid={`button-followup-${lead.id}`}
                     title="Schedule Follow-up"
                   >
-                    <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                    <Calendar className="h-3 w-3 mr-1" />
                     Follow-up
                   </Button>
                   <Button 
