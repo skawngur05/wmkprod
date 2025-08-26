@@ -85,6 +85,42 @@ function AppRouter() {
         </ProtectedRoute>
       </Route>
       
+      <Route path="/admin/users">
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/admin/installers">
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/admin/lead-origins">
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/admin/email-templates">
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/admin/smtp-settings">
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/admin/activity">
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
+      
       <Route path="/leads">
         <ProtectedRoute>
           <Leads />
