@@ -34,7 +34,8 @@ const ROLE_HIERARCHY = {
   'sales_rep': 2,
   'manager': 3,
   'owner': 4,
-  'admin': 5
+  'admin': 5,
+  'administrator': 5
 } as const;
 
 // Define all available permissions
@@ -77,7 +78,7 @@ export default function UserManagement() {
   });
 
   // Redirect non-admin users
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'administrator')) {
     return <Redirect to="/dashboard" />;
   }
 
