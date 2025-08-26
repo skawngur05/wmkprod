@@ -30,3 +30,4 @@
 [x] 30. Created PostgreSQL database with all required tables (users, leads, sample_booklets, installers)
 [x] 31. Inserted default users (kim, patrick, lina) with working credentials
 [x] 32. Database migration completed - all tables properly configured
+[x] 33. Removed "Welcome back" message and date from all pages except dashboard

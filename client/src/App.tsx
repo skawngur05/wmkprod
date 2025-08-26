@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -22,6 +22,7 @@ import Reports from "@/pages/reports";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+  const [location] = useLocation();
 
   if (isLoading) {
     return (
@@ -38,18 +39,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Redirect to="/login" />;
   }
 
+  const isDashboard = location === '/dashboard';
+
   return (
     <div className="app-layout">
       <Sidebar />
       <main className="main-content">
-        <div className="content-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <h5 className="mb-0 text-dark">Welcome back, {user ? capitalizeFirst(user.username) : 'User'}</h5>
-            <div className="user-menu">
-              <span className="text-muted">{new Date().toLocaleDateString()}</span>
+        {isDashboard && (
+          <div className="content-header">
+            <div className="d-flex justify-content-between align-items-center">
+              <h5 className="mb-0 text-dark">Welcome back, {user ? capitalizeFirst(user.username) : 'User'}</h5>
+              <div className="user-menu">
+                <span className="text-muted">{new Date().toLocaleDateString()}</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
         <div className="p-4">
           {children}
         </div>
