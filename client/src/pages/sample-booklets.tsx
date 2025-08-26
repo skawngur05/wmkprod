@@ -52,7 +52,8 @@ export default function SampleBooklets() {
       const data = await response.json();
       // Ensure we always return an array
       return Array.isArray(data) ? data : [];
-    }
+    },
+    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
   });
 
   const { data: stats } = useQuery<BookletStats>({
@@ -346,15 +347,9 @@ export default function SampleBooklets() {
                             >
                               {booklet.tracking_number}
                             </a>
-                            <button
-                              className="btn btn-outline-secondary btn-xs mt-1"
-                              onClick={() => trackPackageMutation.mutate(booklet.id)}
-                              disabled={trackPackageMutation.isPending}
-                              data-testid={`button-track-${booklet.id}`}
-                            >
-                              <i className={`fas ${trackPackageMutation.isPending ? 'fa-spinner fa-spin' : 'fa-search'} me-1`}></i>
-                              Track
-                            </button>
+                            <small className="text-muted d-block mt-1">
+                              Auto-updating every 5 min
+                            </small>
                           </div>
                         ) : (
                           '-'

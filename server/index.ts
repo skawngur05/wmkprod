@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { trackingScheduler } from "./tracking-scheduler";
 import { setupVite, serveStatic, log } from "./vite";
 import dotenv from "dotenv";
 
@@ -77,5 +78,8 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start the automatic USPS tracking scheduler
+    trackingScheduler.start();
   });
 })();

@@ -50,8 +50,8 @@ Preferred communication style: Simple, everyday language.
 - **Lead Management**: Full CRUD operations with inline editing, bulk operations, and advanced filtering
 - **Follow-up System**: Calendar-based scheduling with overdue/today/upcoming categorization
 - **Installation Tracking**: Payment milestone tracking (deposit/balance) and installation scheduling
-- **Sample Booklets**: Real-time USPS tracking integration with automatic status synchronization
-- **USPS Integration**: Live package tracking with statuses: pending, shipped, in-transit, out-for-delivery, delivered
+- **Sample Booklets**: Comprehensive order management with real-time USPS tracking integration
+- **USPS Integration**: Automatic status synchronization every 15 minutes with live package tracking
 - **Reporting**: Performance analytics, conversion tracking, revenue reporting by team member
 - **Import/Export**: CSV handling for bulk operations and data portability
 
@@ -71,7 +71,8 @@ Preferred communication style: Simple, everyday language.
 ### External APIs
 - **USPS API**: Real-time package tracking integration for sample booklets
 - **Credentials**: Stored securely in environment variables (USPS_CONSUMER_KEY, USPS_CONSUMER_SECRET)
-- **Features**: Automatic status synchronization, individual package tracking, bulk tracking updates
+- **Features**: Automatic status synchronization every 15 minutes, background tracking scheduler, mock data fallback for development
+- **Status Types**: pending, shipped, in-transit, out-for-delivery, delivered, unknown
 
 ### UI & Styling
 - **Radix UI**: Comprehensive component library for accessible, unstyled components

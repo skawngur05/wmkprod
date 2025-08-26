@@ -45,9 +45,9 @@ export class USPSService {
       const response = await fetch(`${this.baseUrl}/oauth2/v3/token`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: JSON.stringify({
+        body: new URLSearchParams({
           client_id: this.consumerKey,
           client_secret: this.consumerSecret,
           grant_type: 'client_credentials',

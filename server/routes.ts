@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, updateLeadSchema, insertSampleBookletSchema, updateSampleBookletSchema, insertCalendarEventSchema, updateCalendarEventSchema } from "@shared/schema";
 import { uspsService } from "./usps-service";
+import { trackingScheduler } from "./tracking-scheduler";
 import { z } from "zod";
 import { emailService } from "./email-service";
 
@@ -298,39 +299,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/sample-booklets/sync-tracking", async (req, res) => {
     try {
-      const allBooklets = await storage.getSampleBooklets();
-      const bookletsWithTracking = allBooklets.filter(b => 
-        b.tracking_number && 
-        b.status !== 'delivered' && 
-        b.status !== 'unknown'
-      );
-
-      if (bookletsWithTracking.length === 0) {
-        return res.json({ message: "No booklets with tracking numbers to sync", updated: 0 });
-      }
-
-      const trackingNumbers = bookletsWithTracking.map(b => b.tracking_number!);
-      const trackingResults = await uspsService.trackMultiplePackages(trackingNumbers);
-      
-      let updatedCount = 0;
-      for (let i = 0; i < bookletsWithTracking.length; i++) {
-        const booklet = bookletsWithTracking[i];
-        const tracking = trackingResults[i];
-        
-        if (tracking.status !== booklet.status) {
-          await storage.updateSampleBooklet(booklet.id, { 
-            status: tracking.status as any 
-          });
-          updatedCount++;
-        }
-      }
-
-      res.json({ 
-        message: `Synchronized ${trackingResults.length} tracking numbers`, 
-        updated: updatedCount 
-      });
+      // Use the tracking scheduler for manual sync
+      await trackingScheduler.manualSync();
+      res.json({ message: "Manual tracking sync completed" });
     } catch (error) {
-      console.error('Sync tracking error:', error);
+      console.error('Manual sync tracking error:', error);
       res.status(500).json({ message: "Failed to sync tracking information" });
     }
   });
