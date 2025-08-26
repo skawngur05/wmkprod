@@ -30,107 +30,159 @@ export default function Login() {
   };
 
   return (
-    <div className="login-container d-flex align-items-center justify-content-center">
-      <div className="container">
-        <div className="row justify-content-center">
-          <div className="col-md-6 col-lg-4">
-            <div className="card login-card">
-              <div className="card-body p-5">
-                <div className="text-center mb-4">
-                  <div className="d-flex justify-content-center mb-3">
-                    <img 
-                      src={wmkLogo} 
-                      alt="Wrap My Kitchen Logo" 
-                      style={{ height: '80px', width: 'auto' }}
-                      data-testid="logo-image"
-                    />
-                  </div>
-                  <p className="text-muted" data-testid="app-subtitle">Lead Management CRM</p>
-                </div>
-                
-                <form onSubmit={handleSubmit} data-testid="login-form">
-                  <div className="mb-3">
-                    <label htmlFor="username" className="form-label">Username</label>
-                    <div className="input-group">
-                      <span className="input-group-text">
-                        <i className="fas fa-user"></i>
-                      </span>
-                      <input
-                        type="text"
-                        className="form-control"
-                        id="username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        required
-                        data-testid="input-username"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="mb-3">
-                    <label htmlFor="password" className="form-label">Password</label>
-                    <div className="input-group">
-                      <span className="input-group-text">
-                        <i className="fas fa-lock"></i>
-                      </span>
-                      <input
-                        type="password"
-                        className="form-control"
-                        id="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        data-testid="input-password"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="mb-3 form-check">
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
-                      id="remember"
-                      checked={remember}
-                      onChange={(e) => setRemember(e.target.checked)}
-                      data-testid="checkbox-remember"
-                    />
-                    <label className="form-check-label" htmlFor="remember">
-                      Remember me
-                    </label>
-                  </div>
-                  
-                  {error && (
-                    <div className="alert alert-danger" data-testid="error-message">
-                      {error}
-                    </div>
-                  )}
-                  
-                  <button
-                    type="submit"
-                    className="btn btn-primary w-100 py-2"
-                    disabled={isLoading}
-                    data-testid="button-login"
-                  >
-                    {isLoading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin me-2"></i>Signing in...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-sign-in-alt me-2"></i>Login
-                      </>
-                    )}
-                  </button>
-                  
-                  <div className="text-center mt-3">
-                    <small className="text-muted" data-testid="help-text">
-                      Default users: kim, patrick, lina (password: password)
-                    </small>
-                  </div>
-                </form>
-              </div>
+    <div className="min-h-screen flex">
+      {/* Left Side - Brand Section */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-green-700 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+            backgroundSize: '40px 40px'
+          }}></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center items-center text-white p-12 w-full">
+          <div className="text-center max-w-md">
+            {/* Logo */}
+            <div className="mb-8">
+              <img 
+                src={wmkLogo} 
+                alt="Wrap My Kitchen Logo" 
+                className="h-24 w-auto mx-auto filter brightness-0 invert"
+              />
+            </div>
+            
+            {/* Brand Text */}
+            <h1 className="text-4xl font-bold mb-4">
+              Wrap My Kitchen
+            </h1>
+            <p className="text-xl font-medium mb-6 text-green-100">
+              Your Kitchen Solutions Partner
+            </p>
+            
+            {/* Description */}
+            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 border border-white border-opacity-20">
+              <p className="text-green-50 leading-relaxed">
+                Manage leads, track installations, and grow your kitchen business with our comprehensive CRM solution.
+              </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 p-6">
+        <div className="w-full max-w-md">
+          {/* Back Link */}
+          <div className="mb-6">
+            <button className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
+              <i className="fas fa-arrow-left mr-2"></i>
+              Back to login options
+            </button>
+          </div>
+
+          {/* Form Header */}
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              Sign In
+            </h2>
+            <p className="text-gray-600">
+              Welcome back to Wrap My Kitchen
+            </p>
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Email/Username Field */}
+            <div>
+              <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your email address"
+                  className="w-full px-4 py-3 pl-12 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  required
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i className="fas fa-envelope text-gray-400"></i>
+                </div>
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-3 pl-12 pr-12 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  required
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i className="fas fa-lock text-gray-400"></i>
+                </div>
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <i className="fas fa-eye-slash text-gray-400 cursor-pointer hover:text-gray-600"></i>
+                </div>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="flex">
+                  <i className="fas fa-exclamation-circle text-red-400 mr-2 mt-0.5"></i>
+                  <span className="text-red-800 text-sm">{error}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <i className="fas fa-spinner fa-spin mr-2"></i>
+                  Signing In...
+                </div>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+
+            {/* Sign Up Link */}
+            <div className="text-center">
+              <span className="text-gray-600 text-sm">
+                Don't have an account?{' '}
+                <button type="button" className="text-green-600 hover:text-green-700 font-medium">
+                  Sign up
+                </button>
+              </span>
+            </div>
+
+            {/* Debug Info */}
+            <div className="text-center mt-4">
+              <div className="text-xs text-gray-500 bg-gray-100 rounded p-2">
+                <strong>Test Accounts:</strong><br />
+                kim, patrick, lina (password: password)
+              </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>

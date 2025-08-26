@@ -15,6 +15,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth endpoints
   app.post("/api/auth/login", async (req, res) => {
     try {
+      console.log("Login request body:", req.body);
+      console.log("Body type:", typeof req.body);
+      
       const { username, password } = loginSchema.parse(req.body);
       const user = await storage.getUserByUsername(username.toLowerCase());
       
@@ -31,6 +34,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } 
       });
     } catch (error) {
+      console.error("Login validation error:", error);
+      if (error instanceof z.ZodError) {
+        console.error("Zod validation errors:", error.errors);
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
       res.status(400).json({ message: "Invalid request data" });
     }
   });

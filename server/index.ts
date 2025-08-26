@@ -10,6 +10,12 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Debugging middleware (after body parsing)
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`, req.body ? `Body: ${JSON.stringify(req.body)}` : 'No body');
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
