@@ -131,39 +131,9 @@ export default function SampleBooklets() {
     return labels[status] || status;
   };
 
-  const syncTrackingMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest('POST', '/api/sample-booklets/sync-tracking');
-    },
-    onSuccess: () => {
-      toast({ title: "Success", description: "Tracking information synchronized!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/sample-booklets'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/sample-booklets/stats/dashboard'] });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to sync tracking information", variant: "destructive" });
-    }
-  });
 
-  const trackPackageMutation = useMutation({
-    mutationFn: async (bookletId: string): Promise<TrackingInfo> => {
-      const response = await fetch(`/api/sample-booklets/${bookletId}/tracking`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch tracking information');
-      }
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({ 
-        title: "Tracking Info", 
-        description: `Status: ${data.statusDescription}` 
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/sample-booklets'] });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to fetch tracking information", variant: "destructive" });
-    }
-  });
+
+
 
   const formatDate = (date: string | Date) => {
     return new Date(date).toLocaleDateString();
@@ -197,15 +167,7 @@ export default function SampleBooklets() {
               >
                 <i className="fas fa-plus me-1"></i>Add New Order
               </button>
-              <button 
-                className="btn btn-outline-primary me-2" 
-                onClick={() => syncTrackingMutation.mutate()}
-                disabled={syncTrackingMutation.isPending}
-                data-testid="button-check-delivery"
-              >
-                <i className={`fas ${syncTrackingMutation.isPending ? 'fa-spinner fa-spin' : 'fa-sync'} me-1`}></i>
-                {syncTrackingMutation.isPending ? 'Syncing...' : 'Sync USPS Tracking'}
-              </button>
+
               <button className="btn btn-outline-secondary" data-testid="button-export-booklets">
                 <i className="fas fa-download me-1"></i>Export Orders
               </button>
@@ -372,6 +334,10 @@ export default function SampleBooklets() {
                         {booklet.status === 'pending' && (
                           <button
                             className="btn btn-circle btn-outline-info btn-sm me-1"
+                            onClick={() => {
+                              handleEdit(booklet);
+                            }}
+                            title="Mark as shipped and add tracking number"
                             data-testid={`button-ship-booklet-${booklet.id}`}
                           >
                             <i className="fas fa-shipping-fast"></i>
