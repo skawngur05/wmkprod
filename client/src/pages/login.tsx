@@ -145,10 +145,21 @@ export default function Login() {
 
               {/* Error Message */}
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                  <div className="flex">
-                    <i className="fas fa-exclamation-circle text-red-400 mr-2 mt-0.5 text-sm"></i>
-                    <span className="text-red-800 text-sm">{error}</span>
+                <div className="bg-red-50 border-l-4 border-red-400 rounded-lg p-4 animate-shake">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <div className="w-6 h-6 bg-red-400 rounded-full flex items-center justify-center">
+                        <i className="fas fa-exclamation text-white text-xs"></i>
+                      </div>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">
+                        Login Failed
+                      </h3>
+                      <p className="mt-1 text-sm text-red-700">
+                        {error}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
