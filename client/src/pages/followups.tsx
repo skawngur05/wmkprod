@@ -338,35 +338,28 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
           <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
             QUICK NOTE TEMPLATES
           </Label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {[
-              "Sent a text message",
-              "Sent an email", 
-              "Talked to client - interested",
-              "Talked to client - needs time to decide", 
-              "Left voicemail",
-              "Scheduled callback",
-              "Sent quote",
-              "Meeting scheduled",
-              "Waiting for approval",
-              "Follow-up call completed",
-              "Site visit scheduled",
-              "Quote requested",
-              "Contract sent",
-              "Payment discussion needed"
-            ].map((template) => (
-              <Button
-                key={template}
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs justify-start px-2 py-1 hover:bg-blue-50 hover:border-blue-300"
-                onClick={() => setNewNote(template)}
-              >
-                {template}
-              </Button>
-            ))}
-          </div>
+          <Select onValueChange={(value) => value !== "custom" && setNewNote(value)}>
+            <SelectTrigger className="h-11 text-base">
+              <SelectValue placeholder="Select a template or type your own note below" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="custom">Type custom note below...</SelectItem>
+              <SelectItem value="Sent a text message">Sent a text message</SelectItem>
+              <SelectItem value="Sent an email">Sent an email</SelectItem>
+              <SelectItem value="Talked to client - interested">Talked to client - interested</SelectItem>
+              <SelectItem value="Talked to client - needs time to decide">Talked to client - needs time to decide</SelectItem>
+              <SelectItem value="Left voicemail">Left voicemail</SelectItem>
+              <SelectItem value="Scheduled callback">Scheduled callback</SelectItem>
+              <SelectItem value="Sent quote">Sent quote</SelectItem>
+              <SelectItem value="Meeting scheduled">Meeting scheduled</SelectItem>
+              <SelectItem value="Waiting for approval">Waiting for approval</SelectItem>
+              <SelectItem value="Follow-up call completed">Follow-up call completed</SelectItem>
+              <SelectItem value="Site visit scheduled">Site visit scheduled</SelectItem>
+              <SelectItem value="Quote requested">Quote requested</SelectItem>
+              <SelectItem value="Contract sent">Contract sent</SelectItem>
+              <SelectItem value="Payment discussion needed">Payment discussion needed</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Add New Note */}
