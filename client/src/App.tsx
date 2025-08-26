@@ -57,9 +57,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
           <p className="text-muted">You don't have permission to access this page.</p>
           <button 
             className="btn btn-primary mt-3"
-            onClick={() => window.history.back()}
+            onClick={() => window.location.href = '/dashboard'}
           >
-            Go Back
+            Go to Dashboard
           </button>
         </div>
       </div>

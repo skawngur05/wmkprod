@@ -30,7 +30,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: { 
           id: user.id, 
           username: user.username, 
-          role: user.role 
+          role: user.role,
+          permissions: user.permissions || []
         } 
       });
     } catch (error) {
