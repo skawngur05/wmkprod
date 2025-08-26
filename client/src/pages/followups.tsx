@@ -472,7 +472,7 @@ function FollowupsTable({
               {/* Contact Info - 2 columns */}
               <div className="md:col-span-2">
                 <div className="space-y-2">
-                  <div className="flex items-center text-sm text-gray-700">
+                  <div className="group flex items-center text-sm text-gray-700">
                     <Phone className="h-4 w-4 mr-2 text-green-600" />
                     <span className="flex-1">{lead.phone}</span>
                     <button
@@ -480,14 +480,14 @@ function FollowupsTable({
                         navigator.clipboard.writeText(lead.phone);
                         // Toast notification would go here if needed
                       }}
-                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-all opacity-0 group-hover:opacity-100"
                       title="Copy phone number"
                     >
                       <Copy className="h-3 w-3 text-gray-500 hover:text-gray-700" />
                     </button>
                   </div>
                   {lead.email && (
-                    <div className="flex items-center text-sm text-gray-700">
+                    <div className="group flex items-center text-sm text-gray-700">
                       <Mail className="h-4 w-4 mr-2 text-blue-600" />
                       <span className="flex-1 truncate">{lead.email}</span>
                       <button
@@ -495,7 +495,7 @@ function FollowupsTable({
                           navigator.clipboard.writeText(lead.email);
                           // Toast notification would go here if needed
                         }}
-                        className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                        className="ml-2 p-1 hover:bg-gray-100 rounded transition-all opacity-0 group-hover:opacity-100"
                         title="Copy email address"
                       >
                         <Copy className="h-3 w-3 text-gray-500 hover:text-gray-700" />

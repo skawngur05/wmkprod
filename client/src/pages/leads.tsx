@@ -7,6 +7,13 @@ import { QuickEditModal } from '@/components/modals/quick-edit-modal';
 import { QuickFollowupModal } from '@/components/modals/quick-followup-modal';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Plus, Download, Upload, Search, X, Phone, Mail, Calendar, Eye, Trash2, AlertTriangle, Clock, Check } from 'lucide-react';
 
 export default function Leads() {
   const [filters, setFilters] = useState({
@@ -153,310 +160,360 @@ export default function Leads() {
 
   if (isLoading) {
     return (
-      <div className="container-fluid py-4">
-        <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
-          <div className="text-center">
-            <i className="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
-            <p>Loading leads...</p>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading leads...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container-fluid py-4">
-      <div className="row mb-4">
-        <div className="col">
-          <div className="d-flex justify-content-between align-items-center">
-            <h1 className="h3 fw-bold" data-testid="leads-title">Lead Management</h1>
-            <div>
-              <button
-                className="btn btn-success me-2"
-                onClick={() => window.location.href = '/add-lead'}
-                data-testid="button-add-lead"
-              >
-                <i className="fas fa-plus me-1"></i>Add Lead
-              </button>
-              <button className="btn btn-outline-primary me-2" data-testid="button-export">
-                <i className="fas fa-download me-1"></i>Export CSV
-              </button>
-              <button className="btn btn-outline-secondary" data-testid="button-import">
-                <i className="fas fa-upload me-1"></i>Import CSV
-              </button>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900" data-testid="leads-title">Lead Management</h1>
+            <p className="text-gray-600 mt-1">Manage and track all your sales leads</p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => window.location.href = '/add-lead'}
+              data-testid="button-add-lead"
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Lead
+            </Button>
+            <Button variant="outline" data-testid="button-export">
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button variant="outline" data-testid="button-import">
+              <Upload className="h-4 w-4 mr-2" />
+              Import CSV
+            </Button>
           </div>
         </div>
-      </div>
 
-      {/* Filters */}
-      <div className="card mb-4">
-        <div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-3">
-              <label className="form-label">Search</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search leads..."
-                value={filters.search}
-                onChange={(e) => updateFilters({...filters, search: e.target.value})}
-                data-testid="input-search-leads"
-              />
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-900">Filters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              <div className="md:col-span-4">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Search</label>
+                <Input
+                  type="text"
+                  placeholder="Search leads..."
+                  value={filters.search}
+                  onChange={(e) => updateFilters({...filters, search: e.target.value})}
+                  data-testid="input-search-leads"
+                  className="w-full"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
+                <Select
+                  value={filters.status}
+                  onValueChange={(value) => updateFilters({...filters, status: value})}
+                >
+                  <SelectTrigger data-testid="select-filter-status">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="new">New</SelectItem>
+                    <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="quoted">Quoted</SelectItem>
+                    <SelectItem value="sold">Sold</SelectItem>
+                    <SelectItem value="not-interested">Not Interested</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Origin</label>
+                <Select
+                  value={filters.origin}
+                  onValueChange={(value) => updateFilters({...filters, origin: value})}
+                >
+                  <SelectTrigger data-testid="select-filter-origin">
+                    <SelectValue placeholder="All Origins" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Origins</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="google">Google</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="referral">Referral</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Assigned To</label>
+                <Select
+                  value={filters.assigned_to}
+                  onValueChange={(value) => updateFilters({...filters, assigned_to: value})}
+                >
+                  <SelectTrigger data-testid="select-filter-assigned">
+                    <SelectValue placeholder="All Team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Team</SelectItem>
+                    <SelectItem value="kim">Kim</SelectItem>
+                    <SelectItem value="patrick">Patrick</SelectItem>
+                    <SelectItem value="lina">Lina</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2 flex items-end gap-2">
+                <Button className="flex-1" data-testid="button-filter">
+                  <Search className="h-4 w-4 mr-2" />
+                  Filter
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => updateFilters({ search: '', status: '', origin: '', assigned_to: '' })}
+                  data-testid="button-clear-filters"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              </div>
             </div>
-            <div className="col-md-2">
-              <label className="form-label">Status</label>
-              <select
-                className="form-select"
-                value={filters.status}
-                onChange={(e) => updateFilters({...filters, status: e.target.value})}
-                data-testid="select-filter-status"
-              >
-                <option value="">All Statuses</option>
-                <option value="new">New</option>
-                <option value="in-progress">In Progress</option>
-                <option value="quoted">Quoted</option>
-                <option value="sold">Sold</option>
-                <option value="not-interested">Not Interested</option>
-              </select>
-            </div>
-            <div className="col-md-2">
-              <label className="form-label">Origin</label>
-              <select
-                className="form-select"
-                value={filters.origin}
-                onChange={(e) => updateFilters({...filters, origin: e.target.value})}
-                data-testid="select-filter-origin"
-              >
-                <option value="">All Origins</option>
-                <option value="facebook">Facebook</option>
-                <option value="google">Google</option>
-                <option value="instagram">Instagram</option>
-                <option value="referral">Referral</option>
-              </select>
-            </div>
-            <div className="col-md-2">
-              <label className="form-label">Assigned To</label>
-              <select
-                className="form-select"
-                value={filters.assigned_to}
-                onChange={(e) => updateFilters({...filters, assigned_to: e.target.value})}
-                data-testid="select-filter-assigned"
-              >
-                <option value="">All Team</option>
-                <option value="kim">Kim</option>
-                <option value="patrick">Patrick</option>
-                <option value="lina">Lina</option>
-              </select>
-            </div>
-            <div className="col-md-3 d-flex align-items-end">
-              <button className="btn btn-primary me-2" data-testid="button-filter">
-                <i className="fas fa-search me-1"></i>Filter
-              </button>
-              <button
-                className="btn btn-outline-secondary"
-                onClick={() => updateFilters({ search: '', status: '', origin: '', assigned_to: '' })}
-                data-testid="button-clear-filters"
-              >
-                <i className="fas fa-times me-1"></i>Clear
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
 
-      {/* Leads Table */}
-      <div className="card">
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <table className="table table-hover mb-0" data-testid="leads-table">
-              <thead className="table-light">
-                <tr>
-                  <th>Date</th>
-                  <th>Name</th>
-                  <th>Contact Info</th>
-                  <th>Origin</th>
-                  <th>Next Follow-up</th>
-                  <th>Assigned To</th>
-                  <th>Status</th>
-                  <th>Project Amount</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leads && leads.length > 0 ? (
-                  leads.map((lead) => (
-                    <tr key={lead.id} data-testid={`lead-row-${lead.id}`}>
-                      <td>{formatDate(lead.date_created)}</td>
-                      <td>
-                        <strong>{lead.name}</strong>
-                      </td>
-                      <td>
-                        <div>
-                          <i className="fas fa-phone text-muted me-1"></i>{lead.phone}
-                          {lead.email && (
-                            <>
-                              <br />
-                              <i className="fas fa-envelope text-muted me-1"></i>{lead.email}
-                            </>
+        {/* Leads Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-900">Leads Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table data-testid="leads-table">
+                <TableHeader>
+                  <TableRow className="bg-gray-50 hover:bg-gray-50">
+                    <TableHead className="font-semibold text-gray-900">Date</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Name</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Contact Info</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Origin</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Next Follow-up</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Assigned To</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Status</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Project Amount</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leads && leads.length > 0 ? (
+                    leads.map((lead) => (
+                      <TableRow key={lead.id} data-testid={`lead-row-${lead.id}`} className="hover:bg-gray-50">
+                        <TableCell className="font-medium text-gray-900">{formatDate(lead.date_created)}</TableCell>
+                        <TableCell>
+                          <div className="font-semibold text-gray-900">{lead.name}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center text-sm text-gray-700">
+                              <Phone className="h-3 w-3 mr-2 text-green-600" />
+                              {lead.phone}
+                            </div>
+                            {lead.email && (
+                              <div className="flex items-center text-sm text-gray-700">
+                                <Mail className="h-3 w-3 mr-2 text-blue-600" />
+                                {lead.email}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="capitalize">
+                            {lead.lead_origin.replace('-', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {lead.next_followup_date ? (
+                            <div className="flex items-center space-x-2">
+                              <div className={
+                                isOverdue(lead.next_followup_date) ? 'text-red-600' :
+                                isDueToday(lead.next_followup_date) ? 'text-yellow-600' : 'text-green-600'
+                              }>
+                                {isOverdue(lead.next_followup_date) ? (
+                                  <AlertTriangle className="h-4 w-4" />
+                                ) : isDueToday(lead.next_followup_date) ? (
+                                  <Clock className="h-4 w-4" />
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
+                              </div>
+                              <span className={
+                                isOverdue(lead.next_followup_date) ? 'text-red-600 font-medium' :
+                                isDueToday(lead.next_followup_date) ? 'text-yellow-600 font-medium' : 'text-green-600'
+                              }>
+                                {isOverdue(lead.next_followup_date) ? 'Overdue' :
+                                 isDueToday(lead.next_followup_date) ? 'Today' :
+                                 formatDate(lead.next_followup_date)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">-</span>
                           )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`badge bg-${getOriginColor(lead.lead_origin)}`}>
-                          {lead.lead_origin}
-                        </span>
-                      </td>
-                      <td>
-                        {lead.next_followup_date ? (
-                          <span
-                            className={
-                              isOverdue(lead.next_followup_date) ? 'text-danger' :
-                              isDueToday(lead.next_followup_date) ? 'text-warning' : 'text-success'
-                            }
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-gray-900 capitalize">{lead.assigned_to || 'Unassigned'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            className={`capitalize ${
+                              lead.remarks === 'sold' ? 'bg-green-100 text-green-800' :
+                              lead.remarks === 'quoted' ? 'bg-purple-100 text-purple-800' :
+                              lead.remarks === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
+                              lead.remarks === 'new' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}
                           >
-                            <i className={`fas ${
-                              isOverdue(lead.next_followup_date) ? 'fa-exclamation-triangle' :
-                              isDueToday(lead.next_followup_date) ? 'fa-clock' : 'fa-check'
-                            } me-1`}></i>
-                            {isOverdue(lead.next_followup_date) ? 'Overdue' :
-                             isDueToday(lead.next_followup_date) ? 'Today' :
-                             formatDate(lead.next_followup_date)}
+                            {lead.remarks.replace('-', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-semibold text-green-700">
+                            {lead.project_amount ? formatCurrency(lead.project_amount) : '-'}
                           </span>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td>{lead.assigned_to}</td>
-                      <td>
-                        <span className={`badge bg-${getStatusColor(lead.remarks)} status-badge`}>
-                          {lead.remarks}
-                        </span>
-                      </td>
-                      <td>
-                        {lead.project_amount ? formatCurrency(lead.project_amount) : '-'}
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-circle btn-outline-success btn-sm me-1"
-                          onClick={() => openQuickFollowup(lead)}
-                          title="Quick Follow-up Update"
-                          data-testid={`button-followup-lead-${lead.id}`}
-                        >
-                          <i className="fas fa-calendar-alt"></i>
-                        </button>
-                        <button
-                          className="btn btn-circle btn-outline-primary btn-sm me-1"
-                          onClick={() => openQuickEdit(lead)}
-                          title="View Lead Details"
-                          data-testid={`button-view-lead-${lead.id}`}
-                        >
-                          <i className="fas fa-eye"></i>
-                        </button>
-                        <button
-                          className="btn btn-circle btn-outline-danger btn-sm"
-                          onClick={() => handleDelete(lead.id)}
-                          disabled={deleteLeadMutation.isPending}
-                          title="Delete Lead"
-                          data-testid={`button-delete-lead-${lead.id}`}
-                        >
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={9} className="text-center py-4">
-                      <div className="text-muted">
-                        <i className="fas fa-inbox fa-3x mb-3"></i>
-                        <p>No leads found</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="card-footer">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="text-muted">
-              Showing {leads.length > 0 ? ((currentPage - 1) * 20 + 1) : 0} to {Math.min(currentPage * 20, total)} of {total} leads
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openQuickFollowup(lead)}
+                              title="Quick Follow-up Update"
+                              data-testid={`button-followup-lead-${lead.id}`}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Calendar className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openQuickEdit(lead)}
+                              title="View Lead Details"
+                              data-testid={`button-view-lead-${lead.id}`}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDelete(lead.id)}
+                              disabled={deleteLeadMutation.isPending}
+                              title="Delete Lead"
+                              data-testid={`button-delete-lead-${lead.id}`}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-12">
+                        <div className="text-gray-500">
+                          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                            <Search className="h-8 w-8 text-gray-400" />
+                          </div>
+                          <p className="text-lg font-medium mb-2">No leads found</p>
+                          <p className="text-sm">Try adjusting your filters or add a new lead</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
-            <nav>
-              <ul className="pagination pagination-sm mb-0">
-                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                  <button 
-                    className="page-link" 
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    data-testid="pagination-previous"
+          </CardContent>
+        </Card>
+        
+        {/* Pagination */}
+        <div className="flex justify-between items-center mt-6 px-2">
+          <div className="text-sm text-gray-600">
+            Showing {leads.length > 0 ? ((currentPage - 1) * 20 + 1) : 0} to {Math.min(currentPage * 20, total)} of {total} leads
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              data-testid="pagination-previous"
+            >
+              Previous
+            </Button>
+            
+            {/* Generate page numbers */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+              const pageNum = startPage + i;
+              if (pageNum <= totalPages) {
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    data-testid={`pagination-${pageNum}`}
+                    className="w-10"
                   >
-                    Previous
-                  </button>
-                </li>
-                
-                {/* Generate page numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
-                  const pageNum = startPage + i;
-                  if (pageNum <= totalPages) {
-                    return (
-                      <li key={pageNum} className={`page-item ${currentPage === pageNum ? 'active' : ''}`}>
-                        <button 
-                          className="page-link" 
-                          onClick={() => setCurrentPage(pageNum)}
-                          data-testid={`pagination-${pageNum}`}
-                        >
-                          {pageNum}
-                        </button>
-                      </li>
-                    );
-                  }
-                  return null;
-                })}
-                
-                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                  <button 
-                    className="page-link" 
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    data-testid="pagination-next"
-                  >
-                    Next
-                  </button>
-                </li>
-              </ul>
-            </nav>
+                    {pageNum}
+                  </Button>
+                );
+              }
+              return null;
+            })}
+            
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              data-testid="pagination-next"
+            >
+              Next
+            </Button>
           </div>
         </div>
-      </div>
 
-      <AddLeadModal
-        show={showAddModal}
-        onHide={() => setShowAddModal(false)}
-      />
+        <AddLeadModal
+          show={showAddModal}
+          onHide={() => setShowAddModal(false)}
+        />
 
-      {selectedLead && (
-        <QuickEditModal
-          lead={selectedLead}
-          show={showQuickEdit}
-          onHide={() => setShowQuickEdit(false)}
-          onSave={() => {
-            setShowQuickEdit(false);
+        {selectedLead && (
+          <QuickEditModal
+            lead={selectedLead}
+            show={showQuickEdit}
+            onHide={() => setShowQuickEdit(false)}
+            onSave={() => {
+              setShowQuickEdit(false);
+            }}
+          />
+        )}
+
+        <QuickFollowupModal
+          lead={selectedFollowupLead}
+          show={showQuickFollowup}
+          onHide={() => {
+            setShowQuickFollowup(false);
+            setSelectedFollowupLead(null);
           }}
         />
-      )}
-
-      <QuickFollowupModal
-        lead={selectedFollowupLead}
-        show={showQuickFollowup}
-        onHide={() => {
-          setShowQuickFollowup(false);
-          setSelectedFollowupLead(null);
-        }}
-      />
+      </div>
     </div>
   );
 }
