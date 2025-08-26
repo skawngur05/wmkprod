@@ -43,14 +43,14 @@ export function getStatusColor(status: string): string {
 
 export function getOriginColor(origin: string): string {
   const originColors: Record<string, string> = {
-    'facebook': 'bg-blue-100 text-blue-800 border-blue-200',
-    'google': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'instagram': 'bg-pink-100 text-pink-800 border-pink-200',
-    'referral': 'bg-red-100 text-red-800 border-red-200',
-    'whatsapp': 'bg-green-100 text-green-800 border-green-200',
-    'trade-show': 'bg-violet-100 text-violet-800 border-violet-200',
+    'facebook': 'bg-blue-600 text-white border-blue-600',
+    'google_text': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    'instagram': 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-pink-400',
+    'trade_show': 'bg-violet-100 text-violet-800 border-violet-200',
+    'whatsapp': 'bg-green-500 text-white border-green-500',
+    'website': 'bg-sky-100 text-sky-800 border-sky-200',
     'commercial': 'bg-gray-100 text-gray-800 border-gray-200',
-    'website': 'bg-blue-100 text-blue-800 border-blue-200'
+    'referral': 'bg-red-100 text-red-800 border-red-200'
   };
   return originColors[origin] || 'bg-gray-100 text-gray-800 border-gray-200';
 }

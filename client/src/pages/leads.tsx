@@ -246,10 +246,11 @@ export default function Leads() {
                   <SelectContent>
                     <SelectItem value="all">All Origins</SelectItem>
                     <SelectItem value="facebook">Facebook</SelectItem>
-                    <SelectItem value="google">Google</SelectItem>
+                    <SelectItem value="google_text">Google Text</SelectItem>
                     <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="trade-show">Trade Show</SelectItem>
+                    <SelectItem value="trade_show">Trade Show</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                    <SelectItem value="website">Website</SelectItem>
                     <SelectItem value="commercial">Commercial</SelectItem>
                     <SelectItem value="referral">Referral</SelectItem>
                   </SelectContent>
