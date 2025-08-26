@@ -36,7 +36,7 @@ export default function AdminDashboard() {
       icon: Users,
       value: stats?.totalUsers || 0,
       subtext: `${stats?.adminUsers || 0} admins, ${stats?.activeUsers || 0} sales reps`,
-      href: "/admin/users",
+      href: "/user-management",
       color: "text-blue-600"
     },
     {

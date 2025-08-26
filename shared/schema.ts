@@ -7,6 +7,10 @@ export const users = pgTable("users", {
   username: varchar("username", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   role: varchar("role", { length: 50 }).notNull().default("sales_rep"), // admin, sales_rep
+  permissions: text("permissions").array().default([]), // array of permission strings
+  is_active: boolean("is_active").notNull().default(true),
+  created_at: timestamp("created_at").notNull().default(sql`NOW()`),
+  last_login: timestamp("last_login"),
 });
 
 export const leads = pgTable("leads", {

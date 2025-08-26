@@ -20,6 +20,7 @@ import SampleBooklets from "@/pages/sample-booklets";
 import Installations from "@/pages/installations";
 import Reports from "@/pages/reports";
 import AdminDashboard from "@/pages/admin-dashboard";
+import UserManagement from "@/pages/user-management";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -85,9 +86,9 @@ function AppRouter() {
         </ProtectedRoute>
       </Route>
       
-      <Route path="/admin/users">
+      <Route path="/user-management">
         <ProtectedRoute>
-          <AdminDashboard />
+          <UserManagement />
         </ProtectedRoute>
       </Route>
       

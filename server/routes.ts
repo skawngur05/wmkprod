@@ -1259,6 +1259,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin User Management
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/admin/users", async (req, res) => {
+    try {
+      const { username, password, role, permissions, is_active } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+
+      const newUser = await storage.createUser({
+        username: username.toLowerCase(),
+        password,
+        role: role || 'sales_rep',
+        permissions: permissions || [],
+        is_active: is_active !== undefined ? is_active : true
+      });
+
+      res.json(newUser);
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.put("/api/admin/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const updatedUser = await storage.updateUser(id, updates);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteUser(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   // Admin Dashboard Stats
   app.get("/api/admin/dashboard-stats", async (req, res) => {
     try {
@@ -1270,7 +1334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const stats = {
         totalUsers: users.length,
-        activeUsers: users.filter(u => u.role === 'sales_rep').length,
+        activeUsers: users.filter(u => u.role === 'sales_rep' && u.is_active !== false).length,
         adminUsers: users.filter(u => u.role === 'admin').length,
         totalInstallers: installers.length,
         activeInstallers: installers.filter(i => i.status === 'active').length,
