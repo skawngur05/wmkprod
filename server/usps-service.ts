@@ -20,22 +20,28 @@ const uspsTrackingResponseSchema = z.object({
 export type USPSTrackingResponse = z.infer<typeof uspsTrackingResponseSchema>;
 
 export class USPSService {
-  private readonly consumerKey: string;
-  private readonly consumerSecret: string;
+  private readonly consumerKey: string | null;
+  private readonly consumerSecret: string | null;
   private readonly baseUrl = "https://api.usps.com";
   private accessToken: string | null = null;
   private tokenExpiry: Date | null = null;
+  private readonly isConfigured: boolean;
 
   constructor() {
-    this.consumerKey = process.env.USPS_CONSUMER_KEY!;
-    this.consumerSecret = process.env.USPS_CONSUMER_SECRET!;
+    this.consumerKey = process.env.USPS_CONSUMER_KEY || null;
+    this.consumerSecret = process.env.USPS_CONSUMER_SECRET || null;
+    this.isConfigured = !!(this.consumerKey && this.consumerSecret);
     
-    if (!this.consumerKey || !this.consumerSecret) {
-      throw new Error("USPS API credentials not configured");
+    if (!this.isConfigured) {
+      console.warn("USPS API credentials not configured - tracking functionality will use mock data");
     }
   }
 
   private async getAccessToken(): Promise<string> {
+    if (!this.isConfigured || !this.consumerKey || !this.consumerSecret) {
+      throw new Error("USPS API credentials not configured");
+    }
+
     // Check if we have a valid token
     if (this.accessToken && this.tokenExpiry && new Date() < this.tokenExpiry) {
       return this.accessToken;
@@ -72,6 +78,12 @@ export class USPSService {
   }
 
   async trackPackage(trackingNumber: string): Promise<USPSTrackingResponse> {
+    // Use mock data if USPS credentials are not configured
+    if (!this.isConfigured) {
+      console.log(`USPS not configured - returning mock data for tracking number: ${trackingNumber}`);
+      return this.getMockTrackingData(trackingNumber);
+    }
+
     try {
       const token = await this.getAccessToken();
       
