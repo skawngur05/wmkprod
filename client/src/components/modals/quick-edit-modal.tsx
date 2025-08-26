@@ -97,7 +97,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Two Column Layout - Always two columns */}
-          <div className="grid grid-cols-2 gap-8">
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem'}}>
             {/* Left Column */}
             <div className="space-y-3">
               <div className="space-y-1">
