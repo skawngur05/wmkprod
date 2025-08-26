@@ -310,11 +310,13 @@ const getPaymentStatusBadge = (lead: Lead) => {
 function FollowupsTable({ 
   leads, 
   onQuickEdit, 
-  onQuickFollowup 
+  onQuickFollowup,
+  status = 'upcoming'
 }: { 
   leads: Lead[]; 
   onQuickEdit: (lead: Lead) => void; 
   onQuickFollowup: (lead: Lead) => void;
+  status?: 'overdue' | 'due-today' | 'upcoming';
 }) {
   if (leads.length === 0) {
     return (
@@ -326,10 +328,22 @@ function FollowupsTable({
     );
   }
 
+  // Get card styling based on status
+  const getCardStyling = (status: string) => {
+    switch (status) {
+      case 'overdue':
+        return 'hover:shadow-lg transition-all duration-200 border-l-4 border-l-red-500 bg-red-50/30 border-red-200';
+      case 'due-today':
+        return 'hover:shadow-lg transition-all duration-200 border-l-4 border-l-yellow-500 bg-yellow-50/30 border-yellow-200';
+      default:
+        return 'hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500';
+    }
+  };
+
   return (
     <div className="space-y-4">
       {leads.map((lead) => (
-        <Card key={lead.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500">
+        <Card key={lead.id} className={getCardStyling(status)}>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
               
@@ -619,6 +633,7 @@ export default function Followups() {
               leads={activeOverdue}
               onQuickEdit={handleQuickEdit}
               onQuickFollowup={openQuickFollowup}
+              status="overdue"
             />
           </div>
         )}
@@ -635,6 +650,7 @@ export default function Followups() {
               leads={activeDueToday}
               onQuickEdit={handleQuickEdit}
               onQuickFollowup={openQuickFollowup}
+              status="due-today"
             />
           </div>
         )}
@@ -651,6 +667,7 @@ export default function Followups() {
               leads={upcomingWeek}
               onQuickEdit={handleQuickEdit}
               onQuickFollowup={openQuickFollowup}
+              status="upcoming"
             />
           </div>
         )}
