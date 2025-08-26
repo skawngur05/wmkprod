@@ -236,8 +236,8 @@ export class DatabaseStorage implements IStorage {
 
   // Admin settings methods
   async getAdminSettings(): Promise<any[]> {
-    const result = await db.execute(sql`SELECT * FROM admin_settings ORDER BY setting_key`);
-    return result;
+    // Return empty array for now - admin_settings table doesn't exist yet
+    return [];
   }
 
   async getAdminSetting(key: string): Promise<any | undefined> {
@@ -253,8 +253,8 @@ export class DatabaseStorage implements IStorage {
 
   // Email template methods
   async getEmailTemplates(): Promise<any[]> {
-    const result = await db.execute(sql`SELECT * FROM email_templates ORDER BY template_name`);
-    return result;
+    // Return empty array for now - email_templates table doesn't exist yet
+    return [];
   }
 
   async getEmailTemplate(id: string): Promise<any | undefined> {
@@ -296,8 +296,8 @@ export class DatabaseStorage implements IStorage {
 
   // Lead origins methods
   async getLeadOrigins(): Promise<any[]> {
-    const result = await db.execute(sql`SELECT * FROM lead_origins_custom ORDER BY origin_name`);
-    return result;
+    // Return empty array for now - lead_origins_custom table doesn't exist yet
+    return [];
   }
 
   async getLeadOrigin(id: string): Promise<any | undefined> {
@@ -334,14 +334,8 @@ export class DatabaseStorage implements IStorage {
 
   // Activity log methods
   async getActivityLog(limit: number = 50, offset: number = 0): Promise<any[]> {
-    const result = await db.execute(sql`
-      SELECT sal.*, u.username 
-      FROM system_activity_log sal 
-      LEFT JOIN users u ON sal.user_id = u.id 
-      ORDER BY sal.created_at DESC 
-      LIMIT ${limit} OFFSET ${offset}
-    `);
-    return result;
+    // Return empty array for now - system_activity_log table doesn't exist yet
+    return [];
   }
 
   async logActivity(userId: string, action: string, entityType?: string, entityId?: string, description?: string): Promise<void> {
