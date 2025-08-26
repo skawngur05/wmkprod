@@ -355,16 +355,6 @@ function LeadCard({ lead, onQuickEdit, onQuickFollowup, colorScheme }: {
           <Button 
             size="sm" 
             variant="outline" 
-            className="flex-1 text-green-600 border-green-200 hover:bg-green-50"
-            onClick={() => window.open(`tel:${lead.phone}`, '_self')}
-            data-testid={`button-call-${lead.id}`}
-          >
-            <Phone className="h-4 w-4 mr-1" />
-            Call
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
             className="text-gray-600 border-gray-200 hover:bg-gray-50 px-3"
             onClick={() => onQuickEdit(lead)}
             data-testid={`button-view-${lead.id}`}
@@ -641,12 +631,11 @@ export default function Followups() {
           </DialogContent>
         </Dialog>
 
-        {selectedFollowupLead && showQuickFollowup && (
-          <QuickFollowupModal
-            lead={selectedFollowupLead}
-            onClose={() => setShowQuickFollowup(false)}
-          />
-        )}
+        <QuickFollowupModal
+          lead={selectedFollowupLead}
+          show={showQuickFollowup}
+          onHide={() => setShowQuickFollowup(false)}
+        />
       </div>
     </div>
   );

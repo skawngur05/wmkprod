@@ -33,3 +33,6 @@
 [x] 33. Removed "Welcome back" header from all pages except dashboard
 [x] 34. Created comprehensive mock data (10 leads, 8 sample booklets, 5 installers)
 [x] 35. Migration to Replit environment completed successfully
+[x] 36. Removed call button from follow-up management page
+[x] 37. Redesigned edit lead modal with modern UI components and no scrolling
+[x] 38. Fixed follow-up button functionality with correct modal props
