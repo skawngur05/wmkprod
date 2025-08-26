@@ -90,18 +90,18 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
 
   return (
     <Dialog open={show} onOpenChange={onHide}>
-      <DialogContent className="max-w-3xl" data-testid="quick-edit-modal">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden" data-testid="quick-edit-modal">
+        <DialogHeader className="pb-4">
           <DialogTitle>Edit Lead</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Two Column Layout - Always two columns */}
+          <div className="grid grid-cols-2 gap-8">
             {/* Left Column */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="name" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   NAME <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -109,29 +109,29 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   data-testid="input-edit-name"
-                  className="h-10"
+                  className="h-11 text-base"
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">EMAIL</Label>
+              <div className="space-y-1">
+                <Label htmlFor="email" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">EMAIL</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   data-testid="input-edit-email"
-                  className="h-10"
+                  className="h-11 text-base"
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="assigned_to" className="text-sm font-medium text-gray-700">ASSIGNED TO</Label>
+              <div className="space-y-1">
+                <Label htmlFor="assigned_to" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">ASSIGNED TO</Label>
                 <Select
                   value={formData.assigned_to}
                   onValueChange={(value) => setFormData({...formData, assigned_to: value})}
                 >
-                  <SelectTrigger data-testid="select-edit-assigned" className="h-10">
+                  <SelectTrigger data-testid="select-edit-assigned" className="h-11 text-base">
                     <SelectValue placeholder="Select assignee" />
                   </SelectTrigger>
                   <SelectContent>
@@ -146,9 +146,9 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
             </div>
 
             {/* Right Column */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="phone" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   PHONE <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -157,19 +157,19 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
                   data-testid="input-edit-phone"
-                  className="h-10"
+                  className="h-11 text-base"
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="status" className="text-sm font-medium text-gray-700">
+              <div className="space-y-1">
+                <Label htmlFor="status" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   STATUS <span className="text-red-500">*</span>
                 </Label>
                 <Select
                   value={formData.remarks}
                   onValueChange={(value) => setFormData({...formData, remarks: value})}
                 >
-                  <SelectTrigger data-testid="select-edit-status" className="h-10">
+                  <SelectTrigger data-testid="select-edit-status" className="h-11 text-base">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -182,8 +182,8 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                 </Select>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="project_amount" className="text-sm font-medium text-gray-700">PROJECT AMOUNT</Label>
+              <div className="space-y-1">
+                <Label htmlFor="project_amount" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">PROJECT AMOUNT</Label>
                 <Input
                   id="project_amount"
                   type="number"
@@ -192,34 +192,34 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   value={formData.project_amount}
                   onChange={(e) => setFormData({...formData, project_amount: e.target.value})}
                   data-testid="input-edit-amount"
-                  className="h-10"
+                  className="h-11 text-base"
                 />
               </div>
             </div>
           </div>
 
           {/* Notes - Full Width at Bottom */}
-          <div className="space-y-2">
-            <Label htmlFor="notes" className="text-sm font-medium text-gray-700">NOTES</Label>
+          <div className="space-y-1 pt-2">
+            <Label htmlFor="notes" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">NOTES</Label>
             <Textarea
               id="notes"
-              rows={4}
+              rows={3}
               value={formData.notes}
               onChange={(e) => setFormData({...formData, notes: e.target.value})}
               data-testid="textarea-edit-notes"
               placeholder="Add any additional notes about this lead..."
-              className="resize-none"
+              className="resize-none text-base"
             />
           </div>
 
           {/* Action Buttons - Right Aligned */}
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-3 border-t">
             <Button
               type="button"
               variant="outline"
               onClick={onHide}
               data-testid="button-cancel-edit"
-              className="px-6"
+              className="px-8 h-10"
             >
               Cancel
             </Button>
@@ -227,7 +227,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
               type="submit"
               disabled={updateLeadMutation.isPending}
               data-testid="button-save-edit"
-              className="px-6 bg-green-600 hover:bg-green-700"
+              className="px-8 h-10 bg-green-600 hover:bg-green-700"
             >
               {updateLeadMutation.isPending ? 'Saving...' : 'Update Lead'}
             </Button>
