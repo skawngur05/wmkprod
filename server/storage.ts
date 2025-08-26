@@ -60,8 +60,22 @@ export interface IStorage {
   updateLeadOrigin(id: string, updates: any): Promise<any | undefined>;
   deleteLeadOrigin(id: string): Promise<boolean>;
 
+  // SMTP settings operations
+  getSMTPSettings(): Promise<any[]>;
+  getSMTPSetting(id: string): Promise<any | undefined>;
+  createSMTPSettings(settings: any): Promise<any>;
+  updateSMTPSettings(id: string, updates: any): Promise<any | undefined>;
+  deleteSMTPSettings(id: string): Promise<boolean>;
+
   // Activity log operations
-  getActivityLog(limit?: number, offset?: number): Promise<any[]>;
+  getActivityLogs(filters: {
+    search?: string;
+    entity_type?: string;
+    action?: string;
+    days?: number;
+    limit?: number;
+    offset?: number;
+  }): Promise<any[]>;
   logActivity(userId: string, action: string, entityType?: string, entityId?: string, description?: string): Promise<void>;
 }
 
@@ -336,6 +350,124 @@ export class MemStorage implements IStorage {
     return Array.from(this.sampleBooklets.values()).filter(
       booklet => booklet.status === status
     );
+  }
+
+  // Installer operations (stub implementations for memory storage)
+  async getInstallers(): Promise<Installer[]> {
+    return Promise.resolve([]);
+  }
+
+  async getInstaller(id: string): Promise<Installer | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  async createInstaller(installer: InsertInstaller): Promise<Installer> {
+    const id = randomUUID();
+    return Promise.resolve({ ...installer, id } as Installer);
+  }
+
+  async updateInstaller(id: string, updates: UpdateInstaller): Promise<Installer | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  async deleteInstaller(id: string): Promise<boolean> {
+    return Promise.resolve(false);
+  }
+
+  // Admin settings operations (stub implementations for memory storage)
+  async getAdminSettings(): Promise<any[]> {
+    return Promise.resolve([]);
+  }
+
+  async getAdminSetting(key: string): Promise<any | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  async updateAdminSetting(key: string, value: string): Promise<any | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  // Email template operations (stub implementations for memory storage)
+  async getEmailTemplates(): Promise<any[]> {
+    return Promise.resolve([]);
+  }
+
+  async getEmailTemplate(id: string): Promise<any | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  async createEmailTemplate(template: any): Promise<any> {
+    const id = randomUUID();
+    return Promise.resolve({ ...template, id });
+  }
+
+  async updateEmailTemplate(id: string, updates: any): Promise<any | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  async deleteEmailTemplate(id: string): Promise<boolean> {
+    return Promise.resolve(false);
+  }
+
+  // Lead origins operations (stub implementations for memory storage)
+  async getLeadOrigins(): Promise<any[]> {
+    return Promise.resolve([]);
+  }
+
+  async getLeadOrigin(id: string): Promise<any | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  async createLeadOrigin(originName: string): Promise<any> {
+    const id = randomUUID();
+    return Promise.resolve({ id, name: originName });
+  }
+
+  async updateLeadOrigin(id: string, updates: any): Promise<any | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  async deleteLeadOrigin(id: string): Promise<boolean> {
+    return Promise.resolve(false);
+  }
+
+  // SMTP settings operations (stub implementations for memory storage)
+  async getSMTPSettings(): Promise<any[]> {
+    return Promise.resolve([]);
+  }
+
+  async getSMTPSetting(id: string): Promise<any | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  async createSMTPSettings(settings: any): Promise<any> {
+    const id = randomUUID();
+    return Promise.resolve({ ...settings, id });
+  }
+
+  async updateSMTPSettings(id: string, updates: any): Promise<any | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  async deleteSMTPSettings(id: string): Promise<boolean> {
+    return Promise.resolve(false);
+  }
+
+  // Activity log operations (stub implementations for memory storage)
+  async getActivityLogs(filters: {
+    search?: string;
+    entity_type?: string;
+    action?: string;
+    days?: number;
+    limit?: number;
+    offset?: number;
+  }): Promise<any[]> {
+    return Promise.resolve([]);
+  }
+
+  async logActivity(userId: string, action: string, entityType?: string, entityId?: string, description?: string): Promise<void> {
+    console.log(`Activity: ${action} by ${userId} on ${entityType}:${entityId} - ${description}`);
+    return Promise.resolve();
   }
 }
 

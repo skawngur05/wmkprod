@@ -332,16 +332,156 @@ export class DatabaseStorage implements IStorage {
     return (result as any).rowCount > 0;
   }
 
-  // Activity log methods
-  async getActivityLog(limit: number = 50, offset: number = 0): Promise<any[]> {
-    // Return empty array for now - system_activity_log table doesn't exist yet
-    return [];
+  // Email template operations using direct SQL
+  async getEmailTemplates(): Promise<any[]> {
+    const result = await db.execute(sql`SELECT * FROM email_templates ORDER BY created_at DESC`);
+    return result;
+  }
+
+  async getEmailTemplate(id: string): Promise<any | undefined> {
+    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id}`);
+    return result[0];
+  }
+
+  async createEmailTemplate(template: any): Promise<any> {
+    const id = randomUUID();
+    
+    await db.execute(sql`
+      INSERT INTO email_templates (id, name, type, subject, body, variables, is_active)
+      VALUES (${id}, ${template.name}, ${template.type}, ${template.subject}, 
+              ${template.body}, ${template.variables}, ${template.is_active})
+    `);
+    
+    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id}`);
+    return result[0];
+  }
+
+  async updateEmailTemplate(id: string, updates: any): Promise<any | undefined> {
+    const { name, type, subject, body, variables, is_active } = updates;
+    
+    await db.execute(sql`
+      UPDATE email_templates 
+      SET name = COALESCE(${name}, name),
+          type = COALESCE(${type}, type),
+          subject = COALESCE(${subject}, subject),
+          body = COALESCE(${body}, body),
+          variables = COALESCE(${variables}, variables),
+          is_active = COALESCE(${is_active}, is_active),
+          updated_at = NOW()
+      WHERE id = ${id}
+    `);
+    
+    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id}`);
+    return result[0];
+  }
+
+  async deleteEmailTemplate(id: string): Promise<boolean> {
+    const result = await db.execute(sql`DELETE FROM email_templates WHERE id = ${id}`);
+    return (result as any).rowCount > 0;
+  }
+
+  // SMTP settings operations using direct SQL
+  async getSMTPSettings(): Promise<any[]> {
+    const result = await db.execute(sql`SELECT * FROM smtp_settings ORDER BY created_at DESC`);
+    return result;
+  }
+
+  async getSMTPSetting(id: string): Promise<any | undefined> {
+    const result = await db.execute(sql`SELECT * FROM smtp_settings WHERE id = ${id}`);
+    return result[0];
+  }
+
+  async createSMTPSettings(settings: any): Promise<any> {
+    const id = randomUUID();
+    
+    await db.execute(sql`
+      INSERT INTO smtp_settings (id, host, port, username, password, from_email, from_name, use_tls, is_active, test_email)
+      VALUES (${id}, ${settings.host}, ${settings.port}, ${settings.username}, 
+              ${settings.password}, ${settings.from_email}, ${settings.from_name},
+              ${settings.use_tls}, ${settings.is_active}, ${settings.test_email || null})
+    `);
+    
+    const result = await db.execute(sql`SELECT * FROM smtp_settings WHERE id = ${id}`);
+    return result[0];
+  }
+
+  async updateSMTPSettings(id: string, updates: any): Promise<any | undefined> {
+    const { host, port, username, password, from_email, from_name, use_tls, is_active, test_email } = updates;
+    
+    await db.execute(sql`
+      UPDATE smtp_settings 
+      SET host = COALESCE(${host}, host),
+          port = COALESCE(${port}, port),
+          username = COALESCE(${username}, username),
+          password = COALESCE(${password}, password),
+          from_email = COALESCE(${from_email}, from_email),
+          from_name = COALESCE(${from_name}, from_name),
+          use_tls = COALESCE(${use_tls}, use_tls),
+          is_active = COALESCE(${is_active}, is_active),
+          test_email = COALESCE(${test_email}, test_email),
+          updated_at = NOW()
+      WHERE id = ${id}
+    `);
+    
+    const result = await db.execute(sql`SELECT * FROM smtp_settings WHERE id = ${id}`);
+    return result[0];
+  }
+
+  async deleteSMTPSettings(id: string): Promise<boolean> {
+    const result = await db.execute(sql`DELETE FROM smtp_settings WHERE id = ${id}`);
+    return (result as any).rowCount > 0;
+  }
+
+  // Activity log operations using direct SQL
+  async getActivityLogs(filters: {
+    search?: string;
+    entity_type?: string;
+    action?: string;
+    days?: number;
+    limit?: number;
+    offset?: number;
+  }): Promise<any[]> {
+    const { search, entity_type, action, days, limit = 50, offset = 0 } = filters;
+    
+    let whereConditions = [];
+    
+    if (search) {
+      whereConditions.push(sql`(action LIKE ${`%${search}%`} OR details LIKE ${`%${search}%`})`);
+    }
+    
+    if (entity_type && entity_type !== 'all') {
+      whereConditions.push(sql`entity_type = ${entity_type}`);
+    }
+    
+    if (action && action !== 'all') {
+      whereConditions.push(sql`action LIKE ${`%${action}%`}`);
+    }
+    
+    if (days && days !== -1) {
+      whereConditions.push(sql`created_at >= NOW() - INTERVAL '${days} days'`);
+    }
+    
+    let query = sql`
+      SELECT al.*, u.username as user_name 
+      FROM activity_logs al 
+      LEFT JOIN users u ON al.user_id = u.id
+    `;
+    
+    if (whereConditions.length > 0) {
+      query = sql`${query} WHERE ${sql.join(whereConditions, sql` AND `)}`;
+    }
+    
+    query = sql`${query} ORDER BY al.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+    
+    const result = await db.execute(query);
+    return result;
   }
 
   async logActivity(userId: string, action: string, entityType?: string, entityId?: string, description?: string): Promise<void> {
     const id = randomUUID();
+    
     await db.execute(sql`
-      INSERT INTO system_activity_log (id, user_id, action, entity_type, entity_id, description) 
+      INSERT INTO activity_logs (id, user_id, action, entity_type, entity_id, details)
       VALUES (${id}, ${userId}, ${action}, ${entityType || null}, ${entityId || null}, ${description || null})
     `);
   }

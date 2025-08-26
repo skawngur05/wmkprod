@@ -21,6 +21,11 @@ import Installations from "@/pages/installations";
 import Reports from "@/pages/reports";
 import AdminDashboard from "@/pages/admin-dashboard";
 import UserManagement from "@/pages/user-management";
+import InstallersManagement from "@/pages/admin/installers-management";
+import LeadOriginsManagement from "@/pages/admin/lead-origins-management";
+import EmailTemplatesManagement from "@/pages/admin/email-templates-management";
+import SMTPSettingsManagement from "@/pages/admin/smtp-settings-management";
+import ActivityLogManagement from "@/pages/admin/activity-log-management";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -100,31 +105,31 @@ function AppRouter() {
       
       <Route path="/admin/installers">
         <ProtectedRoute>
-          <AdminDashboard />
+          <InstallersManagement />
         </ProtectedRoute>
       </Route>
       
       <Route path="/admin/lead-origins">
         <ProtectedRoute>
-          <AdminDashboard />
+          <LeadOriginsManagement />
         </ProtectedRoute>
       </Route>
       
       <Route path="/admin/email-templates">
         <ProtectedRoute>
-          <AdminDashboard />
+          <EmailTemplatesManagement />
         </ProtectedRoute>
       </Route>
       
       <Route path="/admin/smtp-settings">
         <ProtectedRoute>
-          <AdminDashboard />
+          <SMTPSettingsManagement />
         </ProtectedRoute>
       </Route>
       
       <Route path="/admin/activity">
         <ProtectedRoute>
-          <AdminDashboard />
+          <ActivityLogManagement />
         </ProtectedRoute>
       </Route>
       

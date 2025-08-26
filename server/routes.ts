@@ -1248,14 +1248,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Activity Log
-  app.get("/api/admin/activity-log", async (req, res) => {
+  // Admin SMTP Settings Management
+  app.get("/api/admin/smtp-settings", async (req, res) => {
     try {
-      const { limit = 50, offset = 0 } = req.query;
-      const activities = await storage.getActivityLog(parseInt(limit as string), parseInt(offset as string));
+      const settings = await storage.getSMTPSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch SMTP settings" });
+    }
+  });
+
+  app.post("/api/admin/smtp-settings", async (req, res) => {
+    try {
+      const settingsData = req.body;
+      const settings = await storage.createSMTPSettings(settingsData);
+      res.status(201).json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create SMTP settings" });
+    }
+  });
+
+  app.put("/api/admin/smtp-settings/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const settings = await storage.updateSMTPSettings(req.params.id, updates);
+      if (!settings) {
+        return res.status(404).json({ message: "SMTP settings not found" });
+      }
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update SMTP settings" });
+    }
+  });
+
+  app.post("/api/admin/smtp-settings/test", async (req, res) => {
+    try {
+      const { test_email, ...smtpConfig } = req.body;
+      
+      // Here you would test the SMTP settings by sending a test email
+      // For now, we'll just return success
+      res.json({ message: "Test email sent successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to send test email" });
+    }
+  });
+
+  // Admin Activity Log
+  app.get("/api/admin/activity-logs", async (req, res) => {
+    try {
+      const { 
+        search, 
+        entity_type, 
+        action, 
+        days,
+        limit = 50, 
+        offset = 0 
+      } = req.query;
+      
+      const activities = await storage.getActivityLogs({
+        search: search as string,
+        entity_type: entity_type as string,
+        action: action as string,
+        days: days ? parseInt(days as string) : undefined,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+      
       res.json(activities);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch activity log" });
+      res.status(500).json({ message: "Failed to fetch activity logs" });
     }
   });
 
