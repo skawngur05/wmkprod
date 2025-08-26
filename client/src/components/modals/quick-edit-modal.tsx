@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface QuickEditModalProps {
   lead: Lead | null;
@@ -301,6 +302,34 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                       <p className="text-xs text-gray-600">Final payment received</p>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Installer Selection */}
+              <div className="space-y-3 pt-4 border-t border-gray-200">
+                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  ASSIGNED INSTALLERS (Select Multiple)
+                </Label>
+                <div className="grid grid-cols-1 gap-3 p-3 border rounded-lg bg-gray-50">
+                  {['angel', 'brian', 'luis'].map((installer) => (
+                    <div key={installer} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`installer-${installer}`}
+                        checked={Array.isArray(formData.assigned_installer) ? formData.assigned_installer.includes(installer) : false}
+                        onCheckedChange={(checked) => {
+                          const currentInstallers = Array.isArray(formData.assigned_installer) ? formData.assigned_installer : [];
+                          const newInstallers = checked
+                            ? [...currentInstallers, installer]
+                            : currentInstallers.filter(i => i !== installer);
+                          setFormData({...formData, assigned_installer: newInstallers});
+                        }}
+                        data-testid={`checkbox-installer-${installer}`}
+                      />
+                      <Label htmlFor={`installer-${installer}`} className="text-sm font-medium capitalize cursor-pointer">
+                        {installer}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
