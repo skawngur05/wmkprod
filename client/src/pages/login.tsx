@@ -10,6 +10,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const { login } = useAuth();
   const [, setLocation] = useLocation();
@@ -122,7 +123,7 @@ export default function Login() {
                 </label>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     id="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -134,7 +135,10 @@ export default function Login() {
                     <i className="fas fa-lock text-gray-400 text-sm"></i>
                   </div>
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                    <i className="fas fa-eye-slash text-gray-400 cursor-pointer hover:text-gray-600 text-sm"></i>
+                    <i 
+                      className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-gray-400 cursor-pointer hover:text-gray-600 text-sm`}
+                      onClick={() => setShowPassword(!showPassword)}
+                    ></i>
                   </div>
                 </div>
               </div>
