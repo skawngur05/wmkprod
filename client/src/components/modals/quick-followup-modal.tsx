@@ -3,6 +3,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Lead, ASSIGNEES } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, User, PenTool, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface QuickFollowupModalProps {
   lead: Lead | null;
@@ -118,174 +127,196 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
   if (!lead) return null;
 
   return (
-    <div 
-      className={`modal fade ${show ? 'show' : ''}`} 
-      style={{ display: show ? 'block' : 'none' }}
-      data-testid="quick-followup-modal"
-    >
-      <div className="modal-dialog">
-        <div className="modal-content">
-          <div className="modal-header bg-primary text-white">
-            <h5 className="modal-title">
-              <i className="fas fa-calendar-check me-2"></i>
-              Follow-up Manager - {lead.name}
-            </h5>
-            <button 
-              type="button" 
-              className="btn-close btn-close-white" 
-              onClick={handleClose}
-              data-testid="button-close-followup-modal"
-            ></button>
-          </div>
-          <div className="modal-body">
-            <form onSubmit={handleSubmit}>
-              {/* Current Follow-up Date Display */}
-              <div className="mb-3 p-3 bg-light border-start border-info border-4">
-                <label className="form-label text-muted mb-1">
-                  <i className="fas fa-history me-1"></i>Current Follow-up Date
-                </label>
-                <div className="fw-bold text-dark">
-                  {lead.next_followup_date ? 
-                    new Date(lead.next_followup_date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric', 
-                      month: 'long',
-                      day: 'numeric'
-                    }) : 
-                    'No follow-up date set'
-                  }
-                </div>
+    <Dialog open={show} onOpenChange={onHide}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="quick-followup-modal">
+        <DialogHeader className="space-y-3 pb-6 border-b">
+          <DialogTitle className="text-xl font-semibold flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-full">
+              <Calendar className="h-5 w-5 text-blue-600" />
+            </div>
+            Follow-up Manager
+          </DialogTitle>
+          <DialogDescription className="text-base">
+            Update follow-up details for <span className="font-medium text-gray-900">{lead.name}</span>
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          {/* Current Follow-up Status Card */}
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3 mb-2">
+                <Clock className="h-4 w-4 text-blue-600" />
+                <Label className="text-sm font-medium text-blue-900">Current Follow-up Date</Label>
               </div>
+              <div className="text-lg font-semibold text-blue-800">
+                {lead.next_followup_date ? 
+                  new Date(lead.next_followup_date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric', 
+                    month: 'long',
+                    day: 'numeric'
+                  }) : 
+                  'No follow-up date set'
+                }
+              </div>
+              {lead.assigned_to && (
+                <Badge variant="outline" className="mt-2">
+                  <User className="h-3 w-3 mr-1" />
+                  {lead.assigned_to.charAt(0).toUpperCase() + lead.assigned_to.slice(1)}
+                </Badge>
+              )}
+            </CardContent>
+          </Card>
 
-              {/* New Follow-up Date */}
-              <div className="mb-3">
-                <label className="form-label fw-semibold">
-                  <i className="fas fa-calendar-plus text-primary me-1"></i>New Follow-up Date
-                </label>
-                <input
-                  type="date"
-                  className="form-control form-control-lg"
-                  value={nextFollowupDate}
-                  onChange={(e) => setNextFollowupDate(e.target.value)}
-                  data-testid="input-followup-date"
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* New Follow-up Date */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-green-600" />
+                New Follow-up Date
+              </Label>
+              <Input
+                type="date"
+                value={nextFollowupDate}
+                onChange={(e) => setNextFollowupDate(e.target.value)}
+                data-testid="input-followup-date"
+                className="h-11"
+              />
+            </div>
+
+            {/* Assign To */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <User className="h-4 w-4 text-purple-600" />
+                Assign To Team Member
+              </Label>
+              <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <SelectTrigger className="h-11" data-testid="select-assigned-to">
+                  <SelectValue placeholder="Select team member..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASSIGNEES.map(member => (
+                    <SelectItem key={member} value={member}>
+                      {member.charAt(0).toUpperCase() + member.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Quick Note Templates */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <PenTool className="h-4 w-4 text-orange-600" />
+                Quick Note Templates
+              </Label>
+              <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
+                <SelectTrigger className="h-11" data-testid="select-note-template">
+                  <SelectValue placeholder="Choose a quick note template..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {quickNoteTemplates.map(template => (
+                    <SelectItem key={template} value={template}>
+                      {template}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Custom Note or Note Preview */}
+            {selectedTemplate === 'Custom note...' ? (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <PenTool className="h-4 w-4 text-indigo-600" />
+                  Custom Note
+                </Label>
+                <Textarea
+                  rows={4}
+                  value={customNote}
+                  onChange={(e) => setCustomNote(e.target.value)}
+                  placeholder="Write your custom follow-up note here..."
+                  data-testid="textarea-custom-note"
+                  className="resize-none"
                 />
               </div>
-
-              {/* Assign To */}
-              <div className="mb-3">
-                <label className="form-label fw-semibold">
-                  <i className="fas fa-user-tag text-success me-1"></i>Assign To
-                </label>
-                <select
-                  className="form-select form-select-lg"
-                  value={assignedTo}
-                  onChange={(e) => setAssignedTo(e.target.value)}
-                  data-testid="select-assigned-to"
-                >
-                  <option value="">Select team member...</option>
-                  {ASSIGNEES.map(member => (
-                    <option key={member} value={member}>
-                      {member.charAt(0).toUpperCase() + member.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Quick Note Templates */}
-              <div className="mb-3">
-                <label className="form-label fw-semibold">
-                  <i className="fas fa-sticky-note text-warning me-1"></i>Quick Note Templates
-                </label>
-                <select
-                  className="form-select form-select-lg"
-                  value={selectedTemplate}
-                  onChange={(e) => handleTemplateChange(e.target.value)}
-                  data-testid="select-note-template"
-                >
-                  <option value="">Choose a quick note template...</option>
-                  {quickNoteTemplates.map(template => (
-                    <option key={template} value={template}>{template}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Custom Note or Note Preview */}
-              {selectedTemplate === 'Custom note...' ? (
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">
-                    <i className="fas fa-pen text-info me-1"></i>Custom Note
-                  </label>
-                  <textarea
-                    className="form-control"
-                    rows={4}
-                    value={customNote}
-                    onChange={(e) => setCustomNote(e.target.value)}
-                    placeholder="Write your custom follow-up note here..."
-                    data-testid="textarea-custom-note"
-                  />
-                </div>
-              ) : selectedTemplate ? (
-                <div className="mb-3">
-                  <label className="form-label fw-semibold text-success">
-                    <i className="fas fa-eye me-1"></i>Note Preview
-                  </label>
-                  <div className="p-3 bg-success-subtle border border-success-subtle rounded">
-                    <div className="d-flex align-items-center">
-                      <i className="fas fa-quote-left text-success me-2"></i>
-                      <span className="fw-medium">
-                        [{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}] {quickNote}
-                      </span>
+            ) : selectedTemplate ? (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-2 text-green-700">
+                  <CheckCircle className="h-4 w-4" />
+                  Note Preview
+                </Label>
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-1 bg-green-100 rounded">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-green-800 font-medium">
+                          [{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}] {quickNote}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Info Alert */}
-              <div className="alert alert-info border-0 bg-info-subtle">
-                <div className="d-flex align-items-center">
-                  <i className="fas fa-lightbulb text-info me-3 fs-5"></i>
-                  <div>
-                    <strong>Quick Tip:</strong> Your note will be timestamped and added to the lead's history. 
-                    {assignedTo && assignedTo !== lead.assigned_to && (
-                      <>
-                        <br />
-                        <small>Lead will be reassigned to <strong>{assignedTo.charAt(0).toUpperCase() + assignedTo.slice(1)}</strong>.</small>
-                      </>
-                    )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
-            </form>
-          </div>
-          <div className="modal-footer bg-light">
-            <button 
-              type="button" 
-              className="btn btn-outline-secondary btn-lg me-2" 
-              onClick={handleClose}
-              data-testid="button-cancel-followup"
-            >
-              <i className="fas fa-times me-2"></i>Cancel
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary btn-lg px-4"
-              onClick={handleSubmit}
-              disabled={updateLeadMutation.isPending || (!nextFollowupDate && !quickNote && !customNote && !assignedTo)}
-              data-testid="button-save-followup"
-            >
-              {updateLeadMutation.isPending ? (
-                <>
-                  <i className="fas fa-spinner fa-spin me-2"></i>Updating Follow-up...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-calendar-check me-2"></i>Update Follow-up
-                </>
-              )}
-            </button>
-          </div>
+            ) : null}
+
+            {/* Info Card */}
+            <Card className="bg-amber-50 border-amber-200">
+              <CardContent className="p-4">
+                <div className="flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-amber-900 mb-1">Quick Tip</p>
+                    <p className="text-amber-800">
+                      Your note will be timestamped and added to the lead's history.
+                      {assignedTo && assignedTo !== lead.assigned_to && (
+                        <>
+                          {' '}Lead will be reassigned to <span className="font-medium">{assignedTo.charAt(0).toUpperCase() + assignedTo.slice(1)}</span>.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleClose}
+                className="flex-1"
+                data-testid="button-cancel-followup"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateLeadMutation.isPending || (!nextFollowupDate && !quickNote && !customNote && !assignedTo)}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                data-testid="button-save-followup"
+              >
+                {updateLeadMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Update Follow-up
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
