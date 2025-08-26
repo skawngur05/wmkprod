@@ -35,6 +35,7 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
     deposit_paid: lead.deposit_paid || false,
     balance_paid: lead.balance_paid || false,
   });
+  const [newNote, setNewNote] = useState('');
 
   const { toast } = useToast();
 
@@ -70,10 +71,18 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Handle new note addition
+    let updatedNotes = formData.notes || '';
+    if (newNote.trim()) {
+      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const newNoteWithTimestamp = `[${timestamp}] ${newNote.trim()}`;
+      updatedNotes = updatedNotes ? `${updatedNotes}\n${newNoteWithTimestamp}` : newNoteWithTimestamp;
+    }
+
     const updates: Partial<Lead> = {
       next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date) : null,
       remarks: formData.remarks,
-      notes: formData.notes || null,
+      notes: updatedNotes || null,
       project_amount: formData.project_amount || null,
       assigned_to: formData.assigned_to,
       installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
@@ -213,45 +222,128 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
         </div>
       </div>
 
-      {/* Notes - Full Width at Bottom */}
-      <div className="space-y-1 pt-2">
-        <Label htmlFor="notes" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-          NOTES
-        </Label>
-        <Textarea
-          id="notes"
-          value={formData.notes}
-          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-          data-testid="textarea-notes"
-          rows={3}
-          className="resize-none text-base"
-        />
-      </div>
-
-      {/* Payment Status Checkboxes - Only for Sold Status */}
+      {/* Payment Status - Only for Sold Status - First Priority */}
       {formData.remarks === 'sold' && (
-        <div className="flex gap-6 pt-2">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="deposit_paid"
-              checked={formData.deposit_paid}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, deposit_paid: checked as boolean }))}
-              data-testid="checkbox-deposit-paid"
-            />
-            <Label htmlFor="deposit_paid" className="text-sm font-medium">Deposit Paid</Label>
-          </div>
+        <div className="col-span-2 space-y-3 pt-2 border-t border-gray-200">
+          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            PAYMENT STATUS
+          </Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div 
+              className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                formData.deposit_paid 
+                  ? 'border-green-500 bg-green-50 shadow-sm' 
+                  : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+              }`}
+              onClick={() => setFormData(prev => ({ ...prev, deposit_paid: !prev.deposit_paid }))}
+            >
+              <div className="flex items-center space-x-3">
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                  formData.deposit_paid ? 'bg-green-500 border-green-500' : 'border-gray-300'
+                }`}>
+                  {formData.deposit_paid && (
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Deposit Paid</p>
+                  <p className="text-xs text-gray-600">Initial payment received</p>
+                </div>
+              </div>
+            </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="balance_paid"
-              checked={formData.balance_paid}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, balance_paid: checked as boolean }))}
-              data-testid="checkbox-balance-paid"
-            />
-            <Label htmlFor="balance_paid" className="text-sm font-medium">Balance Paid</Label>
+            <div 
+              className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                formData.balance_paid 
+                  ? 'border-green-500 bg-green-50 shadow-sm' 
+                  : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+              }`}
+              onClick={() => setFormData(prev => ({ ...prev, balance_paid: !prev.balance_paid }))}
+            >
+              <div className="flex items-center space-x-3">
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                  formData.balance_paid ? 'bg-green-500 border-green-500' : 'border-gray-300'
+                }`}>
+                  {formData.balance_paid && (
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Balance Paid</p>
+                  <p className="text-xs text-gray-600">Final payment received</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Notes History and New Note - Full Width at Bottom */}
+      <div className="col-span-2 space-y-3 pt-4 border-t border-gray-200">
+        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          NOTES HISTORY
+        </Label>
+        
+        {/* Existing Notes History */}
+        <div className="space-y-2 max-h-32 overflow-y-auto">
+          {formData.notes ? (
+            formData.notes.split('\n').filter(line => line.trim()).map((note, index) => {
+              const match = note.match(/^\[(.+?)\]\s*(.+)$/);
+              if (match) {
+                const [, date, content] = match;
+                return (
+                  <div key={index} className="flex items-start space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-green-800">[{date}] {content}</p>
+                    </div>
+                  </div>
+                );
+              } else {
+                return (
+                  <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="w-5 h-5 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-700">{note}</p>
+                    </div>
+                  </div>
+                );
+              }
+            })
+          ) : (
+            <p className="text-sm text-gray-500 italic p-3 bg-gray-50 rounded-lg text-center">
+              No notes history available
+            </p>
+          )}
+        </div>
+
+        {/* Add New Note */}
+        <div className="space-y-2">
+          <Label htmlFor="new-note" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            ADD NEW NOTE
+          </Label>
+          <Textarea
+            id="new-note"
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            placeholder="Enter a new note..."
+            rows={2}
+            className="resize-none text-base"
+          />
+        </div>
+      </div>
 
       <div className="flex gap-3 pt-4">
         <Button type="submit" disabled={updateLeadMutation.isPending} data-testid="button-save-lead">
