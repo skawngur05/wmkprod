@@ -133,8 +133,8 @@ export class MemStorage implements IStorage {
       { 
         username: "lina", 
         password: "password", 
-        role: "sales_rep",
-        permissions: ["dashboard", "leads", "followups", "sample_booklets"],
+        role: "administrator",
+        permissions: ["dashboard", "leads", "add_lead", "followups", "installations", "sample_booklets", "reports", "admin_panel", "user_management", "system_settings"],
         is_active: true,
         created_at: new Date("2024-01-01"),
         last_login: new Date("2024-01-13")
