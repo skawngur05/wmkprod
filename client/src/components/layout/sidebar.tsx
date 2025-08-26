@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { capitalizeFirst } from '@/lib/auth';
 import { Link, useLocation } from 'wouter';
 import logoPath from '@assets/wmk-wh_1756056124487.png';
+import { getNavigationItems } from '@/lib/permissions';
 import { 
   LayoutDashboard,
   Users,
@@ -46,28 +47,10 @@ export function Sidebar() {
 
   const isActive = (path: string) => location === path;
 
-  const navItems = (user?.role === 'admin' || user?.role === 'administrator') ? [
-    { path: '/admin', icon: 'fas fa-shield-alt', label: 'Admin Dashboard', testId: 'nav-admin-dashboard', category: 'admin' },
-    { path: '/admin/users', icon: 'fas fa-users-cog', label: 'User Management', testId: 'nav-admin-users', category: 'admin' },
-    { path: '/admin/installers', icon: 'fas fa-user-cog', label: 'Installers', testId: 'nav-admin-installers', category: 'admin' },
-    { path: '/admin/lead-origins', icon: 'fas fa-globe', label: 'Lead Origins', testId: 'nav-admin-lead-origins', category: 'admin' },
-    { path: '/admin/email-templates', icon: 'fas fa-mail-bulk', label: 'Email Templates', testId: 'nav-admin-email-templates', category: 'admin' },
-    { path: '/admin/smtp-settings', icon: 'fas fa-server', label: 'SMTP Settings', testId: 'nav-admin-smtp', category: 'admin' },
-    { path: '/admin/activity', icon: 'fas fa-history', label: 'Activity Log', testId: 'nav-admin-activity', category: 'admin' },
-    { path: '/leads', icon: 'fas fa-users', label: 'View Leads', testId: 'nav-leads', category: 'core' },
-    { path: '/reports', icon: 'fas fa-chart-bar', label: 'Reports', testId: 'nav-reports', category: 'core' },
-  ] : [
-    { path: '/dashboard', icon: 'fas fa-tachometer-alt', label: 'Dashboard', testId: 'nav-dashboard', category: 'core' },
-    { path: '/leads', icon: 'fas fa-users', label: 'Leads', testId: 'nav-leads', category: 'core' },
-    { path: '/add-lead', icon: 'fas fa-user-plus', label: 'Add Lead', testId: 'nav-add-lead', category: 'core' },
-    { path: '/followups', icon: 'fas fa-calendar-check', label: 'Follow-ups', testId: 'nav-followups', category: 'core' },
-    { path: '/sample-booklets', icon: 'fas fa-book', label: 'Sample Booklets', testId: 'nav-sample-booklets', category: 'core' },
-    { path: '/installations', icon: 'fas fa-tools', label: 'Installations', testId: 'nav-installations', category: 'core' },
-    { path: '/reports', icon: 'fas fa-chart-bar', label: 'Reports', testId: 'nav-reports', category: 'core' },
-  ];
-
-  const coreItems = navItems.filter(item => item.category === 'core');
-  const adminItems = navItems.filter(item => item.category === 'admin');
+  // Get navigation items based on user permissions
+  const navigation = getNavigationItems(user);
+  const coreItems = navigation?.core || [];
+  const adminItems = navigation?.admin || [];
 
   return (
     <div className={`modern-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
@@ -98,7 +81,7 @@ export function Sidebar() {
       <nav className="sidebar-nav-modern">
         <div className="nav-section">
           {!isCollapsed && <div className="nav-section-title">Main</div>}
-          {coreItems.map((item) => {
+          {coreItems.map((item: any) => {
             const IconComponent = iconMap[item.icon as keyof typeof iconMap] || LayoutDashboard;
             return (
               <Link 
@@ -120,7 +103,7 @@ export function Sidebar() {
         {adminItems.length > 0 && (
           <div className="nav-section">
             {!isCollapsed && <div className="nav-section-title">Administration</div>}
-            {adminItems.map((item) => {
+            {adminItems.map((item: any) => {
               const IconComponent = iconMap[item.icon as keyof typeof iconMap] || Shield;
               return (
                 <Link 

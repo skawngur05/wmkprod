@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { Sidebar } from "@/components/layout/sidebar";
+import { hasPermission } from "@/lib/permissions";
 
 // Utility function
 const capitalizeFirst = (str: string): string => {
@@ -44,6 +45,25 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Redirect to="/login" />;
+  }
+
+  // Check if user has permission for the current route
+  if (!hasPermission(user, location)) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+        <div className="text-center">
+          <i className="fas fa-lock fa-3x text-danger mb-3"></i>
+          <h4>Access Denied</h4>
+          <p className="text-muted">You don't have permission to access this page.</p>
+          <button 
+            className="btn btn-primary mt-3"
+            onClick={() => window.history.back()}
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const isDashboard = location === '/dashboard';
