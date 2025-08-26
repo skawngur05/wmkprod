@@ -258,7 +258,7 @@ export default function AddLead() {
                         <SelectContent>
                           {LEAD_ORIGINS.map(origin => (
                             <SelectItem key={origin} value={origin}>
-                              {origin.charAt(0).toUpperCase() + origin.slice(1).replace('-', ' ')}
+                              {origin.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                             </SelectItem>
                           ))}
                         </SelectContent>

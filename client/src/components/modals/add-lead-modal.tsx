@@ -144,7 +144,7 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
                   >
                     <option value="">Select Origin</option>
                     {LEAD_ORIGINS.map(origin => (
-                      <option key={origin} value={origin}>{origin}</option>
+                      <option key={origin} value={origin}>{origin.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</option>
                     ))}
                   </select>
                 </div>

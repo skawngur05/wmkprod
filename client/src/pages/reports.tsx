@@ -100,7 +100,7 @@ export default function Reports() {
   };
   
   const formatOriginName = (origin: string) => {
-    return origin.split('-').map(word => 
+    return origin.split(/[-_]/).map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
