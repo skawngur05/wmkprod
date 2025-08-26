@@ -285,46 +285,50 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
       {/* Notes History and New Note - Full Width at Bottom */}
       <div className="col-span-2 space-y-3 pt-4 border-t border-gray-200">
         <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-          NOTES HISTORY
+          MOST RECENT NOTE
         </Label>
         
-        {/* Existing Notes History */}
-        <div className="space-y-2 max-h-32 overflow-y-auto">
-          {formData.notes ? (
-            formData.notes.split('\n').filter(line => line.trim()).reverse().map((note, index) => {
-              const match = note.match(/^\[(.+?)\]\s*(.+)$/);
-              if (match) {
-                const [, date, content] = match;
-                return (
-                  <div key={index} className="flex items-start space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-green-800">[{date}] {content}</p>
-                    </div>
+        {/* Most Recent Note */}
+        <div className="space-y-2">
+          {formData.notes ? (() => {
+            const notes = formData.notes.split('\n').filter(line => line.trim());
+            if (notes.length === 0) return null;
+            
+            // Get the most recent note (last in the array)
+            const mostRecentNote = notes[notes.length - 1];
+            const match = mostRecentNote.match(/^\[(.+?)\]\s*(.+)$/);
+            
+            if (match) {
+              const [, date, content] = match;
+              return (
+                <div className="flex items-start space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
                   </div>
-                );
-              } else {
-                return (
-                  <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                    <div className="w-5 h-5 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-700">{note}</p>
-                    </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-800">[{date}] {content}</p>
                   </div>
-                );
-              }
-            })
-          ) : (
+                </div>
+              );
+            } else {
+              return (
+                <div className="flex items-start space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="w-5 h-5 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700">{mostRecentNote}</p>
+                  </div>
+                </div>
+              );
+            }
+          })() : (
             <p className="text-sm text-gray-500 italic p-3 bg-gray-50 rounded-lg text-center">
-              No notes history available
+              No notes available
             </p>
           )}
         </div>
