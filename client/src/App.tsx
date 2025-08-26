@@ -76,7 +76,7 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/login">
-        {user ? <Redirect to={user.role === 'admin' ? '/admin' : '/dashboard'} /> : <Login />}
+        {user ? <Redirect to={(user.role === 'admin' || user.role === 'administrator') ? '/admin' : '/dashboard'} /> : <Login />}
       </Route>
       
       <Route path="/dashboard">

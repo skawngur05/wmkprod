@@ -20,13 +20,13 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   
   // Redirect non-admin users
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'administrator')) {
     return <Redirect to="/dashboard" />;
   }
 
   const { data: stats = {}, isLoading } = useQuery({
     queryKey: ['/api/admin/dashboard-stats'],
-    enabled: user?.role === 'admin'
+    enabled: user?.role === 'admin' || user?.role === 'administrator'
   });
 
   const adminCards = [

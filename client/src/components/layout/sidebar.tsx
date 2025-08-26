@@ -9,7 +9,7 @@ export function Sidebar() {
 
   const isActive = (path: string) => location === path;
 
-  const navItems = user?.role === 'admin' ? [
+  const navItems = (user?.role === 'admin' || user?.role === 'administrator') ? [
     { path: '/admin', icon: 'fas fa-shield-alt', label: 'Admin Dashboard', testId: 'nav-admin-dashboard' },
     { path: '/admin/users', icon: 'fas fa-users-cog', label: 'User Management', testId: 'nav-admin-users' },
     { path: '/admin/installers', icon: 'fas fa-user-cog', label: 'Installers', testId: 'nav-admin-installers' },
@@ -62,7 +62,10 @@ export function Sidebar() {
               {user ? capitalizeFirst(user.username) : 'User'}
             </div>
             <div className="small" style={{ color: 'var(--wmk-gray)' }}>
-              {user?.role === 'admin' ? 'Administrator' : 'Sales Rep'}
+              {(user?.role === 'admin' || user?.role === 'administrator') ? 'Administrator' : 
+               user?.role === 'owner' ? 'Owner' :
+               user?.role === 'manager' ? 'Manager' :
+               user?.role === 'installer' ? 'Installer' : 'Sales Rep'}
             </div>
           </div>
         </div>
