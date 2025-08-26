@@ -26,7 +26,8 @@ import {
   TrendingUp,
   Calendar,
   Users,
-  Edit
+  Edit,
+  MapPin
 } from 'lucide-react';
 
 // Installation Card Component
@@ -572,6 +573,15 @@ export default function Installations() {
                           <a href={`mailto:${selectedInstallation.email}`} className="text-blue-600 hover:underline">
                             {selectedInstallation.email}
                           </a>
+                        </div>
+                      )}
+                      {(selectedInstallation as any).customer_address && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-orange-600 mt-1" />
+                          <div>
+                            <p className="text-xs font-medium text-gray-600 uppercase">Installation Address</p>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{(selectedInstallation as any).customer_address}</p>
+                          </div>
                         </div>
                       )}
                     </div>
