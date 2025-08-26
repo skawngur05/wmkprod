@@ -18,9 +18,9 @@ import { Plus, Download, Upload, Search, X, Phone, Mail, Calendar, Eye, Trash2, 
 export default function Leads() {
   const [filters, setFilters] = useState({
     search: '',
-    status: '',
-    origin: '',
-    assigned_to: ''
+    status: 'all',
+    origin: 'all',
+    assigned_to: 'all'
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -44,9 +44,9 @@ export default function Leads() {
       // Build query parameters from filters and pagination
       const params = new URLSearchParams();
       if (filters.search) params.append('search', filters.search);
-      if (filters.status) params.append('status', filters.status);
-      if (filters.origin) params.append('origin', filters.origin);
-      if (filters.assigned_to) params.append('assigned_to', filters.assigned_to);
+      if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+      if (filters.origin && filters.origin !== 'all') params.append('origin', filters.origin);
+      if (filters.assigned_to && filters.assigned_to !== 'all') params.append('assigned_to', filters.assigned_to);
       
       // Add pagination parameters
       params.append('page', currentPage.toString());
@@ -225,7 +225,7 @@ export default function Leads() {
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="new">New</SelectItem>
                     <SelectItem value="in-progress">In Progress</SelectItem>
                     <SelectItem value="quoted">Quoted</SelectItem>
@@ -244,7 +244,7 @@ export default function Leads() {
                     <SelectValue placeholder="All Origins" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Origins</SelectItem>
+                    <SelectItem value="all">All Origins</SelectItem>
                     <SelectItem value="facebook">Facebook</SelectItem>
                     <SelectItem value="google">Google</SelectItem>
                     <SelectItem value="instagram">Instagram</SelectItem>
@@ -262,7 +262,7 @@ export default function Leads() {
                     <SelectValue placeholder="All Team" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Team</SelectItem>
+                    <SelectItem value="all">All Team</SelectItem>
                     <SelectItem value="kim">Kim</SelectItem>
                     <SelectItem value="patrick">Patrick</SelectItem>
                     <SelectItem value="lina">Lina</SelectItem>
@@ -276,7 +276,7 @@ export default function Leads() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => updateFilters({ search: '', status: '', origin: '', assigned_to: '' })}
+                  onClick={() => updateFilters({ search: '', status: 'all', origin: 'all', assigned_to: 'all' })}
                   data-testid="button-clear-filters"
                 >
                   <X className="h-4 w-4 mr-2" />
