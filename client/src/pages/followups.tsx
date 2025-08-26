@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { QuickFollowupModal } from '@/components/modals/quick-followup-modal';
-import { Phone, Mail, Calendar, User, DollarSign, Clock, Eye, AlertCircle, CheckCircle, TrendingUp, Edit } from 'lucide-react';
+import { Phone, Mail, Calendar, User, DollarSign, Clock, Eye, AlertCircle, CheckCircle, TrendingUp, Edit, Copy } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface FollowupsData {
@@ -474,16 +474,32 @@ function FollowupsTable({
                 <div className="space-y-2">
                   <div className="flex items-center text-sm text-gray-700">
                     <Phone className="h-4 w-4 mr-2 text-green-600" />
-                    <a href={`tel:${lead.phone}`} className="hover:text-blue-600 transition-colors">
-                      {lead.phone}
-                    </a>
+                    <span className="flex-1">{lead.phone}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(lead.phone);
+                        // Toast notification would go here if needed
+                      }}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copy phone number"
+                    >
+                      <Copy className="h-3 w-3 text-gray-500 hover:text-gray-700" />
+                    </button>
                   </div>
                   {lead.email && (
                     <div className="flex items-center text-sm text-gray-700">
                       <Mail className="h-4 w-4 mr-2 text-blue-600" />
-                      <a href={`mailto:${lead.email}`} className="hover:text-blue-600 transition-colors truncate">
-                        {lead.email}
-                      </a>
+                      <span className="flex-1 truncate">{lead.email}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(lead.email);
+                          // Toast notification would go here if needed
+                        }}
+                        className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                        title="Copy email address"
+                      >
+                        <Copy className="h-3 w-3 text-gray-500 hover:text-gray-700" />
+                      </button>
                     </div>
                   )}
                 </div>
