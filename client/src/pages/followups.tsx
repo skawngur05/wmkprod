@@ -447,7 +447,7 @@ function FollowupsTable({
   return (
     <div className="space-y-4">
       {leads.map((lead) => (
-        <Card key={lead.id} className={getCardStyling(status)}>
+        <Card key={lead.id} className={`${getCardStyling(status)} cursor-pointer`} onClick={() => onQuickEdit(lead)}>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
               
@@ -476,7 +476,8 @@ function FollowupsTable({
                     <Phone className="h-4 w-4 mr-2 text-green-600" />
                     <span className="flex-1">{lead.phone}</span>
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         navigator.clipboard.writeText(lead.phone);
                         // Toast notification would go here if needed
                       }}
@@ -491,7 +492,8 @@ function FollowupsTable({
                       <Mail className="h-4 w-4 mr-2 text-blue-600" />
                       <span className="flex-1 truncate">{lead.email}</span>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           navigator.clipboard.writeText(lead.email || '');
                           // Toast notification would go here if needed
                         }}
@@ -550,7 +552,10 @@ function FollowupsTable({
                     size="sm" 
                     variant="outline" 
                     className="w-full h-10 text-xs font-medium border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md px-2"
-                    onClick={() => onQuickFollowup(lead)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onQuickFollowup(lead);
+                    }}
                     data-testid={`button-followup-${lead.id}`}
                     title="Schedule Follow-up"
                   >
@@ -561,7 +566,10 @@ function FollowupsTable({
                     size="sm" 
                     variant="outline" 
                     className="w-full h-10 text-xs font-medium border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md px-2"
-                    onClick={() => onQuickEdit(lead)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onQuickEdit(lead);
+                    }}
                     data-testid={`button-view-${lead.id}`}
                     title="Edit Lead"
                   >
