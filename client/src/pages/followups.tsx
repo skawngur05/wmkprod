@@ -366,8 +366,8 @@ function FollowupsTable({
                     <p className="text-sm text-gray-600 capitalize">
                       {lead.lead_origin.replace('-', ' ')}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Created: {formatDate(lead.date_created?.toString() || null)}
+                    <p className="text-sm text-gray-700 font-medium mt-1">
+                      Created: {lead.date_created ? new Date(lead.date_created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -437,23 +437,23 @@ function FollowupsTable({
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    className="w-full h-9 text-xs font-medium border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
+                    className="w-full h-10 text-xs font-medium border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md px-2"
                     onClick={() => onQuickFollowup(lead)}
                     data-testid={`button-followup-${lead.id}`}
                     title="Schedule Follow-up"
                   >
-                    <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                    <Calendar className="h-3 w-3 mr-1" />
                     Follow-up
                   </Button>
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    className="w-full h-9 text-xs font-medium border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
+                    className="w-full h-10 text-xs font-medium border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md px-2"
                     onClick={() => onQuickEdit(lead)}
                     data-testid={`button-view-${lead.id}`}
                     title="Edit Lead"
                   >
-                    <Edit className="h-3.5 w-3.5 mr-1.5" />
+                    <Edit className="h-3 w-3 mr-1" />
                     Edit
                   </Button>
                 </div>

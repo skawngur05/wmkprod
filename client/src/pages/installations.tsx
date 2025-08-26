@@ -113,8 +113,8 @@ function InstallationCard({
                 <p className="text-sm text-gray-600 mb-1">
                   {type === 'repair' ? 'Service Job' : type === 'completed' ? 'Completed Project' : 'Installation'}
                 </p>
-                <p className="text-xs text-gray-500 mb-2">
-                  Created: {formatDate(installation.date_created)}
+                <p className="text-sm text-gray-700 font-medium mb-2">
+                  Created: {installation.date_created ? new Date(installation.date_created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {getPriorityBadge()}
