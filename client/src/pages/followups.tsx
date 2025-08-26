@@ -87,108 +87,142 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="next_followup_date">Next Follow-up Date</Label>
-        <Input
-          id="next_followup_date"
-          type="date"
-          value={formData.next_followup_date}
-          onChange={(e) => setFormData(prev => ({ ...prev, next_followup_date: e.target.value }))}
-          data-testid="input-next-followup-date"
-        />
+      {/* Two Column Layout */}
+      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem'}}>
+        {/* Left Column */}
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="next_followup_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              NEXT FOLLOW-UP DATE
+            </Label>
+            <Input
+              id="next_followup_date"
+              type="date"
+              value={formData.next_followup_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, next_followup_date: e.target.value }))}
+              data-testid="input-next-followup-date"
+              className="h-11 text-base"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="project_amount" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              PROJECT AMOUNT
+            </Label>
+            <Input
+              id="project_amount"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={formData.project_amount}
+              onChange={(e) => setFormData(prev => ({ ...prev, project_amount: e.target.value }))}
+              data-testid="input-project-amount"
+              className="h-11 text-base"
+            />
+          </div>
+
+          {formData.remarks === 'sold' && (
+            <div className="space-y-1">
+              <Label htmlFor="installation_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                INSTALLATION DATE
+              </Label>
+              <Input
+                id="installation_date"
+                type="date"
+                value={formData.installation_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, installation_date: e.target.value }))}
+                data-testid="input-installation-date"
+                className="h-11 text-base"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Right Column */}
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="status" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              STATUS
+            </Label>
+            <Select
+              value={formData.remarks}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, remarks: value }))}
+            >
+              <SelectTrigger data-testid="select-status" className="h-11 text-base">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new">New</SelectItem>
+                <SelectItem value="in-progress">In Progress</SelectItem>
+                <SelectItem value="quoted">Quoted</SelectItem>
+                <SelectItem value="sold">Sold</SelectItem>
+                <SelectItem value="not-interested">Not Interested</SelectItem>
+                <SelectItem value="not-service-area">Not Service Area</SelectItem>
+                <SelectItem value="not-compatible">Not Compatible</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="assigned_to" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              ASSIGNED TO
+            </Label>
+            <Select
+              value={formData.assigned_to || ''}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: value }))}
+            >
+              <SelectTrigger data-testid="select-assigned-to" className="h-11 text-base">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="kim">Kim</SelectItem>
+                <SelectItem value="patrick">Patrick</SelectItem>
+                <SelectItem value="lina">Lina</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {formData.remarks === 'sold' && (
+            <div className="space-y-1">
+              <Label htmlFor="assigned_installer" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                ASSIGNED INSTALLER
+              </Label>
+              <Select
+                value={formData.assigned_installer}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_installer: value }))}
+              >
+                <SelectTrigger data-testid="select-assigned-installer" className="h-11 text-base">
+                  <SelectValue placeholder="Select installer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="angel">Angel</SelectItem>
+                  <SelectItem value="brian">Brian</SelectItem>
+                  <SelectItem value="luis">Luis</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div>
-        <Label htmlFor="status">Status</Label>
-        <Select
-          value={formData.remarks}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, remarks: value }))}
-        >
-          <SelectTrigger data-testid="select-status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="new">New</SelectItem>
-            <SelectItem value="in-progress">In Progress</SelectItem>
-            <SelectItem value="quoted">Quoted</SelectItem>
-            <SelectItem value="sold">Sold</SelectItem>
-            <SelectItem value="not-interested">Not Interested</SelectItem>
-            <SelectItem value="not-service-area">Not Service Area</SelectItem>
-            <SelectItem value="not-compatible">Not Compatible</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="project_amount">Project Amount</Label>
-        <Input
-          id="project_amount"
-          type="number"
-          step="0.01"
-          placeholder="0.00"
-          value={formData.project_amount}
-          onChange={(e) => setFormData(prev => ({ ...prev, project_amount: e.target.value }))}
-          data-testid="input-project-amount"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="assigned_to">Assigned To</Label>
-        <Select
-          value={formData.assigned_to || ''}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: value }))}
-        >
-          <SelectTrigger data-testid="select-assigned-to">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="kim">Kim</SelectItem>
-            <SelectItem value="patrick">Patrick</SelectItem>
-            <SelectItem value="lina">Lina</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="notes">Notes</Label>
+      {/* Notes - Full Width at Bottom */}
+      <div className="space-y-1 pt-2">
+        <Label htmlFor="notes" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          NOTES
+        </Label>
         <Textarea
           id="notes"
           value={formData.notes}
           onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
           data-testid="textarea-notes"
+          rows={3}
+          className="resize-none text-base"
         />
       </div>
 
+      {/* Payment Status Checkboxes - Only for Sold Status */}
       {formData.remarks === 'sold' && (
-        <>
-          <div>
-            <Label htmlFor="installation_date">Installation Date</Label>
-            <Input
-              id="installation_date"
-              type="date"
-              value={formData.installation_date}
-              onChange={(e) => setFormData(prev => ({ ...prev, installation_date: e.target.value }))}
-              data-testid="input-installation-date"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="assigned_installer">Assigned Installer</Label>
-            <Select
-              value={formData.assigned_installer}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_installer: value }))}
-            >
-              <SelectTrigger data-testid="select-assigned-installer">
-                <SelectValue placeholder="Select installer" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="angel">Angel</SelectItem>
-                <SelectItem value="brian">Brian</SelectItem>
-                <SelectItem value="luis">Luis</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
+        <div className="flex gap-6 pt-2">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="deposit_paid"
@@ -196,7 +230,7 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
               onCheckedChange={(checked) => setFormData(prev => ({ ...prev, deposit_paid: checked as boolean }))}
               data-testid="checkbox-deposit-paid"
             />
-            <Label htmlFor="deposit_paid">Deposit Paid</Label>
+            <Label htmlFor="deposit_paid" className="text-sm font-medium">Deposit Paid</Label>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -206,9 +240,9 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
               onCheckedChange={(checked) => setFormData(prev => ({ ...prev, balance_paid: checked as boolean }))}
               data-testid="checkbox-balance-paid"
             />
-            <Label htmlFor="balance_paid">Balance Paid</Label>
+            <Label htmlFor="balance_paid" className="text-sm font-medium">Balance Paid</Label>
           </div>
-        </>
+        </div>
       )}
 
       <div className="flex gap-3 pt-4">
