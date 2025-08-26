@@ -54,20 +54,13 @@ export type Lead = typeof leads.$inferSelect;
 // Enums for dropdowns
 export const LEAD_ORIGINS = [
   "facebook",
-  "google",
-  "instagram", 
-  "trade-show",
+  "google_text",
+  "instagram",
+  "trade_show",
   "whatsapp",
-  "commercial",
-  "referral",
   "website",
-  "phone",
-  "email",
-  "walk-in",
-  "tiktok",
-  "youtube",
-  "linkedin",
-  "twitter"
+  "commercial",
+  "referral"
 ] as const;
 
 export const LEAD_STATUSES = [

@@ -40,7 +40,7 @@ Preferred communication style: Simple, everyday language.
 ### Data Models
 - **Users**: ID, username, password, role (admin/sales_rep)
 - **Leads**: Comprehensive lead tracking with fields for contact info, lead source, status, assigned team member, project value, follow-up dates, payment tracking, and installation details
-- **Lead Origins**: 14+ predefined sources including social media, referrals, and direct channels
+- **Lead Origins**: 8 predefined sources: Facebook, Google Text, Instagram, Trade Show, WhatsApp, Website, Commercial, Referral
 - **Lead Statuses**: Complete workflow states from "New" to "Sold" with intermediate stages
 - **Team Members**: Kim, Patrick, Lina for sales assignment
 - **Installers**: Angel, Brian, Luis for installation assignment

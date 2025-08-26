@@ -1200,58 +1200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Lead Origins Management
-  app.get("/api/admin/lead-origins", async (req, res) => {
-    try {
-      const origins = await storage.getLeadOrigins();
-      res.json(origins);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch lead origins" });
-    }
-  });
 
-  app.post("/api/admin/lead-origins", async (req, res) => {
-    try {
-      const { origin_name } = req.body;
-      if (!origin_name) {
-        return res.status(400).json({ message: "Origin name is required" });
-      }
-      
-      const origin = await storage.createLeadOrigin(origin_name);
-      res.status(201).json(origin);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to create lead origin" });
-    }
-  });
-
-  app.put("/api/admin/lead-origins/:id", async (req, res) => {
-    try {
-      const { origin_name, is_active } = req.body;
-      const updates: any = {};
-      if (origin_name !== undefined) updates.origin_name = origin_name;
-      if (is_active !== undefined) updates.is_active = is_active;
-      
-      const origin = await storage.updateLeadOrigin(req.params.id, updates);
-      if (!origin) {
-        return res.status(404).json({ message: "Lead origin not found" });
-      }
-      res.json(origin);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to update lead origin" });
-    }
-  });
-
-  app.delete("/api/admin/lead-origins/:id", async (req, res) => {
-    try {
-      const deleted = await storage.deleteLeadOrigin(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Lead origin not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete lead origin" });
-    }
-  });
 
   // Admin Email Templates Management
   app.get("/api/admin/email-templates", async (req, res) => {

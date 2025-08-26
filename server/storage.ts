@@ -244,7 +244,7 @@ export class MemStorage implements IStorage {
         name: "Jessica Martinez",
         phone: "(555) 567-8901",
         email: "jessica.martinez@email.com",
-        lead_origin: "trade-show",
+        lead_origin: "trade_show",
         date_created: new Date("2024-01-11"),
         next_followup_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), // tomorrow
         remarks: "quoted",
@@ -295,7 +295,7 @@ export class MemStorage implements IStorage {
         name: "Christopher Lee",
         phone: "(555) 890-1234",
         email: null,
-        lead_origin: "phone",
+        lead_origin: "google_text",
         date_created: new Date("2024-01-08"),
         next_followup_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
         remarks: "in-progress",

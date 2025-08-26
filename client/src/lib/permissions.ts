@@ -90,7 +90,6 @@ export function getNavigationItems(user: User | null) {
     { path: '/admin', icon: 'fas fa-shield-alt', label: 'Admin Dashboard', testId: 'nav-admin-dashboard', permission: PERMISSIONS.ADMIN_PANEL },
     { path: '/admin/users', icon: 'fas fa-users-cog', label: 'User Management', testId: 'nav-admin-users', permission: PERMISSIONS.USER_MANAGEMENT },
     { path: '/admin/installers', icon: 'fas fa-user-cog', label: 'Installers', testId: 'nav-admin-installers', permission: PERMISSIONS.ADMIN_PANEL },
-    { path: '/admin/lead-origins', icon: 'fas fa-globe', label: 'Lead Origins', testId: 'nav-admin-lead-origins', permission: PERMISSIONS.ADMIN_PANEL },
     { path: '/admin/email-templates', icon: 'fas fa-mail-bulk', label: 'Email Templates', testId: 'nav-admin-email-templates', permission: PERMISSIONS.ADMIN_PANEL },
     { path: '/admin/smtp-settings', icon: 'fas fa-server', label: 'SMTP Settings', testId: 'nav-admin-smtp', permission: PERMISSIONS.SYSTEM_SETTINGS },
     { path: '/admin/activity', icon: 'fas fa-history', label: 'Activity Log', testId: 'nav-admin-activity', permission: PERMISSIONS.ADMIN_PANEL },
