@@ -291,7 +291,7 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
         {/* Existing Notes History */}
         <div className="space-y-2 max-h-32 overflow-y-auto">
           {formData.notes ? (
-            formData.notes.split('\n').filter(line => line.trim()).map((note, index) => {
+            formData.notes.split('\n').filter(line => line.trim()).reverse().map((note, index) => {
               const match = note.match(/^\[(.+?)\]\s*(.+)$/);
               if (match) {
                 const [, date, content] = match;
