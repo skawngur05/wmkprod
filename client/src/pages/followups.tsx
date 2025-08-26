@@ -366,6 +366,9 @@ function FollowupsTable({
                     <p className="text-sm text-gray-600 capitalize">
                       {lead.lead_origin.replace('-', ' ')}
                     </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Created: {formatDate(lead.date_created?.toString() || null)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -434,12 +437,12 @@ function FollowupsTable({
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    className="w-full h-8 text-xs"
+                    className="w-full h-9 text-xs font-medium border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
                     onClick={() => onQuickFollowup(lead)}
                     data-testid={`button-followup-${lead.id}`}
                     title="Schedule Follow-up"
                   >
-                    <Calendar className="h-3 w-3 mr-1" />
+                    <Calendar className="h-3.5 w-3.5 mr-1.5" />
                     Follow-up
                   </Button>
                   <Button 

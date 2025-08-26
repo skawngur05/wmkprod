@@ -110,8 +110,11 @@ function InstallationCard({
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900 text-lg">{installation.name}</h3>
-                <p className="text-sm text-gray-600 mb-2">
+                <p className="text-sm text-gray-600 mb-1">
                   {type === 'repair' ? 'Service Job' : type === 'completed' ? 'Completed Project' : 'Installation'}
+                </p>
+                <p className="text-xs text-gray-500 mb-2">
+                  Created: {formatDate(installation.date_created)}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {getPriorityBadge()}
