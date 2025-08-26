@@ -90,129 +90,117 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
 
   return (
     <Dialog open={show} onOpenChange={onHide}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="quick-edit-modal">
+      <DialogContent className="max-w-3xl" data-testid="quick-edit-modal">
         <DialogHeader>
-          <DialogTitle>Edit Lead Details</DialogTitle>
+          <DialogTitle>Edit Lead</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                data-testid="input-edit-name"
-              />
+          {/* Two Column Layout */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Left Column */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                  NAME <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  data-testid="input-edit-name"
+                  className="h-10"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-700">EMAIL</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  data-testid="input-edit-email"
+                  className="h-10"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="assigned_to" className="text-sm font-medium text-gray-700">ASSIGNED TO</Label>
+                <Select
+                  value={formData.assigned_to}
+                  onValueChange={(value) => setFormData({...formData, assigned_to: value})}
+                >
+                  <SelectTrigger data-testid="select-edit-assigned" className="h-10">
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ASSIGNEES.map(assignee => (
+                      <SelectItem key={assignee} value={assignee}>
+                        {assignee.charAt(0).toUpperCase() + assignee.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                data-testid="input-edit-phone"
-              />
+
+            {/* Right Column */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                  PHONE <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  data-testid="input-edit-phone"
+                  className="h-10"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="status" className="text-sm font-medium text-gray-700">
+                  STATUS <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.remarks}
+                  onValueChange={(value) => setFormData({...formData, remarks: value})}
+                >
+                  <SelectTrigger data-testid="select-edit-status" className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_STATUSES.map(status => (
+                      <SelectItem key={status} value={status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="project_amount" className="text-sm font-medium text-gray-700">PROJECT AMOUNT</Label>
+                <Input
+                  id="project_amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.project_amount}
+                  onChange={(e) => setFormData({...formData, project_amount: e.target.value})}
+                  data-testid="input-edit-amount"
+                  className="h-10"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                data-testid="input-edit-email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lead_origin">Lead Origin</Label>
-              <Select
-                value={formData.lead_origin}
-                onValueChange={(value) => setFormData({...formData, lead_origin: value})}
-              >
-                <SelectTrigger data-testid="select-edit-origin">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LEAD_ORIGINS.map(origin => (
-                    <SelectItem key={origin} value={origin}>{origin}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Status and Assignment */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.remarks}
-                onValueChange={(value) => setFormData({...formData, remarks: value})}
-              >
-                <SelectTrigger data-testid="select-edit-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LEAD_STATUSES.map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="assigned_to">Assigned To</Label>
-              <Select
-                value={formData.assigned_to}
-                onValueChange={(value) => setFormData({...formData, assigned_to: value})}
-              >
-                <SelectTrigger data-testid="select-edit-assigned">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ASSIGNEES.map(assignee => (
-                    <SelectItem key={assignee} value={assignee}>{assignee}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Project Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="project_amount">Project Amount</Label>
-              <Input
-                id="project_amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.project_amount}
-                onChange={(e) => setFormData({...formData, project_amount: e.target.value})}
-                data-testid="input-edit-amount"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="next_followup_date">Next Follow-up Date</Label>
-              <Input
-                id="next_followup_date"
-                type="date"
-                value={formData.next_followup_date}
-                onChange={(e) => setFormData({...formData, next_followup_date: e.target.value})}
-                data-testid="input-edit-followup"
-              />
-            </div>
-          </div>
-
-          {/* Notes - Always at the end */}
+          {/* Notes - Full Width at Bottom */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes" className="text-sm font-medium text-gray-700">NOTES</Label>
             <Textarea
               id="notes"
               rows={4}
@@ -220,25 +208,28 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
               onChange={(e) => setFormData({...formData, notes: e.target.value})}
               data-testid="textarea-edit-notes"
               placeholder="Add any additional notes about this lead..."
+              className="resize-none"
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="submit"
-              disabled={updateLeadMutation.isPending}
-              data-testid="button-save-edit"
-            >
-              {updateLeadMutation.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
+          {/* Action Buttons - Right Aligned */}
+          <div className="flex justify-end gap-3 pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={onHide}
               data-testid="button-cancel-edit"
+              className="px-6"
             >
               Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={updateLeadMutation.isPending}
+              data-testid="button-save-edit"
+              className="px-6 bg-green-600 hover:bg-green-700"
+            >
+              {updateLeadMutation.isPending ? 'Saving...' : 'Update Lead'}
             </Button>
           </div>
         </form>

@@ -38,3 +38,4 @@
 [x] 38. Fixed follow-up button functionality with correct modal props
 [x] 39. Converted follow-up management page from card layout to table layout
 [x] 40. Created comprehensive table component with all lead information organized in columns
+[x] 41. Redesigned edit modal to match user's exact format - two column layout with notes at bottom, no scrolling
