@@ -27,8 +27,13 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     assigned_to: '',
     project_amount: '',
     next_followup_date: '',
-    notes: ''
+    notes: '',
+    deposit_paid: false,
+    balance_paid: false,
+    installation_date: '',
+    assigned_installer: [] as string[]
   });
+  const [newNote, setNewNote] = useState('');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -63,7 +68,11 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         project_amount: lead.project_amount ? lead.project_amount.toString() : '',
         next_followup_date: lead.next_followup_date ? 
           new Date(lead.next_followup_date).toISOString().split('T')[0] : '',
-        notes: lead.notes || ''
+        notes: lead.notes || '',
+        deposit_paid: lead.deposit_paid || false,
+        balance_paid: lead.balance_paid || false,
+        installation_date: lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : '',
+        assigned_installer: lead.assigned_installer || []
       });
     }
   }, [lead]);
@@ -71,6 +80,14 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Handle new note addition
+    let updatedNotes = formData.notes || '';
+    if (newNote.trim()) {
+      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const newNoteWithTimestamp = `[${timestamp}] ${newNote.trim()}`;
+      updatedNotes = updatedNotes ? `${updatedNotes}\n${newNoteWithTimestamp}` : newNoteWithTimestamp;
+    }
+
     const updates = {
       name: formData.name,
       phone: formData.phone,
@@ -80,7 +97,11 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       assigned_to: formData.assigned_to,
       project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null,
       next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date) : null,
-      notes: formData.notes || null
+      notes: updatedNotes || null,
+      deposit_paid: formData.deposit_paid,
+      balance_paid: formData.balance_paid,
+      installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
+      assigned_installer: formData.assigned_installer
     };
 
     updateLeadMutation.mutate(updates);
@@ -195,21 +216,156 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   className="h-11 text-base"
                 />
               </div>
+              
+              <div className="space-y-1">
+                <Label htmlFor="next_followup_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">NEXT FOLLOW-UP DATE</Label>
+                <Input
+                  id="next_followup_date"
+                  type="date"
+                  value={formData.next_followup_date}
+                  onChange={(e) => setFormData({...formData, next_followup_date: e.target.value})}
+                  data-testid="input-edit-followup-date"
+                  className="h-11 text-base"
+                />
+              </div>
+              
+              {formData.remarks === 'sold' && (
+                <div className="space-y-1">
+                  <Label htmlFor="installation_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">INSTALLATION DATE</Label>
+                  <Input
+                    id="installation_date"
+                    type="date"
+                    value={formData.installation_date}
+                    onChange={(e) => setFormData({...formData, installation_date: e.target.value})}
+                    data-testid="input-edit-installation-date"
+                    className="h-11 text-base"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Notes - Full Width at Bottom */}
-          <div className="space-y-1 pt-2">
-            <Label htmlFor="notes" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">NOTES</Label>
-            <Textarea
-              id="notes"
-              rows={3}
-              value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
-              data-testid="textarea-edit-notes"
-              placeholder="Add any additional notes about this lead..."
-              className="resize-none text-base"
-            />
+          {/* Payment Status - Only for Sold Status - First Priority */}
+          {formData.remarks === 'sold' && (
+            <div className="space-y-3 pt-2 border-t border-gray-200">
+              <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                PAYMENT STATUS
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div 
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                    formData.deposit_paid 
+                      ? 'border-green-500 bg-green-50 shadow-sm' 
+                      : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                  }`}
+                  onClick={() => setFormData({...formData, deposit_paid: !formData.deposit_paid})}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                      formData.deposit_paid ? 'bg-green-500 border-green-500' : 'border-gray-300'
+                    }`}>
+                      {formData.deposit_paid && (
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Deposit Paid</p>
+                      <p className="text-xs text-gray-600">Initial payment received</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div 
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                    formData.balance_paid 
+                      ? 'border-green-500 bg-green-50 shadow-sm' 
+                      : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                  }`}
+                  onClick={() => setFormData({...formData, balance_paid: !formData.balance_paid})}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                      formData.balance_paid ? 'bg-green-500 border-green-500' : 'border-gray-300'
+                    }`}>
+                      {formData.balance_paid && (
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Balance Paid</p>
+                      <p className="text-xs text-gray-600">Final payment received</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notes History and New Note - Full Width at Bottom */}
+          <div className="space-y-3 pt-4 border-t border-gray-200">
+            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              NOTES HISTORY
+            </Label>
+            
+            {/* Existing Notes History */}
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {formData.notes ? (
+                formData.notes.split('\n').filter(line => line.trim()).reverse().map((note, index) => {
+                  const match = note.match(/^\[(.+?)\]\s*(.+)$/);
+                  if (match) {
+                    const [, date, content] = match;
+                    return (
+                      <div key={index} className="flex items-start space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-green-800">[{date}] {content}</p>
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div className="w-5 h-5 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-700">{note}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+                })
+              ) : (
+                <p className="text-sm text-gray-500 italic p-3 bg-gray-50 rounded-lg text-center">
+                  No notes history available
+                </p>
+              )}
+            </div>
+
+            {/* Add New Note */}
+            <div className="space-y-2">
+              <Label htmlFor="new-note" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                ADD NEW NOTE
+              </Label>
+              <Textarea
+                id="new-note"
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Enter a new note..."
+                rows={2}
+                className="resize-none text-base"
+              />
+            </div>
           </div>
 
           {/* Action Buttons - Right Aligned */}
