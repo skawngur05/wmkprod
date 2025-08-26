@@ -306,7 +306,7 @@ const getPaymentStatusBadge = (lead: Lead) => {
   }
 };
 
-// Follow-ups Table Component
+// Follow-ups Card Layout Component
 function FollowupsTable({ 
   leads, 
   onQuickEdit, 
@@ -316,88 +316,144 @@ function FollowupsTable({
   onQuickEdit: (lead: Lead) => void; 
   onQuickFollowup: (lead: Lead) => void;
 }) {
+  if (leads.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-500">
+        <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p className="text-lg font-medium mb-2">No follow-ups scheduled</p>
+        <p className="text-sm">Great job staying on top of your leads!</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Lead</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Follow-up Date</TableHead>
-            <TableHead>Project Amount</TableHead>
-            <TableHead>Assigned To</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {leads.map((lead) => (
-            <TableRow key={lead.id}>
-              <TableCell>
-                <div>
-                  <div className="font-medium">{lead.name}</div>
-                  <div className="text-sm text-gray-500 capitalize">
-                    {lead.lead_origin.replace('-', ' ')}
+    <div className="space-y-4">
+      {leads.map((lead) => (
+        <Card key={lead.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+              
+              {/* Lead Info - 3 columns */}
+              <div className="md:col-span-3">
+                <div className="flex items-start space-x-3">
+                  <div className="p-2 bg-blue-50 rounded-full">
+                    <User className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-lg">{lead.name}</h3>
+                    <p className="text-sm text-gray-600 capitalize">
+                      {lead.lead_origin.replace('-', ' ')}
+                    </p>
                   </div>
                 </div>
-              </TableCell>
-              <TableCell>
-                <div>
-                  <div className="text-sm">{lead.phone}</div>
+              </div>
+
+              {/* Contact Info - 2 columns */}
+              <div className="md:col-span-2">
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm text-gray-700">
+                    <Phone className="h-4 w-4 mr-2 text-green-600" />
+                    <a href={`tel:${lead.phone}`} className="hover:text-blue-600 transition-colors">
+                      {lead.phone}
+                    </a>
+                  </div>
                   {lead.email && (
-                    <div className="text-sm text-gray-500">{lead.email}</div>
+                    <div className="flex items-center text-sm text-gray-700">
+                      <Mail className="h-4 w-4 mr-2 text-blue-600" />
+                      <a href={`mailto:${lead.email}`} className="hover:text-blue-600 transition-colors truncate">
+                        {lead.email}
+                      </a>
+                    </div>
                   )}
                 </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-1">
+              </div>
+
+              {/* Status & Payment - 2 columns */}
+              <div className="md:col-span-2">
+                <div className="flex flex-col gap-2">
                   {getStatusBadge(lead.remarks)}
                   {getPaymentStatusBadge(lead)}
                 </div>
-              </TableCell>
-              <TableCell>
-                <div className="text-sm">
-                  {formatDate(lead.next_followup_date?.toString() || null)}
+              </div>
+
+              {/* Follow-up Date - 2 columns */}
+              <div className="md:col-span-2">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-orange-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {formatDate(lead.next_followup_date?.toString() || null)}
+                    </p>
+                  </div>
                 </div>
-              </TableCell>
-              <TableCell>
-                <div className="text-sm font-medium text-green-600">
-                  {formatCurrency(lead.project_amount)}
+              </div>
+
+              {/* Project Amount & Assigned - 2 columns */}
+              <div className="md:col-span-2">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-semibold text-green-700">
+                      {formatCurrency(lead.project_amount)}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <User className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600 capitalize">
+                      {lead.assigned_to || 'Unassigned'}
+                    </span>
+                  </div>
                 </div>
-              </TableCell>
-              <TableCell>
-                <div className="text-sm capitalize">
-                  {lead.assigned_to || 'Unassigned'}
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-1">
+              </div>
+
+              {/* Actions - 1 column */}
+              <div className="md:col-span-1">
+                <div className="flex flex-col gap-2">
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    className="h-8 w-8 p-0"
+                    className="w-full h-8 text-xs"
                     onClick={() => onQuickFollowup(lead)}
                     data-testid={`button-followup-${lead.id}`}
                     title="Schedule Follow-up"
                   >
-                    <Calendar className="h-4 w-4" />
+                    <Calendar className="h-3 w-3 mr-1" />
+                    Follow-up
                   </Button>
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    className="h-8 w-8 p-0"
+                    className="w-full h-8 text-xs"
                     onClick={() => onQuickEdit(lead)}
                     data-testid={`button-view-${lead.id}`}
                     title="Edit Lead"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
                   </Button>
                 </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              </div>
+
+            </div>
+
+            {/* Notes Section - Full Width */}
+            {lead.notes && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-start space-x-2">
+                  <div className="p-1 bg-gray-50 rounded">
+                    <Eye className="h-3 w-3 text-gray-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-700 mb-1">Notes:</p>
+                    <p className="text-sm text-gray-600 line-clamp-2">{lead.notes}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
