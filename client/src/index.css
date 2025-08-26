@@ -225,25 +225,34 @@
 }
 
 .logout-btn {
-  background: transparent;
-  border: 2px solid var(--border);
-  color: var(--wmk-black);
-  padding: 0.5rem 1rem;
+  background: var(--danger-red);
+  border: 2px solid var(--danger-red);
+  color: var(--wmk-white);
+  padding: 0.75rem 1rem;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.9rem;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(220, 38, 127, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .logout-btn:hover {
-  background: var(--danger-red);
+  background: var(--wmk-white);
   border-color: var(--danger-red);
-  color: var(--wmk-white);
+  color: var(--danger-red);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 127, 0.3);
 }
 
 .sidebar-footer {
   padding: 1.5rem;
-  border-top: 1px solid var(--sidebar-border);
+  border-top: 2px solid var(--wmk-gray-light);
   margin-top: auto;
+  background: var(--wmk-white);
 }
 
 /* Modern Bootstrap overrides with brand colors */
