@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, updateLeadSchema, insertSampleBookletSchema, updateSampleBookletSchema, insertCalendarEventSchema, updateCalendarEventSchema } from "@shared/schema";
+import { uspsService } from "./usps-service";
 import { z } from "zod";
 import { emailService } from "./email-service";
 
@@ -267,12 +268,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // USPS Tracking endpoints
+  app.get("/api/sample-booklets/:id/tracking", async (req, res) => {
+    try {
+      const booklet = await storage.getSampleBooklet(req.params.id);
+      if (!booklet) {
+        return res.status(404).json({ message: "Sample booklet not found" });
+      }
+
+      if (!booklet.tracking_number) {
+        return res.status(400).json({ message: "No tracking number available for this booklet" });
+      }
+
+      const trackingInfo = await uspsService.trackPackage(booklet.tracking_number);
+      
+      // Update booklet status if it has changed
+      if (trackingInfo.status !== booklet.status) {
+        await storage.updateSampleBooklet(req.params.id, { 
+          status: trackingInfo.status as any 
+        });
+      }
+
+      res.json(trackingInfo);
+    } catch (error) {
+      console.error('Tracking error:', error);
+      res.status(500).json({ message: "Failed to fetch tracking information" });
+    }
+  });
+
+  app.post("/api/sample-booklets/sync-tracking", async (req, res) => {
+    try {
+      const allBooklets = await storage.getSampleBooklets();
+      const bookletsWithTracking = allBooklets.filter(b => 
+        b.tracking_number && 
+        b.status !== 'delivered' && 
+        b.status !== 'unknown'
+      );
+
+      if (bookletsWithTracking.length === 0) {
+        return res.json({ message: "No booklets with tracking numbers to sync", updated: 0 });
+      }
+
+      const trackingNumbers = bookletsWithTracking.map(b => b.tracking_number!);
+      const trackingResults = await uspsService.trackMultiplePackages(trackingNumbers);
+      
+      let updatedCount = 0;
+      for (let i = 0; i < bookletsWithTracking.length; i++) {
+        const booklet = bookletsWithTracking[i];
+        const tracking = trackingResults[i];
+        
+        if (tracking.status !== booklet.status) {
+          await storage.updateSampleBooklet(booklet.id, { 
+            status: tracking.status as any 
+          });
+          updatedCount++;
+        }
+      }
+
+      res.json({ 
+        message: `Synchronized ${trackingResults.length} tracking numbers`, 
+        updated: updatedCount 
+      });
+    } catch (error) {
+      console.error('Sync tracking error:', error);
+      res.status(500).json({ message: "Failed to sync tracking information" });
+    }
+  });
+
   // Sample Booklets dashboard stats
   app.get("/api/sample-booklets/stats/dashboard", async (req, res) => {
     try {
       const allBooklets = await storage.getSampleBooklets();
       const pending = allBooklets.filter(b => b.status === "pending").length;
       const shipped = allBooklets.filter(b => b.status === "shipped").length;
+      const inTransit = allBooklets.filter(b => b.status === "in-transit").length;
+      const outForDelivery = allBooklets.filter(b => b.status === "out-for-delivery").length;
       const delivered = allBooklets.filter(b => b.status === "delivered").length;
       const thisWeek = allBooklets.filter(b => {
         const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -283,6 +353,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalOrders: allBooklets.length,
         pendingOrders: pending,
         shippedOrders: shipped,
+        inTransitOrders: inTransit,
+        outForDeliveryOrders: outForDelivery,
         deliveredOrders: delivered,
         thisWeekOrders: thisWeek
       });

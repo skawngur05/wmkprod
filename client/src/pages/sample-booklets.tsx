@@ -10,8 +10,26 @@ interface BookletStats {
   totalOrders: number;
   pendingOrders: number;
   shippedOrders: number;
+  inTransitOrders: number;
+  outForDeliveryOrders: number;
   deliveredOrders: number;
   thisWeekOrders: number;
+}
+
+interface TrackingInfo {
+  trackingNumber: string;
+  status: string;
+  statusDescription: string;
+  deliveryDate?: string;
+  lastUpdated: string;
+  trackingEvents: Array<{
+    eventDate: string;
+    eventTime: string;
+    eventDescription: string;
+    eventCity?: string;
+    eventState?: string;
+    eventZip?: string;
+  }>;
 }
 
 export default function SampleBooklets() {
@@ -92,10 +110,59 @@ export default function SampleBooklets() {
     const badges: Record<string, string> = {
       'pending': 'warning',
       'shipped': 'info',
-      'delivered': 'success'
+      'in-transit': 'primary',
+      'out-for-delivery': 'info',
+      'delivered': 'success',
+      'unknown': 'secondary'
     };
     return badges[status] || 'secondary';
   };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      'pending': 'Pending',
+      'shipped': 'Shipped',
+      'in-transit': 'In Transit',
+      'out-for-delivery': 'Out for Delivery',
+      'delivered': 'Delivered',
+      'unknown': 'Unknown'
+    };
+    return labels[status] || status;
+  };
+
+  const syncTrackingMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('POST', '/api/sample-booklets/sync-tracking');
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Tracking information synchronized!" });
+      queryClient.invalidateQueries({ queryKey: ['/api/sample-booklets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sample-booklets/stats/dashboard'] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to sync tracking information", variant: "destructive" });
+    }
+  });
+
+  const trackPackageMutation = useMutation({
+    mutationFn: async (bookletId: string): Promise<TrackingInfo> => {
+      const response = await fetch(`/api/sample-booklets/${bookletId}/tracking`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch tracking information');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Tracking Info", 
+        description: `Status: ${data.statusDescription}` 
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/sample-booklets'] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to fetch tracking information", variant: "destructive" });
+    }
+  });
 
   const formatDate = (date: string | Date) => {
     return new Date(date).toLocaleDateString();
@@ -129,8 +196,14 @@ export default function SampleBooklets() {
               >
                 <i className="fas fa-plus me-1"></i>Add New Order
               </button>
-              <button className="btn btn-outline-primary me-2" data-testid="button-check-delivery">
-                <i className="fas fa-sync me-1"></i>Check Delivery Status
+              <button 
+                className="btn btn-outline-primary me-2" 
+                onClick={() => syncTrackingMutation.mutate()}
+                disabled={syncTrackingMutation.isPending}
+                data-testid="button-check-delivery"
+              >
+                <i className={`fas ${syncTrackingMutation.isPending ? 'fa-spinner fa-spin' : 'fa-sync'} me-1`}></i>
+                {syncTrackingMutation.isPending ? 'Syncing...' : 'Sync USPS Tracking'}
               </button>
               <button className="btn btn-outline-secondary" data-testid="button-export-booklets">
                 <i className="fas fa-download me-1"></i>Export Orders
@@ -201,6 +274,8 @@ export default function SampleBooklets() {
                 <option value="">All Orders</option>
                 <option value="pending">Pending</option>
                 <option value="shipped">Shipped</option>
+                <option value="in-transit">In Transit</option>
+                <option value="out-for-delivery">Out for Delivery</option>
                 <option value="delivered">Delivered</option>
               </select>
             </div>
@@ -255,21 +330,32 @@ export default function SampleBooklets() {
                       </td>
                       <td>
                         <span className={`badge bg-${getStatusBadge(booklet.status)} status-badge`}>
-                          {booklet.status.toUpperCase()}
+                          {getStatusLabel(booklet.status)}
                         </span>
                       </td>
                       <td>{formatDate(booklet.date_ordered)}</td>
                       <td>
                         {booklet.tracking_number ? (
-                          <a
-                            href={`https://tools.usps.com/go/TrackConfirmAction?tLabels=${booklet.tracking_number}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary"
-                            data-testid={`tracking-link-${booklet.id}`}
-                          >
-                            {booklet.tracking_number}
-                          </a>
+                          <div>
+                            <a
+                              href={`https://tools.usps.com/go/TrackConfirmAction?tLabels=${booklet.tracking_number}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary d-block"
+                              data-testid={`tracking-link-${booklet.id}`}
+                            >
+                              {booklet.tracking_number}
+                            </a>
+                            <button
+                              className="btn btn-outline-secondary btn-xs mt-1"
+                              onClick={() => trackPackageMutation.mutate(booklet.id)}
+                              disabled={trackPackageMutation.isPending}
+                              data-testid={`button-track-${booklet.id}`}
+                            >
+                              <i className={`fas ${trackPackageMutation.isPending ? 'fa-spinner fa-spin' : 'fa-search'} me-1`}></i>
+                              Track
+                            </button>
+                          </div>
                         ) : (
                           '-'
                         )}

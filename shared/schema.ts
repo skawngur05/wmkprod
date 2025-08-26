@@ -185,7 +185,10 @@ export const PRODUCT_TYPES = [
 export const BOOKLET_STATUSES = [
   "pending",
   "shipped", 
-  "delivered"
+  "in-transit",
+  "out-for-delivery",
+  "delivered",
+  "unknown"
 ] as const;
 
 // Installers enums
