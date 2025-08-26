@@ -1,11 +1,16 @@
-import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet } from "@shared/schema";
+import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet, type Installer, type InsertInstaller, type UpdateInstaller } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
+  // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getUsers(): Promise<User[]>;
+  updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
   
+  // Lead operations
   getLeads(): Promise<Lead[]>;
   getLeadsPaginated(page?: number, limit?: number, filters?: {
     search?: string;
@@ -28,6 +33,36 @@ export interface IStorage {
   updateSampleBooklet(id: string, updates: UpdateSampleBooklet): Promise<SampleBooklet | undefined>;
   deleteSampleBooklet(id: string): Promise<boolean>;
   getSampleBookletsByStatus(status: string): Promise<SampleBooklet[]>;
+
+  // Installer operations
+  getInstallers(): Promise<Installer[]>;
+  getInstaller(id: string): Promise<Installer | undefined>;
+  createInstaller(installer: InsertInstaller): Promise<Installer>;
+  updateInstaller(id: string, updates: UpdateInstaller): Promise<Installer | undefined>;
+  deleteInstaller(id: string): Promise<boolean>;
+
+  // Admin settings operations
+  getAdminSettings(): Promise<any[]>;
+  getAdminSetting(key: string): Promise<any | undefined>;
+  updateAdminSetting(key: string, value: string): Promise<any | undefined>;
+
+  // Email template operations
+  getEmailTemplates(): Promise<any[]>;
+  getEmailTemplate(id: string): Promise<any | undefined>;
+  createEmailTemplate(template: any): Promise<any>;
+  updateEmailTemplate(id: string, updates: any): Promise<any | undefined>;
+  deleteEmailTemplate(id: string): Promise<boolean>;
+
+  // Lead origins operations
+  getLeadOrigins(): Promise<any[]>;
+  getLeadOrigin(id: string): Promise<any | undefined>;
+  createLeadOrigin(originName: string): Promise<any>;
+  updateLeadOrigin(id: string, updates: any): Promise<any | undefined>;
+  deleteLeadOrigin(id: string): Promise<boolean>;
+
+  // Activity log operations
+  getActivityLog(limit?: number, offset?: number): Promise<any[]>;
+  logActivity(userId: string, action: string, entityType?: string, entityId?: string, description?: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {

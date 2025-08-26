@@ -1,6 +1,6 @@
-import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet } from "@shared/schema";
+import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet, type Installer, type InsertInstaller, type UpdateInstaller } from "@shared/schema";
 import { db } from "./db";
-import { users, leads, sampleBooklets } from "@shared/schema";
+import { users, leads, sampleBooklets, installers } from "@shared/schema";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { IStorage } from "./storage";
@@ -186,5 +186,169 @@ export class DatabaseStorage implements IStorage {
 
   async getSampleBookletsByStatus(status: string): Promise<SampleBooklet[]> {
     return await db.select().from(sampleBooklets).where(eq(sampleBooklets.status, status));
+  }
+
+  // User management methods
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.username));
+  }
+
+  async updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined> {
+    await db.update(users).set(updates).where(eq(users.id, id));
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return (result as any).rowCount > 0;
+  }
+
+  // Installer management methods
+  async getInstallers(): Promise<Installer[]> {
+    return await db.select().from(installers).orderBy(desc(installers.name));
+  }
+
+  async getInstaller(id: string): Promise<Installer | undefined> {
+    const result = await db.select().from(installers).where(eq(installers.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createInstaller(insertInstaller: InsertInstaller): Promise<Installer> {
+    const id = randomUUID();
+    const installerWithId = { ...insertInstaller, id };
+    await db.insert(installers).values(installerWithId);
+    
+    const result = await db.select().from(installers).where(eq(installers.id, id)).limit(1);
+    return result[0];
+  }
+
+  async updateInstaller(id: string, updates: UpdateInstaller): Promise<Installer | undefined> {
+    await db.update(installers).set(updates).where(eq(installers.id, id));
+    const result = await db.select().from(installers).where(eq(installers.id, id)).limit(1);
+    return result[0];
+  }
+
+  async deleteInstaller(id: string): Promise<boolean> {
+    const result = await db.delete(installers).where(eq(installers.id, id));
+    return (result as any).rowCount > 0;
+  }
+
+  // Admin settings methods
+  async getAdminSettings(): Promise<any[]> {
+    const result = await db.execute(sql`SELECT * FROM admin_settings ORDER BY setting_key`);
+    return result.rows;
+  }
+
+  async getAdminSetting(key: string): Promise<any | undefined> {
+    const result = await db.execute(sql`SELECT * FROM admin_settings WHERE setting_key = ${key} LIMIT 1`);
+    return result.rows[0];
+  }
+
+  async updateAdminSetting(key: string, value: string): Promise<any | undefined> {
+    await db.execute(sql`UPDATE admin_settings SET setting_value = ${value}, updated_at = NOW() WHERE setting_key = ${key}`);
+    const result = await db.execute(sql`SELECT * FROM admin_settings WHERE setting_key = ${key} LIMIT 1`);
+    return result.rows[0];
+  }
+
+  // Email template methods
+  async getEmailTemplates(): Promise<any[]> {
+    const result = await db.execute(sql`SELECT * FROM email_templates ORDER BY template_name`);
+    return result.rows;
+  }
+
+  async getEmailTemplate(id: string): Promise<any | undefined> {
+    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id} LIMIT 1`);
+    return result.rows[0];
+  }
+
+  async createEmailTemplate(template: any): Promise<any> {
+    const id = randomUUID();
+    const { template_name, subject, body_content, template_type, is_active = true } = template;
+    await db.execute(sql`
+      INSERT INTO email_templates (id, template_name, subject, body_content, template_type, is_active) 
+      VALUES (${id}, ${template_name}, ${subject}, ${body_content}, ${template_type}, ${is_active})
+    `);
+    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id} LIMIT 1`);
+    return result.rows[0];
+  }
+
+  async updateEmailTemplate(id: string, updates: any): Promise<any | undefined> {
+    const { template_name, subject, body_content, template_type, is_active } = updates;
+    await db.execute(sql`
+      UPDATE email_templates 
+      SET template_name = COALESCE(${template_name}, template_name),
+          subject = COALESCE(${subject}, subject),
+          body_content = COALESCE(${body_content}, body_content),
+          template_type = COALESCE(${template_type}, template_type),
+          is_active = COALESCE(${is_active}, is_active),
+          updated_at = NOW()
+      WHERE id = ${id}
+    `);
+    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id} LIMIT 1`);
+    return result.rows[0];
+  }
+
+  async deleteEmailTemplate(id: string): Promise<boolean> {
+    const result = await db.execute(sql`DELETE FROM email_templates WHERE id = ${id}`);
+    return (result as any).rowCount > 0;
+  }
+
+  // Lead origins methods
+  async getLeadOrigins(): Promise<any[]> {
+    const result = await db.execute(sql`SELECT * FROM lead_origins_custom ORDER BY origin_name`);
+    return result.rows;
+  }
+
+  async getLeadOrigin(id: string): Promise<any | undefined> {
+    const result = await db.execute(sql`SELECT * FROM lead_origins_custom WHERE id = ${id} LIMIT 1`);
+    return result.rows[0];
+  }
+
+  async createLeadOrigin(originName: string): Promise<any> {
+    const id = randomUUID();
+    await db.execute(sql`
+      INSERT INTO lead_origins_custom (id, origin_name, is_active) 
+      VALUES (${id}, ${originName}, true)
+    `);
+    const result = await db.execute(sql`SELECT * FROM lead_origins_custom WHERE id = ${id} LIMIT 1`);
+    return result.rows[0];
+  }
+
+  async updateLeadOrigin(id: string, updates: any): Promise<any | undefined> {
+    const { origin_name, is_active } = updates;
+    await db.execute(sql`
+      UPDATE lead_origins_custom 
+      SET origin_name = COALESCE(${origin_name}, origin_name),
+          is_active = COALESCE(${is_active}, is_active)
+      WHERE id = ${id}
+    `);
+    const result = await db.execute(sql`SELECT * FROM lead_origins_custom WHERE id = ${id} LIMIT 1`);
+    return result.rows[0];
+  }
+
+  async deleteLeadOrigin(id: string): Promise<boolean> {
+    const result = await db.execute(sql`DELETE FROM lead_origins_custom WHERE id = ${id}`);
+    return (result as any).rowCount > 0;
+  }
+
+  // Activity log methods
+  async getActivityLog(limit: number = 50, offset: number = 0): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT sal.*, u.username 
+      FROM system_activity_log sal 
+      LEFT JOIN users u ON sal.user_id = u.id 
+      ORDER BY sal.created_at DESC 
+      LIMIT ${limit} OFFSET ${offset}
+    `);
+    return result.rows;
+  }
+
+  async logActivity(userId: string, action: string, entityType?: string, entityId?: string, description?: string): Promise<void> {
+    const id = randomUUID();
+    await db.execute(sql`
+      INSERT INTO system_activity_log (id, user_id, action, entity_type, entity_id, description) 
+      VALUES (${id}, ${userId}, ${action}, ${entityType || null}, ${entityId || null}, ${description || null})
+    `);
   }
 }

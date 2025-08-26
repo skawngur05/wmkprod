@@ -19,6 +19,7 @@ import Followups from "@/pages/followups";
 import SampleBooklets from "@/pages/sample-booklets";
 import Installations from "@/pages/installations";
 import Reports from "@/pages/reports";
+import AdminDashboard from "@/pages/admin-dashboard";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -69,12 +70,18 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/login">
-        {user ? <Redirect to="/dashboard" /> : <Login />}
+        {user ? <Redirect to={user.role === 'admin' ? '/admin' : '/dashboard'} /> : <Login />}
       </Route>
       
       <Route path="/dashboard">
         <ProtectedRoute>
           <Dashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/admin">
+        <ProtectedRoute>
+          <AdminDashboard />
         </ProtectedRoute>
       </Route>
       
@@ -115,7 +122,7 @@ function AppRouter() {
       </Route>
       
       <Route path="/">
-        <Redirect to="/dashboard" />
+        <Redirect to={user?.role === 'admin' ? '/admin' : '/dashboard'} />
       </Route>
       
       <Route component={NotFound} />

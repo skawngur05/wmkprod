@@ -1016,6 +1016,277 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =================== ADMIN ROUTES ===================
+  
+  // Admin middleware to check admin role
+  const requireAdmin = (req: any, res: any, next: any) => {
+    // For now, we'll skip real authentication and just check if admin role is in header
+    const userRole = req.headers['x-user-role'];
+    if (userRole !== 'admin') {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    next();
+  };
+
+  // Admin Users Management
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      res.json(users.map(user => ({ ...user, password: undefined }))); // Don't send passwords
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/admin/users", async (req, res) => {
+    try {
+      const { username, password, role } = req.body;
+      if (!username || !password || !role) {
+        return res.status(400).json({ message: "Username, password, and role are required" });
+      }
+      
+      const user = await storage.createUser({ username, password, role });
+      res.status(201).json({ ...user, password: undefined });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.put("/api/admin/users/:id", async (req, res) => {
+    try {
+      const { username, password, role } = req.body;
+      const updates: any = {};
+      if (username) updates.username = username;
+      if (password) updates.password = password;
+      if (role) updates.role = role;
+      
+      const user = await storage.updateUser(req.params.id, updates);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({ ...user, password: undefined });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteUser(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Admin Settings Management
+  app.get("/api/admin/settings", async (req, res) => {
+    try {
+      const settings = await storage.getAdminSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.put("/api/admin/settings/:key", async (req, res) => {
+    try {
+      const { value } = req.body;
+      const setting = await storage.updateAdminSetting(req.params.key, value);
+      if (!setting) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      res.json(setting);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update setting" });
+    }
+  });
+
+  // Admin Installers Management
+  app.get("/api/admin/installers", async (req, res) => {
+    try {
+      const installers = await storage.getInstallers();
+      res.json(installers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch installers" });
+    }
+  });
+
+  app.post("/api/admin/installers", async (req, res) => {
+    try {
+      const installerData = req.body;
+      const installer = await storage.createInstaller(installerData);
+      res.status(201).json(installer);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create installer" });
+    }
+  });
+
+  app.put("/api/admin/installers/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const installer = await storage.updateInstaller(req.params.id, updates);
+      if (!installer) {
+        return res.status(404).json({ message: "Installer not found" });
+      }
+      res.json(installer);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update installer" });
+    }
+  });
+
+  app.delete("/api/admin/installers/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteInstaller(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Installer not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete installer" });
+    }
+  });
+
+  // Admin Lead Origins Management
+  app.get("/api/admin/lead-origins", async (req, res) => {
+    try {
+      const origins = await storage.getLeadOrigins();
+      res.json(origins);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch lead origins" });
+    }
+  });
+
+  app.post("/api/admin/lead-origins", async (req, res) => {
+    try {
+      const { origin_name } = req.body;
+      if (!origin_name) {
+        return res.status(400).json({ message: "Origin name is required" });
+      }
+      
+      const origin = await storage.createLeadOrigin(origin_name);
+      res.status(201).json(origin);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create lead origin" });
+    }
+  });
+
+  app.put("/api/admin/lead-origins/:id", async (req, res) => {
+    try {
+      const { origin_name, is_active } = req.body;
+      const updates: any = {};
+      if (origin_name !== undefined) updates.origin_name = origin_name;
+      if (is_active !== undefined) updates.is_active = is_active;
+      
+      const origin = await storage.updateLeadOrigin(req.params.id, updates);
+      if (!origin) {
+        return res.status(404).json({ message: "Lead origin not found" });
+      }
+      res.json(origin);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update lead origin" });
+    }
+  });
+
+  app.delete("/api/admin/lead-origins/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteLeadOrigin(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Lead origin not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete lead origin" });
+    }
+  });
+
+  // Admin Email Templates Management
+  app.get("/api/admin/email-templates", async (req, res) => {
+    try {
+      const templates = await storage.getEmailTemplates();
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch email templates" });
+    }
+  });
+
+  app.post("/api/admin/email-templates", async (req, res) => {
+    try {
+      const templateData = req.body;
+      const template = await storage.createEmailTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create email template" });
+    }
+  });
+
+  app.put("/api/admin/email-templates/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const template = await storage.updateEmailTemplate(req.params.id, updates);
+      if (!template) {
+        return res.status(404).json({ message: "Email template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update email template" });
+    }
+  });
+
+  app.delete("/api/admin/email-templates/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteEmailTemplate(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Email template not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete email template" });
+    }
+  });
+
+  // Admin Activity Log
+  app.get("/api/admin/activity-log", async (req, res) => {
+    try {
+      const { limit = 50, offset = 0 } = req.query;
+      const activities = await storage.getActivityLog(parseInt(limit as string), parseInt(offset as string));
+      res.json(activities);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch activity log" });
+    }
+  });
+
+  // Admin Dashboard Stats
+  app.get("/api/admin/dashboard-stats", async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      const installers = await storage.getInstallers();
+      const leads = await storage.getLeads();
+      const emailTemplates = await storage.getEmailTemplates();
+      const leadOrigins = await storage.getLeadOrigins();
+      
+      const stats = {
+        totalUsers: users.length,
+        activeUsers: users.filter(u => u.role === 'sales_rep').length,
+        adminUsers: users.filter(u => u.role === 'admin').length,
+        totalInstallers: installers.length,
+        activeInstallers: installers.filter(i => i.status === 'active').length,
+        totalLeads: leads.length,
+        totalEmailTemplates: emailTemplates.length,
+        activeEmailTemplates: emailTemplates.filter(t => t.is_active).length,
+        totalLeadOrigins: leadOrigins.length,
+        activeLeadOrigins: leadOrigins.filter(o => o.is_active).length
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch admin dashboard stats" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

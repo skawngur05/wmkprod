@@ -9,7 +9,17 @@ export function Sidebar() {
 
   const isActive = (path: string) => location === path;
 
-  const navItems = [
+  const navItems = user?.role === 'admin' ? [
+    { path: '/admin', icon: 'fas fa-shield-alt', label: 'Admin Dashboard', testId: 'nav-admin-dashboard' },
+    { path: '/admin/users', icon: 'fas fa-users-cog', label: 'User Management', testId: 'nav-admin-users' },
+    { path: '/admin/installers', icon: 'fas fa-user-cog', label: 'Installers', testId: 'nav-admin-installers' },
+    { path: '/admin/lead-origins', icon: 'fas fa-globe', label: 'Lead Origins', testId: 'nav-admin-lead-origins' },
+    { path: '/admin/email-templates', icon: 'fas fa-mail-bulk', label: 'Email Templates', testId: 'nav-admin-email-templates' },
+    { path: '/admin/smtp-settings', icon: 'fas fa-server', label: 'SMTP Settings', testId: 'nav-admin-smtp' },
+    { path: '/admin/activity', icon: 'fas fa-history', label: 'Activity Log', testId: 'nav-admin-activity' },
+    { path: '/leads', icon: 'fas fa-users', label: 'View Leads', testId: 'nav-leads' },
+    { path: '/reports', icon: 'fas fa-chart-bar', label: 'Reports', testId: 'nav-reports' },
+  ] : [
     { path: '/dashboard', icon: 'fas fa-tachometer-alt', label: 'Dashboard', testId: 'nav-dashboard' },
     { path: '/leads', icon: 'fas fa-users', label: 'Leads', testId: 'nav-leads' },
     { path: '/add-lead', icon: 'fas fa-user-plus', label: 'Add Lead', testId: 'nav-add-lead' },
