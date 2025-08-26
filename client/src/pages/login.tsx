@@ -34,23 +34,31 @@ export default function Login() {
     <div className="min-h-screen flex">
       {/* Left Side - Brand Section */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-green-700 relative overflow-hidden">
-        {/* Background Pattern */}
+        {/* Animated Background Pattern */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
+          <div className="absolute inset-0 animate-pulse" style={{
             backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '40px 40px'
+            backgroundSize: '40px 40px',
+            animation: 'backgroundMove 20s linear infinite'
           }}></div>
+        </div>
+        
+        {/* Additional floating elements */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-20 left-20 w-32 h-32 bg-white rounded-full animate-bounce" style={{animationDelay: '0s', animationDuration: '6s'}}></div>
+          <div className="absolute bottom-32 right-16 w-24 h-24 bg-white rounded-full animate-bounce" style={{animationDelay: '2s', animationDuration: '8s'}}></div>
+          <div className="absolute top-1/2 left-8 w-16 h-16 bg-white rounded-full animate-bounce" style={{animationDelay: '4s', animationDuration: '7s'}}></div>
         </div>
         
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center items-center text-white p-12 w-full">
           <div className="text-center max-w-md">
-            {/* Logo */}
+            {/* Floating Logo */}
             <div className="mb-8">
               <img 
                 src={wmkLogo} 
                 alt="Wrap My Kitchen Logo" 
-                className="h-24 w-auto mx-auto filter brightness-0 invert"
+                className="h-24 w-auto mx-auto filter brightness-0 invert animate-float"
               />
             </div>
             
