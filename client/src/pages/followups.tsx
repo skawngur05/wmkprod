@@ -333,6 +333,42 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
           )}
         </div>
 
+        {/* Quick Note Templates */}
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            QUICK NOTE TEMPLATES
+          </Label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {[
+              "Sent a text message",
+              "Sent an email", 
+              "Talked to client - interested",
+              "Talked to client - needs time to decide", 
+              "Left voicemail",
+              "Scheduled callback",
+              "Sent quote",
+              "Meeting scheduled",
+              "Waiting for approval",
+              "Follow-up call completed",
+              "Site visit scheduled",
+              "Quote requested",
+              "Contract sent",
+              "Payment discussion needed"
+            ].map((template) => (
+              <Button
+                key={template}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs justify-start px-2 py-1 hover:bg-blue-50 hover:border-blue-300"
+                onClick={() => setNewNote(template)}
+              >
+                {template}
+              </Button>
+            ))}
+          </div>
+        </div>
+
         {/* Add New Note */}
         <div className="space-y-2">
           <Label htmlFor="new-note" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -342,7 +378,7 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
             id="new-note"
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
-            placeholder="Enter a new note..."
+            placeholder="Enter a new note or select from templates above..."
             rows={2}
             className="resize-none text-base"
           />
@@ -547,21 +583,7 @@ function FollowupsTable({
 
               {/* Actions - 1 column */}
               <div className="md:col-span-1">
-                <div className="flex flex-col gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="w-full h-10 text-xs font-medium border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md px-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onQuickFollowup(lead);
-                    }}
-                    data-testid={`button-followup-${lead.id}`}
-                    title="Schedule Follow-up"
-                  >
-                    <Calendar className="h-3 w-3 mr-1" />
-                    Follow-up
-                  </Button>
+                <div className="flex justify-center">
                   <Button 
                     size="sm" 
                     variant="outline" 
