@@ -23,6 +23,7 @@ export const leads = pgTable("leads", {
   next_followup_date: timestamp("next_followup_date"),
   remarks: varchar("remarks", { length: 255 }).notNull().default("new"), // status field
   assigned_to: varchar("assigned_to", { length: 255 }),
+  customer_address: text("customer_address"), // Installation address for sold projects
   project_amount: decimal("project_amount", { precision: 10, scale: 2 }),
   notes: text("notes"),
   additional_notes: text("additional_notes"),

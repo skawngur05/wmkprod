@@ -26,6 +26,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     lead_origin: '',
     remarks: '',
     assigned_to: '',
+    customer_address: '',
     project_amount: '',
     next_followup_date: '',
     notes: '',
@@ -66,6 +67,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         lead_origin: lead.lead_origin || '',
         remarks: lead.remarks || '',
         assigned_to: lead.assigned_to || '',
+        customer_address: (lead as any).customer_address || '',
         project_amount: lead.project_amount ? lead.project_amount.toString() : '',
         next_followup_date: lead.next_followup_date ? 
           new Date(lead.next_followup_date).toISOString().split('T')[0] : '',
@@ -96,6 +98,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       lead_origin: formData.lead_origin,
       remarks: formData.remarks,
       assigned_to: formData.assigned_to,
+      customer_address: formData.customer_address || null,
       project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null,
       next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date) : null,
       notes: updatedNotes || null,
@@ -166,6 +169,24 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   </SelectContent>
                 </Select>
               </div>
+              
+              {/* Customer Address - Only show when status is sold */}
+              {formData.remarks === 'sold' && (
+                <div className="space-y-1">
+                  <Label htmlFor="customer_address" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    CUSTOMER ADDRESS FOR INSTALLATION
+                  </Label>
+                  <Textarea
+                    id="customer_address"
+                    value={formData.customer_address}
+                    onChange={(e) => setFormData({...formData, customer_address: e.target.value})}
+                    data-testid="textarea-edit-customer-address"
+                    className="text-base resize-none"
+                    rows={3}
+                    placeholder="Enter the complete installation address..."
+                  />
+                </div>
+              )}
             </div>
 
             {/* Right Column */}
