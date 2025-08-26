@@ -124,6 +124,7 @@
   height: 100vh;
   z-index: 1000;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden; /* Prevent sidebar content from overflowing */
 }
 
 .sidebar-header {
@@ -153,6 +154,8 @@
 .sidebar-nav {
   flex: 1;
   padding: 1.5rem 0;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px); /* Leave space for header and footer */
 }
 
 .sidebar-nav-item {
@@ -253,6 +256,8 @@
   border-top: 2px solid var(--wmk-gray-light);
   margin-top: auto;
   background: var(--wmk-white);
+  flex-shrink: 0; /* Prevent footer from shrinking */
+  min-height: 140px; /* Ensure footer has enough space */
 }
 
 /* Modern Bootstrap overrides with brand colors */

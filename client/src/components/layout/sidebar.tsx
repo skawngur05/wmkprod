@@ -55,7 +55,7 @@ export function Sidebar() {
       <div className="sidebar-footer">
         <div className="d-flex align-items-center mb-3">
           <div className="user-avatar me-3">
-            {user?.username?.charAt(0).toUpperCase()}
+            {user?.username?.charAt(0).toUpperCase() || 'U'}
           </div>
           <div className="flex-fill">
             <div className="fw-medium" style={{ color: 'var(--wmk-black)' }}>
@@ -69,10 +69,30 @@ export function Sidebar() {
         
         <button 
           className="logout-btn w-100"
-          onClick={logout}
+          onClick={() => {
+            console.log('Logout clicked');
+            if (logout) {
+              logout();
+            } else {
+              window.location.href = '/login';
+            }
+          }}
           data-testid="logout-button"
+          style={{ 
+            background: 'var(--danger-red)', 
+            color: 'white', 
+            border: '2px solid var(--danger-red)',
+            padding: '12px',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            cursor: 'pointer'
+          }}
         >
-          <i className="fas fa-sign-out-alt me-2"></i>
+          <i className="fas fa-sign-out-alt"></i>
           Logout
         </button>
       </div>
