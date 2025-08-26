@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet, type Installer, type InsertInstaller, type UpdateInstaller } from "@shared/schema";
+import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet, type Installer, type InsertInstaller, type UpdateInstaller, type CalendarEvent, type InsertCalendarEvent, type UpdateCalendarEvent } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -67,6 +67,13 @@ export interface IStorage {
   updateSMTPSettings(id: string, updates: any): Promise<any | undefined>;
   deleteSMTPSettings(id: string): Promise<boolean>;
 
+  // Calendar Event operations
+  getCalendarEvents(): Promise<CalendarEvent[]>;
+  getCalendarEvent(id: string): Promise<CalendarEvent | undefined>;
+  createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
+  updateCalendarEvent(id: string, updates: UpdateCalendarEvent): Promise<CalendarEvent | undefined>;
+  deleteCalendarEvent(id: string): Promise<boolean>;
+
   // Activity log operations
   getActivityLogs(filters: {
     search?: string;
@@ -83,11 +90,13 @@ export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private leads: Map<string, Lead>;
   private sampleBooklets: Map<string, SampleBooklet>;
+  private calendarEvents: Map<string, CalendarEvent>;
 
   constructor() {
     this.users = new Map();
     this.leads = new Map();
     this.sampleBooklets = new Map();
+    this.calendarEvents = new Map();
     this.initializeDefaultData();
   }
 
@@ -311,7 +320,8 @@ export class MemStorage implements IStorage {
         notes: leadData.notes || null,
         additional_notes: leadData.additional_notes || null,
         installation_date: leadData.installation_date || null,
-        assigned_installer: leadData.assigned_installer || null,
+        assigned_installer: Array.isArray(leadData.assigned_installer) ? leadData.assigned_installer : 
+          (leadData.assigned_installer ? [leadData.assigned_installer] : []),
         assigned_to: leadData.assigned_to || null
       };
       this.leads.set(id, lead);
@@ -708,6 +718,39 @@ export class MemStorage implements IStorage {
   async logActivity(userId: string, action: string, entityType?: string, entityId?: string, description?: string): Promise<void> {
     console.log(`Activity: ${action} by ${userId} on ${entityType}:${entityId} - ${description}`);
     return Promise.resolve();
+  }
+
+  // Calendar Event operations
+  async getCalendarEvents(): Promise<CalendarEvent[]> {
+    return Array.from(this.calendarEvents.values());
+  }
+
+  async getCalendarEvent(id: string): Promise<CalendarEvent | undefined> {
+    return this.calendarEvents.get(id);
+  }
+
+  async createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent> {
+    const id = randomUUID();
+    const newEvent: CalendarEvent = {
+      id,
+      ...event,
+      created_at: new Date(),
+    };
+    this.calendarEvents.set(id, newEvent);
+    return newEvent;
+  }
+
+  async updateCalendarEvent(id: string, updates: UpdateCalendarEvent): Promise<CalendarEvent | undefined> {
+    const event = this.calendarEvents.get(id);
+    if (!event) return undefined;
+    
+    const updatedEvent = { ...event, ...updates };
+    this.calendarEvents.set(id, updatedEvent);
+    return updatedEvent;
+  }
+
+  async deleteCalendarEvent(id: string): Promise<boolean> {
+    return this.calendarEvents.delete(id);
   }
 }
 

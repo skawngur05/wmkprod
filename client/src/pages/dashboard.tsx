@@ -4,6 +4,7 @@ import { capitalizeFirst, formatCurrency, formatDate, getStatusColor } from '@/l
 import { Lead } from '@shared/schema';
 import { useState } from 'react';
 import { QuickEditModal } from '@/components/modals/quick-edit-modal';
+import { BusinessCalendar } from '@/components/calendar/BusinessCalendar';
 
 interface DashboardStats {
   totalLeads: number;
@@ -160,6 +161,22 @@ export default function Dashboard() {
                   <i className="fas fa-plus-circle fa-2x"></i>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row mb-4">
+        {/* Business Calendar - Full Width */}
+        <div className="col-12">
+          <div className="card" data-testid="business-calendar">
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">
+                <i className="fas fa-calendar-alt me-2"></i>Business Calendar
+              </h5>
+            </div>
+            <div className="card-body">
+              <BusinessCalendar />
             </div>
           </div>
         </div>

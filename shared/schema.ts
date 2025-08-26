@@ -83,6 +83,40 @@ export const LEAD_STATUSES = [
 export const ASSIGNEES = ["kim", "patrick", "lina"] as const;
 export const INSTALLERS = ["angel", "brian", "luis"] as const;
 
+// Calendar Events schema
+export const calendarEvents = pgTable("calendar_events", {
+  id: varchar("id", { length: 36 }).primaryKey().notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // installation, leave, trade-show, showroom-visit, holiday
+  start_date: timestamp("start_date").notNull(),
+  end_date: timestamp("end_date"),
+  all_day: boolean("all_day").notNull().default(false),
+  description: text("description"),
+  location: varchar("location", { length: 255 }),
+  assigned_to: varchar("assigned_to", { length: 255 }), // for leave events
+  related_lead_id: varchar("related_lead_id", { length: 36 }), // for installation events
+  created_at: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({
+  id: true,
+  created_at: true,
+});
+
+export const updateCalendarEventSchema = insertCalendarEventSchema.partial();
+
+export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
+export type UpdateCalendarEvent = z.infer<typeof updateCalendarEventSchema>;
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
+
+export const EVENT_TYPES = [
+  "installation",
+  "leave", 
+  "trade-show",
+  "showroom-visit",
+  "holiday"
+] as const;
+
 // Sample Booklets schema
 export const sampleBooklets = pgTable("sample_booklets", {
   id: varchar("id", { length: 36 }).primaryKey().notNull(),
