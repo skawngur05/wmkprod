@@ -58,13 +58,11 @@ export default function InstallersManagement() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('/api/admin/installers', {
-        method: 'POST',
-        body: JSON.stringify({
-          ...data,
-          hourly_rate: data.hourly_rate ? parseFloat(data.hourly_rate) : null
-        })
-      });
+      const payload = {
+        ...data,
+        hourly_rate: data.hourly_rate ? parseFloat(data.hourly_rate) : null
+      };
+      return apiRequest('POST', '/api/admin/installers', payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/installers'] });
@@ -79,13 +77,11 @@ export default function InstallersManagement() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      return apiRequest(`/api/admin/installers/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          ...data,
-          hourly_rate: data.hourly_rate ? parseFloat(data.hourly_rate) : null
-        })
-      });
+      const payload = {
+        ...data,
+        hourly_rate: data.hourly_rate ? parseFloat(data.hourly_rate) : null
+      };
+      return apiRequest('PUT', `/api/admin/installers/${id}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/installers'] });
@@ -101,7 +97,7 @@ export default function InstallersManagement() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/admin/installers/${id}`, { method: 'DELETE' });
+      return apiRequest('DELETE', `/api/admin/installers/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/installers'] });
