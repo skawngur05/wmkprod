@@ -86,11 +86,11 @@ export default function Login() {
           </div>
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username Field */}
-            <div className="mb-6">
-              <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-3">
-                Username
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email Address Field */}
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
               </label>
               <div className="relative">
                 <input
@@ -98,19 +98,19 @@ export default function Login() {
                   id="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
-                  className="w-full px-4 py-4 pl-12 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors text-base"
+                  placeholder="Enter your @wrapmykitchen.com email"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                   required
                 />
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <i className="fas fa-user text-gray-400"></i>
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i className="fas fa-envelope text-gray-400 text-sm"></i>
                 </div>
               </div>
             </div>
 
             {/* Password Field */}
-            <div className="mb-6">
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-3">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
               <div className="relative">
@@ -120,48 +120,46 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full px-4 py-4 pl-12 pr-12 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors text-base"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                   required
                 />
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <i className="fas fa-lock text-gray-400"></i>
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i className="fas fa-lock text-gray-400 text-sm"></i>
                 </div>
-                <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                  <i className="fas fa-eye-slash text-gray-400 cursor-pointer hover:text-gray-600"></i>
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <i className="fas fa-eye-slash text-gray-400 cursor-pointer hover:text-gray-600 text-sm"></i>
                 </div>
               </div>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
                 <div className="flex">
-                  <i className="fas fa-exclamation-circle text-red-400 mr-3 mt-0.5"></i>
+                  <i className="fas fa-exclamation-circle text-red-400 mr-2 mt-0.5 text-sm"></i>
                   <span className="text-red-800 text-sm">{error}</span>
                 </div>
               </div>
             )}
 
             {/* Submit Button */}
-            <div className="mb-6">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-base"
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Signing In...
-                  </div>
-                ) : (
-                  'Sign In'
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <i className="fas fa-spinner fa-spin mr-2"></i>
+                  Signing In...
+                </div>
+              ) : (
+                'Sign In'
+              )}
+            </button>
 
             {/* Sign Up Link */}
-            <div className="text-center mb-6">
+            <div className="text-center">
               <span className="text-gray-600 text-sm">
                 Don't have an account?{' '}
                 <button 
@@ -175,8 +173,8 @@ export default function Login() {
             </div>
 
             {/* Debug Info */}
-            <div className="text-center">
-              <div className="text-xs text-gray-500 bg-gray-100 rounded p-3">
+            <div className="text-center mt-4">
+              <div className="text-xs text-gray-500 bg-gray-100 rounded p-2">
                 <strong>Test Accounts:</strong><br />
                 kim, patrick, lina (password: password)
               </div>
