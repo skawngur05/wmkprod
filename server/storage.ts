@@ -92,20 +92,76 @@ export class MemStorage implements IStorage {
   }
 
   private initializeDefaultData() {
-    // Create default users
+    // Create default users with comprehensive mock data
     const defaultUsers = [
-      { username: "kim", password: "password", role: "admin" },
-      { username: "patrick", password: "password", role: "sales_rep" },
-      { username: "lina", password: "password", role: "sales_rep" }
+      { 
+        username: "admin", 
+        password: "admin123", 
+        role: "administrator",
+        permissions: ["dashboard", "leads", "followups", "installations", "sample_booklets", "reports", "admin_panel", "user_management", "system_settings"],
+        is_active: true,
+        created_at: new Date("2024-01-01"),
+        last_login: new Date()
+      },
+      { 
+        username: "kim", 
+        password: "password", 
+        role: "owner",
+        permissions: ["dashboard", "leads", "followups", "installations", "sample_booklets", "reports", "admin_panel", "user_management"],
+        is_active: true,
+        created_at: new Date("2024-01-01"),
+        last_login: new Date("2024-01-15")
+      },
+      { 
+        username: "patrick", 
+        password: "password", 
+        role: "sales_rep",
+        permissions: ["dashboard", "leads", "followups", "sample_booklets"],
+        is_active: true,
+        created_at: new Date("2024-01-01"),
+        last_login: new Date("2024-01-14")
+      },
+      { 
+        username: "lina", 
+        password: "password", 
+        role: "sales_rep",
+        permissions: ["dashboard", "leads", "followups", "sample_booklets"],
+        is_active: true,
+        created_at: new Date("2024-01-01"),
+        last_login: new Date("2024-01-13")
+      },
+      { 
+        username: "manager", 
+        password: "manager123", 
+        role: "manager",
+        permissions: ["dashboard", "leads", "followups", "installations", "sample_booklets", "reports"],
+        is_active: true,
+        created_at: new Date("2024-01-01"),
+        last_login: new Date("2024-01-12")
+      },
+      { 
+        username: "installer", 
+        password: "installer123", 
+        role: "installer",
+        permissions: ["dashboard", "installations"],
+        is_active: true,
+        created_at: new Date("2024-01-01"),
+        last_login: new Date("2024-01-11")
+      }
     ];
 
     defaultUsers.forEach(userData => {
       const id = randomUUID();
-      const user: User = { ...userData, id, role: userData.role };
+      const user: User = { 
+        ...userData, 
+        id,
+        permissions: userData.permissions,
+        last_login: userData.last_login || null
+      };
       this.users.set(id, user);
     });
 
-    // Create sample leads for demonstration
+    // Create comprehensive sample leads for demonstration
     const sampleLeads = [
       {
         name: "Sarah Johnson",
@@ -157,6 +213,91 @@ export class MemStorage implements IStorage {
         balance_paid: true,
         installation_date: new Date("2024-01-20"),
         assigned_installer: "angel",
+      },
+      {
+        name: "David Wilson",
+        phone: "(555) 456-7890",
+        email: "david.wilson@email.com",
+        lead_origin: "instagram",
+        date_created: new Date("2024-01-12"),
+        next_followup_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
+        remarks: "new",
+        assigned_to: "patrick",
+        project_amount: "8500.00",
+        notes: "Interested in bathroom cabinet wrapping. Needs consultation.",
+        additional_notes: "Prefers weekend appointments",
+        deposit_paid: false,
+        balance_paid: false,
+        installation_date: null,
+        assigned_installer: null,
+      },
+      {
+        name: "Jessica Martinez",
+        phone: "(555) 567-8901",
+        email: "jessica.martinez@email.com",
+        lead_origin: "trade-show",
+        date_created: new Date("2024-01-11"),
+        next_followup_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), // tomorrow
+        remarks: "quoted",
+        assigned_to: "lina",
+        project_amount: "18200.00",
+        notes: "Large kitchen project. Quote provided for complete wrap. Very interested.",
+        additional_notes: "Budget approved by husband, just needs scheduling",
+        deposit_paid: false,
+        balance_paid: false,
+        installation_date: null,
+        assigned_installer: null,
+      },
+      {
+        name: "Robert Taylor",
+        phone: "(555) 678-9012",
+        email: "robert.taylor@email.com",
+        lead_origin: "whatsapp",
+        date_created: new Date("2024-01-10"),
+        next_followup_date: null,
+        remarks: "not-interested",
+        assigned_to: "kim",
+        project_amount: "0.00",
+        notes: "Not interested after learning about pricing. Too expensive for their budget.",
+        additional_notes: "May revisit in 6 months",
+        deposit_paid: false,
+        balance_paid: false,
+        installation_date: null,
+        assigned_installer: null,
+      },
+      {
+        name: "Amanda Thompson",
+        phone: "(555) 789-0123",
+        email: "amanda.thompson@email.com",
+        lead_origin: "website",
+        date_created: new Date("2024-01-09"),
+        next_followup_date: new Date("2024-01-19"),
+        remarks: "sold",
+        assigned_to: "patrick",
+        project_amount: "11700.00",
+        notes: "Kitchen cabinet wrap project. Customer very satisfied with proposal.",
+        additional_notes: "Recommended by previous customer",
+        deposit_paid: true,
+        balance_paid: false,
+        installation_date: new Date("2024-01-22"),
+        assigned_installer: "brian",
+      },
+      {
+        name: "Christopher Lee",
+        phone: "(555) 890-1234",
+        email: null,
+        lead_origin: "phone",
+        date_created: new Date("2024-01-08"),
+        next_followup_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+        remarks: "in-progress",
+        assigned_to: "lina",
+        project_amount: "6800.00",
+        notes: "Small bathroom project. Site visit scheduled.",
+        additional_notes: "Cash payment preferred",
+        deposit_paid: false,
+        balance_paid: false,
+        installation_date: null,
+        assigned_installer: null,
       }
     ];
 
@@ -170,7 +311,8 @@ export class MemStorage implements IStorage {
         notes: leadData.notes || null,
         additional_notes: leadData.additional_notes || null,
         installation_date: leadData.installation_date || null,
-        assigned_installer: leadData.assigned_installer || null
+        assigned_installer: leadData.assigned_installer || null,
+        assigned_to: leadData.assigned_to || null
       };
       this.leads.set(id, lead);
     });
@@ -218,6 +360,8 @@ export class MemStorage implements IStorage {
       const booklet: SampleBooklet = { 
         ...bookletData, 
         id,
+        order_number: bookletData.order_number || null,
+        phone: bookletData.phone || null,
         date_ordered: new Date("2024-01-15"),
         tracking_number: bookletData.tracking_number || null,
         date_shipped: bookletData.date_shipped || null,
@@ -239,17 +383,92 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      role: insertUser.role || "sales_rep",
+      permissions: insertUser.permissions || [],
+      is_active: insertUser.is_active ?? true,
+      created_at: insertUser.created_at || new Date(),
+      last_login: insertUser.last_login || null
+    };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) return undefined;
+
+    const updatedUser: User = { ...existingUser, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    return this.users.delete(id);
   }
 
   async getLeads(): Promise<Lead[]> {
     return Array.from(this.leads.values()).sort((a, b) => 
       new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
     );
+  }
+
+  async getLeadsPaginated(page: number = 1, limit: number = 20, filters?: {
+    search?: string;
+    status?: string;
+    origin?: string;
+    assigned_to?: string;
+  }): Promise<{ leads: Lead[], total: number, page: number, limit: number, totalPages: number }> {
+    let filteredLeads = Array.from(this.leads.values());
+
+    // Apply filters
+    if (filters?.search) {
+      const searchTerm = filters.search.toLowerCase();
+      filteredLeads = filteredLeads.filter(lead => 
+        lead.name.toLowerCase().includes(searchTerm) ||
+        lead.phone.includes(searchTerm) ||
+        (lead.email && lead.email.toLowerCase().includes(searchTerm))
+      );
+    }
+
+    if (filters?.status && filters.status !== 'all') {
+      filteredLeads = filteredLeads.filter(lead => lead.remarks === filters.status);
+    }
+
+    if (filters?.origin && filters.origin !== 'all') {
+      filteredLeads = filteredLeads.filter(lead => lead.lead_origin === filters.origin);
+    }
+
+    if (filters?.assigned_to && filters.assigned_to !== 'all') {
+      filteredLeads = filteredLeads.filter(lead => lead.assigned_to === filters.assigned_to);
+    }
+
+    // Sort by date created
+    filteredLeads.sort((a, b) => 
+      new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
+    );
+
+    // Calculate pagination
+    const total = filteredLeads.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    const paginatedLeads = filteredLeads.slice(offset, offset + limit);
+
+    return {
+      leads: paginatedLeads,
+      total,
+      page,
+      limit,
+      totalPages
+    };
   }
 
   async getLead(id: string): Promise<Lead | undefined> {
@@ -261,7 +480,14 @@ export class MemStorage implements IStorage {
     const lead: Lead = { 
       ...insertLead, 
       id,
-      date_created: new Date()
+      email: insertLead.email || null,
+      next_followup_date: insertLead.next_followup_date || null,
+      assigned_to: insertLead.assigned_to || null,
+      notes: insertLead.notes || null,
+      additional_notes: insertLead.additional_notes || null,
+      installation_date: insertLead.installation_date || null,
+      assigned_installer: insertLead.assigned_installer || null,
+      date_created: insertLead.date_created || new Date()
     };
     this.leads.set(id, lead);
     return lead;
@@ -271,7 +497,16 @@ export class MemStorage implements IStorage {
     const existingLead = this.leads.get(id);
     if (!existingLead) return undefined;
 
-    const updatedLead: Lead = { ...existingLead, ...updates };
+    // Process date fields properly
+    const processedUpdates: any = { ...updates };
+    if (typeof processedUpdates.next_followup_date === 'string') {
+      processedUpdates.next_followup_date = new Date(processedUpdates.next_followup_date);
+    }
+    if (typeof processedUpdates.installation_date === 'string') {
+      processedUpdates.installation_date = new Date(processedUpdates.installation_date);
+    }
+
+    const updatedLead: Lead = { ...existingLead, ...processedUpdates };
     this.leads.set(id, updatedLead);
     return updatedLead;
   }
@@ -321,7 +556,12 @@ export class MemStorage implements IStorage {
     const booklet: SampleBooklet = { 
       ...insertBooklet, 
       id,
-      date_ordered: new Date(),
+      order_number: insertBooklet.order_number || null,
+      phone: insertBooklet.phone || null,
+      tracking_number: insertBooklet.tracking_number || null,
+      date_shipped: insertBooklet.date_shipped || null,
+      notes: insertBooklet.notes || null,
+      date_ordered: insertBooklet.date_ordered || new Date(),
       created_at: new Date(),
       updated_at: new Date()
     };
