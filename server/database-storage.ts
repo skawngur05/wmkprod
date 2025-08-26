@@ -237,29 +237,29 @@ export class DatabaseStorage implements IStorage {
   // Admin settings methods
   async getAdminSettings(): Promise<any[]> {
     const result = await db.execute(sql`SELECT * FROM admin_settings ORDER BY setting_key`);
-    return result.rows;
+    return result;
   }
 
   async getAdminSetting(key: string): Promise<any | undefined> {
     const result = await db.execute(sql`SELECT * FROM admin_settings WHERE setting_key = ${key} LIMIT 1`);
-    return result.rows[0];
+    return result[0];
   }
 
   async updateAdminSetting(key: string, value: string): Promise<any | undefined> {
     await db.execute(sql`UPDATE admin_settings SET setting_value = ${value}, updated_at = NOW() WHERE setting_key = ${key}`);
     const result = await db.execute(sql`SELECT * FROM admin_settings WHERE setting_key = ${key} LIMIT 1`);
-    return result.rows[0];
+    return result[0];
   }
 
   // Email template methods
   async getEmailTemplates(): Promise<any[]> {
     const result = await db.execute(sql`SELECT * FROM email_templates ORDER BY template_name`);
-    return result.rows;
+    return result;
   }
 
   async getEmailTemplate(id: string): Promise<any | undefined> {
     const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id} LIMIT 1`);
-    return result.rows[0];
+    return result[0];
   }
 
   async createEmailTemplate(template: any): Promise<any> {
@@ -270,7 +270,7 @@ export class DatabaseStorage implements IStorage {
       VALUES (${id}, ${template_name}, ${subject}, ${body_content}, ${template_type}, ${is_active})
     `);
     const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id} LIMIT 1`);
-    return result.rows[0];
+    return result[0];
   }
 
   async updateEmailTemplate(id: string, updates: any): Promise<any | undefined> {
@@ -286,7 +286,7 @@ export class DatabaseStorage implements IStorage {
       WHERE id = ${id}
     `);
     const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id} LIMIT 1`);
-    return result.rows[0];
+    return result[0];
   }
 
   async deleteEmailTemplate(id: string): Promise<boolean> {
@@ -297,12 +297,12 @@ export class DatabaseStorage implements IStorage {
   // Lead origins methods
   async getLeadOrigins(): Promise<any[]> {
     const result = await db.execute(sql`SELECT * FROM lead_origins_custom ORDER BY origin_name`);
-    return result.rows;
+    return result;
   }
 
   async getLeadOrigin(id: string): Promise<any | undefined> {
     const result = await db.execute(sql`SELECT * FROM lead_origins_custom WHERE id = ${id} LIMIT 1`);
-    return result.rows[0];
+    return result[0];
   }
 
   async createLeadOrigin(originName: string): Promise<any> {
@@ -312,7 +312,7 @@ export class DatabaseStorage implements IStorage {
       VALUES (${id}, ${originName}, true)
     `);
     const result = await db.execute(sql`SELECT * FROM lead_origins_custom WHERE id = ${id} LIMIT 1`);
-    return result.rows[0];
+    return result[0];
   }
 
   async updateLeadOrigin(id: string, updates: any): Promise<any | undefined> {
@@ -324,7 +324,7 @@ export class DatabaseStorage implements IStorage {
       WHERE id = ${id}
     `);
     const result = await db.execute(sql`SELECT * FROM lead_origins_custom WHERE id = ${id} LIMIT 1`);
-    return result.rows[0];
+    return result[0];
   }
 
   async deleteLeadOrigin(id: string): Promise<boolean> {
@@ -341,7 +341,7 @@ export class DatabaseStorage implements IStorage {
       ORDER BY sal.created_at DESC 
       LIMIT ${limit} OFFSET ${offset}
     `);
-    return result.rows;
+    return result;
   }
 
   async logActivity(userId: string, action: string, entityType?: string, entityId?: string, description?: string): Promise<void> {
