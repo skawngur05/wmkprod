@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
+import { QuickEditModal } from '@/components/modals/quick-edit-modal';
 import { 
   CalendarDays, 
   CheckCircle, 
@@ -24,7 +25,8 @@ import {
   AlertTriangle,
   TrendingUp,
   Calendar,
-  Users
+  Users,
+  Edit
 } from 'lucide-react';
 
 // Installation Card Component
@@ -98,7 +100,8 @@ function InstallationCard({
   };
 
   return (
-    <Card className={`transition-all duration-200 hover:shadow-lg border-l-4 ${colorScheme === 'blue' ? 'border-l-blue-500' : colorScheme === 'green' ? 'border-l-green-500' : colorScheme === 'yellow' ? 'border-l-yellow-500' : 'border-l-red-500'}`}>
+    <Card className={`transition-all duration-200 hover:shadow-lg border-l-4 cursor-pointer ${colorScheme === 'blue' ? 'border-l-blue-500' : colorScheme === 'green' ? 'border-l-green-500' : colorScheme === 'yellow' ? 'border-l-yellow-500' : 'border-l-red-500'}`}
+      onClick={() => onViewDetails(installation)}>
       <CardContent className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
           
@@ -265,6 +268,7 @@ export default function Installations() {
   
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedInstallation, setSelectedInstallation] = useState<Lead | null>(null);
   const [emailType, setEmailType] = useState<'client' | 'installer'>('client');
   const [customMessage, setCustomMessage] = useState('');
@@ -320,6 +324,11 @@ export default function Installations() {
   const handleViewDetails = (installation: Lead) => {
     setSelectedInstallation(installation);
     setViewModalOpen(true);
+  };
+
+  const handleEditInstallation = (installation: Lead) => {
+    setSelectedInstallation(installation);
+    setEditModalOpen(true);
   };
   
   const handleSendEmail = () => {
@@ -646,9 +655,20 @@ export default function Installations() {
                 <div className="flex gap-3 pt-4 border-t">
                   <Button 
                     onClick={() => setViewModalOpen(false)}
+                    variant="outline"
                     className="flex-1"
                   >
                     Close
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setViewModalOpen(false);
+                      handleEditInstallation(selectedInstallation);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit Details
                   </Button>
                   {selectedInstallation.email && (
                     <Button 
@@ -720,6 +740,17 @@ export default function Installations() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Modal */}
+        <QuickEditModal
+          lead={selectedInstallation}
+          show={editModalOpen}
+          onHide={() => setEditModalOpen(false)}
+          onSave={() => {
+            queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
+            setEditModalOpen(false);
+          }}
+        />
       </div>
     </div>
   );
