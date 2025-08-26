@@ -25,6 +25,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+
+
       // Simple session - in production use proper session management
       res.json({ 
         user: { 
