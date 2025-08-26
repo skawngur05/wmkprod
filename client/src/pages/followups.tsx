@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { QuickFollowupModal } from '@/components/modals/quick-followup-modal';
-import { Phone, Mail, Calendar, User, DollarSign, Clock, Eye, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
+import { Phone, Mail, Calendar, User, DollarSign, Clock, Eye, AlertCircle, CheckCircle, TrendingUp, Edit } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface FollowupsData {
   overdue: Lead[];
@@ -222,50 +223,23 @@ function QuickEditForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   );
 }
 
-// Lead Card Component
-function LeadCard({ lead, onQuickEdit, onQuickFollowup, colorScheme }: { 
-  lead: Lead; 
-  onQuickEdit: (lead: Lead) => void; 
-  onQuickFollowup: (lead: Lead) => void;
-  colorScheme: 'red' | 'yellow' | 'blue' | 'green';
-}) {
-  const formatCurrency = (amount: string | null) => {
-    if (!amount) return 'Not set';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(parseFloat(amount));
-  };
-  
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Not set';
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
+// Utility functions
+const formatCurrency = (amount: string | null) => {
+  if (!amount) return 'Not set';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(parseFloat(amount));
+};
 
-  const getPaymentStatusBadge = (lead: Lead) => {
-    if (lead.remarks !== 'sold') return null;
-    
-    const depositPaid = lead.deposit_paid;
-    const balancePaid = lead.balance_paid;
-    
-    if (balancePaid) {
-      return <Badge className="bg-green-100 text-green-700 border-green-200">Paid in Full</Badge>;
-    } else if (depositPaid) {
-      return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Deposit Paid</Badge>;
-    } else {
-      return <Badge className="bg-red-100 text-red-700 border-red-200">Payment Pending</Badge>;
-    }
-  };
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return 'Not set';
+  return new Date(dateString).toLocaleDateString('en-US', { 
+    weekday: 'short', 
+    month: 'short', 
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
 
-  const colorClasses = {
-    red: 'border-red-200 shadow-red-100 hover:shadow-red-200',
-    yellow: 'border-yellow-200 shadow-yellow-100 hover:shadow-yellow-200', 
-    blue: 'border-blue-200 shadow-blue-100 hover:shadow-blue-200',
-    green: 'border-green-200 shadow-green-100 hover:shadow-green-200'
-  };
-
+const getStatusBadge = (status: string) => {
   const statusColors = {
     'new': 'bg-blue-100 text-blue-800',
     'in-progress': 'bg-yellow-100 text-yellow-800', 
@@ -277,93 +251,120 @@ function LeadCard({ lead, onQuickEdit, onQuickFollowup, colorScheme }: {
   };
 
   return (
-    <Card className={`transition-all duration-200 hover:shadow-lg ${colorClasses[colorScheme]}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg font-semibold text-gray-900 mb-2">{lead.name}</CardTitle>
-            <div className="flex flex-wrap gap-2 mb-3">
-              <Badge className={`${statusColors[lead.remarks as keyof typeof statusColors]} font-medium capitalize`}>
-                {lead.remarks.replace('-', ' ')}
-              </Badge>
-              {getPaymentStatusBadge(lead)}
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* Contact Info */}
-        <div className="flex items-center gap-2 text-gray-600">
-          <Phone className="h-4 w-4" />
-          <span className="text-sm font-medium">{lead.phone}</span>
-        </div>
-        
-        {lead.email && (
-          <div className="flex items-center gap-2 text-gray-600">
-            <Mail className="h-4 w-4" />
-            <span className="text-sm">{lead.email}</span>
-          </div>
-        )}
+    <Badge className={`${statusColors[status as keyof typeof statusColors]} font-medium capitalize`}>
+      {status.replace('-', ' ')}
+    </Badge>
+  );
+};
 
-        {/* Follow-up Date */}
-        <div className="flex items-center gap-2 text-gray-700">
-          <Calendar className="h-4 w-4" />
-          <div>
-            <span className="text-sm font-medium">Next Follow-up:</span>
-            <span className="text-sm ml-2">{formatDate(lead.next_followup_date?.toString() || null)}</span>
-          </div>
-        </div>
+const getPaymentStatusBadge = (lead: Lead) => {
+  if (lead.remarks !== 'sold') return null;
+  
+  const depositPaid = lead.deposit_paid;
+  const balancePaid = lead.balance_paid;
+  
+  if (balancePaid) {
+    return <Badge className="bg-green-100 text-green-700 border-green-200">Paid in Full</Badge>;
+  } else if (depositPaid) {
+    return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Deposit Paid</Badge>;
+  } else {
+    return <Badge className="bg-red-100 text-red-700 border-red-200">Payment Pending</Badge>;
+  }
+};
 
-        {/* Project Amount */}
-        <div className="flex items-center gap-2 text-gray-700">
-          <DollarSign className="h-4 w-4" />
-          <div>
-            <span className="text-sm font-medium">Project Value:</span>
-            <span className="text-sm ml-2 font-semibold text-green-600">{formatCurrency(lead.project_amount)}</span>
-          </div>
-        </div>
-
-        {/* Assigned To */}
-        {lead.assigned_to && (
-          <div className="flex items-center gap-2 text-gray-700">
-            <User className="h-4 w-4" />
-            <div>
-              <span className="text-sm font-medium">Assigned to:</span>
-              <span className="text-sm ml-2 capitalize">{lead.assigned_to}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Lead Origin */}
-        <div className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md inline-block">
-          Source: {lead.lead_origin.replace('-', ' ').toUpperCase()}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-2 border-t border-gray-100">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50"
-            onClick={() => onQuickFollowup(lead)}
-            data-testid={`button-followup-${lead.id}`}
-          >
-            <Calendar className="h-4 w-4 mr-1" />
-            Follow-up
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="text-gray-600 border-gray-200 hover:bg-gray-50 px-3"
-            onClick={() => onQuickEdit(lead)}
-            data-testid={`button-view-${lead.id}`}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+// Follow-ups Table Component
+function FollowupsTable({ 
+  leads, 
+  onQuickEdit, 
+  onQuickFollowup 
+}: { 
+  leads: Lead[]; 
+  onQuickEdit: (lead: Lead) => void; 
+  onQuickFollowup: (lead: Lead) => void;
+}) {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Lead</TableHead>
+            <TableHead>Contact</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Follow-up Date</TableHead>
+            <TableHead>Project Amount</TableHead>
+            <TableHead>Assigned To</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {leads.map((lead) => (
+            <TableRow key={lead.id}>
+              <TableCell>
+                <div>
+                  <div className="font-medium">{lead.name}</div>
+                  <div className="text-sm text-gray-500 capitalize">
+                    {lead.lead_origin.replace('-', ' ')}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div>
+                  <div className="text-sm">{lead.phone}</div>
+                  {lead.email && (
+                    <div className="text-sm text-gray-500">{lead.email}</div>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-col gap-1">
+                  {getStatusBadge(lead.remarks)}
+                  {getPaymentStatusBadge(lead)}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="text-sm">
+                  {formatDate(lead.next_followup_date?.toString() || null)}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="text-sm font-medium text-green-600">
+                  {formatCurrency(lead.project_amount)}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="text-sm capitalize">
+                  {lead.assigned_to || 'Unassigned'}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex gap-1">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => onQuickFollowup(lead)}
+                    data-testid={`button-followup-${lead.id}`}
+                    title="Schedule Follow-up"
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => onQuickEdit(lead)}
+                    data-testid={`button-view-${lead.id}`}
+                    title="Edit Lead"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -524,17 +525,11 @@ export default function Followups() {
               <h2 className="text-xl font-semibold text-gray-900">Overdue Follow-ups</h2>
               <Badge className="bg-red-100 text-red-700">{activeOverdue.length}</Badge>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {activeOverdue.map((lead) => (
-                <LeadCard 
-                  key={lead.id} 
-                  lead={lead} 
-                  onQuickEdit={handleQuickEdit}
-                  onQuickFollowup={openQuickFollowup}
-                  colorScheme="red"
-                />
-              ))}
-            </div>
+            <FollowupsTable 
+              leads={activeOverdue}
+              onQuickEdit={handleQuickEdit}
+              onQuickFollowup={openQuickFollowup}
+            />
           </div>
         )}
 
@@ -546,17 +541,11 @@ export default function Followups() {
               <h2 className="text-xl font-semibold text-gray-900">Due Today</h2>
               <Badge className="bg-yellow-100 text-yellow-700">{activeDueToday.length}</Badge>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {activeDueToday.map((lead) => (
-                <LeadCard 
-                  key={lead.id} 
-                  lead={lead} 
-                  onQuickEdit={handleQuickEdit}
-                  onQuickFollowup={openQuickFollowup}
-                  colorScheme="yellow"
-                />
-              ))}
-            </div>
+            <FollowupsTable 
+              leads={activeDueToday}
+              onQuickEdit={handleQuickEdit}
+              onQuickFollowup={openQuickFollowup}
+            />
           </div>
         )}
 
@@ -568,17 +557,11 @@ export default function Followups() {
               <h2 className="text-xl font-semibold text-gray-900">Upcoming This Week</h2>
               <Badge className="bg-blue-100 text-blue-700">{upcomingWeek.length}</Badge>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {upcomingWeek.map((lead) => (
-                <LeadCard 
-                  key={lead.id} 
-                  lead={lead} 
-                  onQuickEdit={handleQuickEdit}
-                  onQuickFollowup={openQuickFollowup}
-                  colorScheme="blue"
-                />
-              ))}
-            </div>
+            <FollowupsTable 
+              leads={upcomingWeek}
+              onQuickEdit={handleQuickEdit}
+              onQuickFollowup={openQuickFollowup}
+            />
           </div>
         )}
 
@@ -590,17 +573,11 @@ export default function Followups() {
               <h2 className="text-xl font-semibold text-gray-900">Scheduled Installations</h2>
               <Badge className="bg-green-100 text-green-700">{scheduledInstallations.length}</Badge>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {scheduledInstallations.map((lead) => (
-                <LeadCard 
-                  key={lead.id} 
-                  lead={lead} 
-                  onQuickEdit={handleQuickEdit}
-                  onQuickFollowup={openQuickFollowup}
-                  colorScheme="green"
-                />
-              ))}
-            </div>
+            <FollowupsTable 
+              leads={scheduledInstallations}
+              onQuickEdit={handleQuickEdit}
+              onQuickFollowup={openQuickFollowup}
+            />
           </div>
         )}
 

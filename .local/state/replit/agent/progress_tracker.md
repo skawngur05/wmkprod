@@ -36,3 +36,5 @@
 [x] 36. Removed call button from follow-up management page
 [x] 37. Redesigned edit lead modal with modern UI components and no scrolling
 [x] 38. Fixed follow-up button functionality with correct modal props
+[x] 39. Converted follow-up management page from card layout to table layout
+[x] 40. Created comprehensive table component with all lead information organized in columns
