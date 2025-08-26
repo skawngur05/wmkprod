@@ -49,6 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('crm_user');
+    localStorage.clear(); // Clear all localStorage to ensure clean state
+    window.location.reload(); // Force page reload to clear any cached state
   };
 
   return (
