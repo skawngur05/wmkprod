@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, Phone, Mail, Share2, Flag, Users, DollarSign, Calendar, FileText, Save, X, Building, MapPin, ExternalLink, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowLeft, User, Phone, Mail, Share2, Flag, Users, DollarSign, Calendar, FileText, Save, X, Building, MapPin, ExternalLink, Loader2, CheckCircle, AlertCircle, HardHat } from 'lucide-react';
 import { enrichEmail, type EnrichmentData, getConfidenceColor, getConfidenceLabel } from '@/lib/email-enrichment';
 
 export default function AddLead() {
@@ -24,7 +25,11 @@ export default function AddLead() {
     assigned_to: 'kim',
     project_amount: '',
     next_followup_date: '',
-    notes: ''
+    notes: '',
+    installation_date: '',
+    assigned_installer: [] as string[],
+    deposit_paid: false,
+    balance_paid: false
   });
   
   const [enrichmentData, setEnrichmentData] = useState<EnrichmentData | null>(null);
@@ -118,7 +123,11 @@ export default function AddLead() {
         assigned_to: formData.assigned_to,
         project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null,
         next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date) : null,
-        notes: formData.notes || null
+        notes: formData.notes || null,
+        installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
+        assigned_installer: formData.assigned_installer,
+        deposit_paid: formData.deposit_paid,
+        balance_paid: formData.balance_paid
       };
 
       createLeadMutation.mutate(leadData);
@@ -419,6 +428,119 @@ export default function AddLead() {
                     </div>
                   </div>
                 </div>
+
+                {/* Installation & Payment Section (Only for Sold Status) */}
+                {formData.remarks === 'sold' && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
+                      <HardHat className="h-5 w-5 text-blue-500" />
+                      <h3 className="text-lg font-semibold text-gray-900">Installation & Payment Details</h3>
+                    </div>
+                    
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="installation_date" className="flex items-center gap-2 font-medium">
+                          <Calendar className="h-4 w-4" />
+                          Installation Date
+                        </Label>
+                        <Input
+                          id="installation_date"
+                          type="date"
+                          value={formData.installation_date}
+                          onChange={(e) => handleInputChange('installation_date', e.target.value)}
+                          data-testid="input-installation-date"
+                          className="h-11"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2 font-medium">
+                          <Users className="h-4 w-4" />
+                          Assigned Installers
+                        </Label>
+                        <div className="grid grid-cols-1 gap-3 p-3 border rounded-lg bg-gray-50">
+                          {['angel', 'brian', 'luis'].map((installer) => (
+                            <div key={installer} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`installer-${installer}`}
+                                checked={formData.assigned_installer.includes(installer)}
+                                onCheckedChange={(checked) => {
+                                  const currentInstallers = formData.assigned_installer;
+                                  const newInstallers = checked
+                                    ? [...currentInstallers, installer]
+                                    : currentInstallers.filter(i => i !== installer);
+                                  setFormData(prev => ({ ...prev, assigned_installer: newInstallers }));
+                                }}
+                                data-testid={`checkbox-installer-${installer}`}
+                              />
+                              <Label htmlFor={`installer-${installer}`} className="text-sm font-medium capitalize cursor-pointer">
+                                {installer}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Payment Status */}
+                      <div className="md:col-span-2 space-y-3 pt-2 border-t border-gray-200">
+                        <Label className="text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                          Payment Status
+                        </Label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div 
+                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                              formData.deposit_paid 
+                                ? 'border-green-500 bg-green-50 shadow-sm' 
+                                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                            }`}
+                            onClick={() => setFormData(prev => ({ ...prev, deposit_paid: !prev.deposit_paid }))}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                formData.deposit_paid ? 'bg-green-500 border-green-500' : 'border-gray-300'
+                              }`}>
+                                {formData.deposit_paid && (
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">Deposit Paid</p>
+                                <p className="text-xs text-gray-600">Initial payment received</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div 
+                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                              formData.balance_paid 
+                                ? 'border-green-500 bg-green-50 shadow-sm' 
+                                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                            }`}
+                            onClick={() => setFormData(prev => ({ ...prev, balance_paid: !prev.balance_paid }))}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                formData.balance_paid ? 'bg-green-500 border-green-500' : 'border-gray-300'
+                              }`}>
+                                {formData.balance_paid && (
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">Balance Paid</p>
+                                <p className="text-xs text-gray-600">Final payment received</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Additional Information Section */}
                 <div>
