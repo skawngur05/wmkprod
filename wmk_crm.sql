@@ -1,0 +1,1072 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.0
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Aug 27, 2025 at 09:36 PM
+-- Server version: 10.4.27-MariaDB
+-- PHP Version: 8.1.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `wmk_crm`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `completed_projects`
+--
+
+CREATE TABLE `completed_projects` (
+  `id` int(11) NOT NULL,
+  `lead_id` int(11) NOT NULL,
+  `customer_name` varchar(100) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `project_amount` decimal(10,2) DEFAULT 0.00,
+  `deposit_paid` tinyint(1) DEFAULT 0,
+  `balance_paid` tinyint(1) DEFAULT 0,
+  `installation_date` date DEFAULT NULL,
+  `completion_date` date NOT NULL,
+  `assigned_installer` varchar(100) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `original_lead_origin` enum('Facebook','Google Text','Instagram','Trade Show','WhatsApp','Commercial','Referral') DEFAULT NULL,
+  `original_date_created` date DEFAULT NULL,
+  `original_assigned_to` enum('Kim','Patrick','Lina') DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `email_templates`
+--
+
+CREATE TABLE `email_templates` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `subject` varchar(255) NOT NULL,
+  `body` text NOT NULL,
+  `template_type` enum('repair_notification','follow_up','installation_reminder','custom') NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `installers`
+--
+
+CREATE TABLE `installers` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `hire_date` date DEFAULT NULL,
+  `hourly_rate` decimal(10,2) DEFAULT NULL,
+  `specialty` text DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `installers`
+--
+
+INSERT INTO `installers` (`id`, `name`, `phone`, `email`, `status`, `hire_date`, `hourly_rate`, `specialty`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 'Angel', '', 'specvangel@gmail.com', 'active', '0000-00-00', NULL, '', '', '2025-08-23 10:10:53', '2025-08-27 12:18:43'),
+(2, 'Brian', NULL, NULL, 'active', NULL, NULL, NULL, NULL, '2025-08-23 10:10:53', '2025-08-23 10:10:53'),
+(3, 'Luis', NULL, NULL, 'active', NULL, NULL, NULL, NULL, '2025-08-23 10:10:53', '2025-08-23 10:10:53');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `leads`
+--
+
+CREATE TABLE `leads` (
+  `id` int(11) NOT NULL,
+  `date_created` date NOT NULL,
+  `lead_origin` enum('Facebook','Google Text','Instagram','Trade Show','WhatsApp','Commercial','Referral','Website') NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `next_followup_date` date DEFAULT NULL,
+  `remarks` enum('Not Interested','Not Service Area','Not Compatible','Sold','In Progress','New') DEFAULT 'New',
+  `assigned_to` enum('Kim','Patrick','Lina') NOT NULL,
+  `notes` text DEFAULT NULL,
+  `additional_notes` text DEFAULT NULL,
+  `project_amount` decimal(10,2) DEFAULT 0.00,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deposit_paid` tinyint(1) DEFAULT 0,
+  `balance_paid` tinyint(1) DEFAULT 0,
+  `installation_date` date DEFAULT NULL,
+  `assigned_installer` varchar(100) DEFAULT NULL COMMENT 'Installer assigned to this installation (Angel, Brian, Luis, etc.)',
+  `address` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `leads`
+--
+
+INSERT INTO `leads` (`id`, `date_created`, `lead_origin`, `name`, `phone`, `email`, `next_followup_date`, `remarks`, `assigned_to`, `notes`, `additional_notes`, `project_amount`, `created_at`, `updated_at`, `deposit_paid`, `balance_paid`, `installation_date`, `assigned_installer`, `address`) VALUES
+(1580, '2025-08-22', 'Google Text', 'Khrystsina Barkett', '(786) 301-8300', 'Ksazanovich@gmail.com', '2025-08-28', 'In Progress', 'Kim', '08/25/2025 - Sent a text', '', '4995.00', '2025-08-22 07:32:33', '2025-08-26 04:18:37', 0, 0, NULL, NULL, NULL),
+(1581, '2025-08-22', 'Website', 'Mareena Win', '(813) 528-1250', 'mareenawin@gmail.com', NULL, 'Not Service Area', 'Kim', '', '', '0.00', '2025-08-22 07:33:34', '2025-08-25 11:39:26', 0, 0, NULL, NULL, NULL),
+(1582, '2025-08-21', 'Google Text', 'Missy - New Project', '(786) 255-0686', 'Missygueits@gmail.com', '2025-08-27', 'Sold', 'Patrick', 'New Project - WMK-009 most likely. Need a confirmation of the color - HOUSE no COI\r\nNEED TO CONNECT WITH HER HUBSBAND FOR CHASE renovation - Instead of replacing, reface!2', '', '2295.00', '2025-08-22 07:34:44', '2025-08-25 06:53:14', 1, 0, '2025-09-15', 'Brian', NULL),
+(1583, '2025-08-21', 'Google Text', 'Jose', '(786) 510-9456', 'jorgecgarcia21@gmail.com', '2025-08-28', 'In Progress', 'Kim', '08/25/2025 - Sent a text - DId you take pictures of your project in Melbourne this weekend', '', '4995.00', '2025-08-22 07:36:20', '2025-08-25 10:08:31', 0, 0, NULL, NULL, NULL),
+(1584, '2025-02-03', 'Trade Show', 'Renato', '(954) 591-1264', 'Renatoafaria@gmail.com', '2025-09-04', 'Sold', 'Patrick', 'NEED TO FOLLOW UP IN EARLY SEPT FOR THE DEPOSIT', '', '2995.00', '2025-08-22 07:38:02', '2025-08-22 07:38:02', 0, 0, NULL, NULL, NULL),
+(1585, '2025-08-20', 'Google Text', 'Melissa  Furtuna America', '(786) 201-6978', 'Melissa@viadolcegroup.com', '2025-09-03', 'In Progress', 'Kim', 'sent a follow up text and email\r\n\r\n08/25/2025 - Sent a text - Showroom visit. She replied...Waiting for client. And I mentionned: waiting for the budget approval or to schedule the visit to come to our showroom?\r\n\r\nTEXTED on 08/25 - Waiting for Client\'s budget', '', '6495.00', '2025-08-22 07:38:56', '2025-08-26 13:04:31', 0, 0, NULL, NULL, NULL),
+(1586, '2025-08-20', 'Google Text', 'Xeanny', '(954) 494-5292', 'xeannych@icloud.com', '2025-09-02', 'Sold', 'Patrick', 'NEED TO GET HER CREDIT CARD INFO once she has her dates for the floor ( end of SEPT )\r\nPickup 24-25th of Sept and installation on Sept 30th', '', '4313.00', '2025-08-22 07:40:14', '2025-08-26 12:54:12', 1, 0, '2025-09-25', 'Brian', NULL),
+(1587, '2025-08-20', 'Google Text', 'Ada Villalobos', '(645) 230-6812', 'villala99@hotmail.com', '2025-09-05', 'In Progress', 'Kim', 'I answered her text on 08/21 / She will order the sample booklet first.\r\n\r\n08/25/2025 - Sent a text - Schedule the work\r\nSHe replied - wants to come first showroom to make the deposit - ASKED when?\n[Aug 27, 2025] Sent a text message planning to visit the showroom', '', '2795.00', '2025-08-22 07:41:03', '2025-08-27 13:14:26', 0, 0, NULL, NULL, NULL),
+(1588, '2025-08-19', 'Trade Show', 'Francesca McFeely', '(954) 415-1155', 'Francescam@bellsouth.net', '2025-08-29', 'In Progress', 'Patrick', 'Good afternoon Francesca. Sorry for not getting back to you last week. The answer is yes. we will cover the toe kicks as well. Do you want to schedule the work for the end of September? FYI, at the moment, this is the closest date I can do it but please keep in mind that we have a Tradeshow next weekend and I will add many installation so if you schedule pass Friday, your project will be most likely done in October - Patrick\r\n\r\nYes please and then I will need an estimate including all we talked about in writing to francescam@bellsouth.net thank u', '', '5995.00', '2025-08-22 07:43:37', '2025-08-24 09:46:38', 0, 0, NULL, NULL, NULL),
+(1589, '2025-08-19', 'Referral', 'Wil & Angel', '(305) 297-2220', 'sabelhome@gmail.com', '2025-09-23', 'In Progress', 'Patrick', 'They will be closing the unit first before they decide estimate 09/23/2025', '', '2595.00', '2025-08-22 07:44:49', '2025-08-22 07:44:49', 0, 0, NULL, NULL, NULL),
+(1590, '2025-08-18', 'Google Text', 'Alex', '(305) 494-3258', 'Studio52wj@gmail.com', '2025-08-27', 'In Progress', 'Patrick', 'He wants to visit the showroom on Wednesday at 12:30PM\r\n\r\n08/25/2025 - Sent a text - Reminder for Wednesday 12h30pm', '', '3195.00', '2025-08-22 07:46:05', '2025-08-25 09:19:25', 0, 0, NULL, NULL, NULL),
+(1591, '2025-08-19', 'Website', 'Pedro Alves', '(954) 696-0781', 'pedro.alves@icloud.com', '2025-08-27', 'In Progress', 'Patrick', 'Good afternoon Pedro. Just wanted to know if you have any questions regarding the estimate I sent you? - sent on 08/24', '', '3995.00', '2025-08-22 07:47:49', '2025-08-24 09:57:39', 0, 0, NULL, NULL, NULL),
+(1592, '2025-08-16', 'Website', 'Vera Thompson', '(786) 287-0682', 'vera0402@yahoo.com', '2025-09-10', 'In Progress', 'Kim', 'She have 2 projects. 1995n& 4995. Wrap Master Pro is competing with us.\r\n8/25/2025 - Sent a text -  She wants to come to showroom. \r\n\r\n08/25/2025 - Talked to client - coming at 5pm today\r\nVera came to the showroom today. She saw some samples and she likes 0.57 a lot and 0.22. She will get back to us in the next two weeks. Not before that because her husband is out of town and she needs to go see tiles for the backsplash. So follow up in two weeks.', 'I told her what I think about WMP and his guarantee.', '6995.00', '2025-08-22 07:48:43', '2025-08-25 13:24:57', 0, 0, NULL, NULL, NULL),
+(1593, '2025-08-16', 'Google Text', 'Jesica & Miguel from Cutler Bay', '(305) 450-2340', 'Task@mhilife.com', '2025-08-27', 'In Progress', 'Patrick', 'planning to visit the showroom on Saturday. She is coming at 12h30pm\r\nAlso countertop needs to be less than 44inches Additional $1,995 for all countertops and backsplash with Grey marble infeel. Sent an text on 08/24 to get an update on the countertops', '', '7995.00', '2025-08-22 07:49:44', '2025-08-26 04:24:18', 0, 0, NULL, NULL, NULL),
+(1594, '2025-08-16', 'Google Text', 'Andy Plattus', '(213) 716-6570', 'Suddenmoves7@yahoo.com', '2025-08-22', 'Not Interested', 'Patrick', '', '', '6995.00', '2025-08-22 07:50:36', '2025-08-22 07:50:36', 0, 0, NULL, NULL, NULL),
+(1595, '2025-08-16', 'Website', 'Vanesa Rodriguez', '(786) 427-3049', 'rodriguezvr1211@gmail.com', '2025-09-03', 'In Progress', 'Kim', 'sent a text confirming if she received the estimate\r\n\r\n08/26/2025 - Sent a text / any questions on your estimate', 'See if she got the estimate in her SPAM folder?', '4995.00', '2025-08-22 07:51:20', '2025-08-26 04:23:36', 0, 0, NULL, NULL, NULL),
+(1596, '2025-08-16', 'Google Text', 'NA', '(702) 467-2975', 'Steelefaded@yahoo.com', '2025-08-22', 'Not Interested', 'Kim', 'Sent a text to get an update on the landlord', '', '1500.00', '2025-08-22 07:52:23', '2025-08-22 07:52:23', 0, 0, NULL, NULL, NULL),
+(1597, '2025-08-14', 'Google Text', 'Carolina', '(305) 613-8464', 'Bookcaropozo@gmail.com', '2025-09-04', 'Sold', 'Patrick', 'Installation on 09/04. SENT sample booklet today by USPS', '', '2895.00', '2025-08-22 07:53:14', '2025-08-23 11:14:58', 1, 0, '2025-08-30', 'Brian', NULL),
+(1598, '2025-08-13', 'Google Text', 'Elise Jessica', '(917) 843-6567', 'Elise.Jessica@ymail.com', '2025-08-27', 'Not Interested', 'Kim', '', '', '2495.00', '2025-08-22 07:53:52', '2025-08-22 07:53:52', 0, 0, NULL, NULL, NULL),
+(1599, '2025-08-13', 'Website', 'Debi Favinger', '(954) 471-5864', 'dfavinger@hotmail.com', '2025-08-28', 'In Progress', 'Patrick', 'TEXTED ON 08/21 to see if any update', '', '2395.00', '2025-08-22 07:54:40', '2025-08-22 07:54:40', 0, 0, NULL, NULL, NULL),
+(1600, '2025-08-13', 'WhatsApp', 'Diana Bomery', '(305) 502-5300', 'dianabomeny@gmail.com', '2025-08-29', 'In Progress', 'Patrick', 'INVITED to showroom on 08/20', '', '2495.00', '2025-08-22 07:55:35', '2025-08-22 07:55:35', 0, 0, NULL, NULL, NULL),
+(1601, '2025-08-13', 'Google Text', 'Luz Suarez', '(754) 423-6406', 'adriana0731@icloud.com', NULL, NULL, 'Kim', 'She came here to get the sample for her Brother', 'SOLD ARE PROJECT 3 MONTHS AGO. Installation AT THE END OF AUGUST', '2995.00', '2025-08-22 07:56:27', '2025-08-23 10:07:11', 1, 0, '2025-08-30', NULL, NULL),
+(1602, '2025-08-13', 'Google Text', 'Heather Lefebvre', '(954) 254-7675', 'heather@oceanarealiving.com', '2025-08-28', 'In Progress', 'Kim', 'Need to send sample booklet today 08/13. NEED to follow up with her on MONDAY to see if she got the samples\r\n\r\n08/25/2025 - Sent a text - Any update', '', '5995.00', '2025-08-22 07:57:14', '2025-08-25 09:33:07', 0, 0, NULL, NULL, NULL),
+(1603, '2025-08-12', 'Google Text', 'Robert Southard - Boat Project', '(954) 214-3974', 'ttlapp65@gmail.com', '2025-08-27', 'In Progress', 'Patrick', 'Boat project -\r\n08/25/2025 - Sent a text -USING PERSONAL PHONE for Wednesday visit', 'Potential VISIT ON THE BOAT ON MONDAY 08/25', '9500.00', '2025-08-22 07:58:03', '2025-08-25 09:31:06', 0, 0, NULL, NULL, NULL),
+(1604, '2025-08-12', 'Google Text', 'Gilles Lacasse', '(819) 208-0719', 'gilles.lacasse007@gmail.com', NULL, 'Not Service Area', 'Kim', 'SOMEONE IN CANADA', '', '0.00', '2025-08-22 07:58:42', '2025-08-23 09:12:34', 0, 0, NULL, NULL, NULL),
+(1605, '2025-08-11', 'Google Text', 'Ana M Pineda', '(786) 546-5281', 'Shiftingparadigm@hotmail.com', '2025-08-28', 'In Progress', 'Patrick', 'TEXT on 08/21 with an update question since we were about to do the project and then everything stopped.', 'Warm Lead / Interested but doesn\'t have money at the moment / She will reach out to us when shes ready', '2695.00', '2025-08-22 08:05:19', '2025-08-22 08:05:44', 0, 0, NULL, NULL, NULL),
+(1606, '2025-08-11', 'Google Text', 'Ramin Mozafar', '(305) 401-7316', 'RLBMozafari@gmail.com', NULL, 'Sold', 'Patrick', '', '', '3395.00', '2025-08-22 08:06:39', '2025-08-23 07:10:00', 0, 0, NULL, NULL, NULL),
+(1607, '2025-08-11', 'Referral', 'Hasnaa Boutros', '(954) 579-3647', 'hboutros@onesothebysrealty.com', '2025-10-15', 'In Progress', 'Kim', 'She replied. She not ready yet to make changes... Follow up in 2 months', '', '5495.00', '2025-08-22 08:07:28', '2025-08-22 08:07:28', 0, 0, NULL, NULL, NULL),
+(1608, '2025-08-11', 'Website', 'Maria Fazio', '(732) 754-0605', 'Mariac1476@yahoo.com', '2025-09-03', 'In Progress', 'Kim', 'Salon Project In NJ - Any update on her project. When is she coming to Florida? Maybe she can come to our showroom.\r\n\r\n08/25/2025 - Sent a text - Inviting her to the showroom - She texted me back 08/25. She is coming in Sept . KIM will do the follow up for her visit to the showroom', 'PATRICK WILL FOLLOW UP THAT ONE. Made the offer with taupe and grey. She needs to commit to the work', '9995.00', '2025-08-22 08:08:36', '2025-08-25 09:35:28', 0, 0, NULL, NULL, NULL),
+(1609, '2025-08-09', 'Website', 'Kelly Ellis', '(919) 710-2921', 'KNGARRIS@GMAIL.COM', NULL, 'Not Service Area', 'Patrick', 'NO CARPENTER NO AREA', '', '0.00', '2025-08-22 08:09:05', '2025-08-23 07:21:16', 0, 0, NULL, NULL, NULL),
+(1610, '2025-08-09', 'Google Text', 'carmona ramon', '(617) 794-9979', 'carmonaramon3@gmail.com', '2025-08-28', 'In Progress', 'Kim', 'Came to the showroom. Ready to move forward but could not give the deposit on the spot!\r\nClosing first and then wrap - 08/20 info\r\n@ Kim follow up on the closing of the house this week to see if this is done?', 'HE WILL GIVE ME HIS CREDIT CARD TODAY. I Left VM and Called for the Credti card and date. Closing is next week so need to wait no to put anything on credit card. He should be ready NOW - 08/20/2025. Issue with CLOSING. Next week', '5995.00', '2025-08-22 08:09:43', '2025-08-25 12:08:44', 0, 0, NULL, NULL, NULL),
+(1611, '2025-08-08', 'Google Text', 'Malle Hernandez', '(786) 623-7802', 'mallehernandez@yahoo.com', '2025-09-01', 'In Progress', 'Patrick', 'sent a follow text and email. TEXT on 08/21 for an update', '', '4696.00', '2025-08-22 08:10:54', '2025-08-22 08:10:54', 0, 0, NULL, NULL, NULL),
+(1612, '2025-08-07', 'Commercial', 'Amaurys Clavero - Ocean One', '(954) 889-4651', 'ChefEngeneer@gmail.com', '2025-09-10', 'In Progress', 'Patrick', 'FRONT DESK RECEPTION - Follow up with Ray - This client doesnt have a valid email address.', 'NO EMAIL ADDRESS!', '100000.00', '2025-08-22 08:11:54', '2025-08-26 13:14:18', 0, 0, NULL, NULL, NULL),
+(1613, '2025-08-06', 'Google Text', 'Jose Pernia', '(786) 623-7505', 'Jose@beainteriorsdesign.com', '2025-08-29', 'In Progress', 'Patrick', 'new project. BUDGETING phase. WIll get back to him in ONE month', '', '3995.00', '2025-08-22 08:14:04', '2025-08-22 08:14:04', 0, 0, NULL, NULL, NULL),
+(1614, '2025-08-06', 'Website', 'Janice Ryan', '(214) 577-6878', 'jrwrmach6@gmail.com', NULL, 'Not Service Area', 'Kim', '', '', '0.00', '2025-08-22 08:14:30', '2025-08-22 08:14:30', 0, 0, NULL, NULL, NULL),
+(1615, '2025-08-06', 'Website', 'Cheyl Sett', '(248) 652-6821', 'cherylsetter@gmail.com', NULL, 'Not Service Area', 'Kim', '', '', '0.00', '2025-08-22 08:14:57', '2025-08-22 08:14:57', 0, 0, NULL, NULL, NULL),
+(1616, '2025-08-06', 'Referral', 'Luiz Modolo - Stuart Drossner Friend', '(646) 286-9874', 'fmodolo1@gmail.com', NULL, 'Sold', 'Patrick', 'REALTOR - needed to move quickly in Bal Harbour. Harbour House Condo # 406, Bal Harbour.. Friend with Luis. TEXTED him on 08/08', '', '2695.00', '2025-08-22 08:15:49', '2025-08-22 08:15:49', 0, 0, NULL, NULL, NULL),
+(1617, '2025-08-06', 'Website', 'Alessandra Carvalho', '(305) 851-1881', 'alessandra@oaksdg.com', '2025-09-02', 'Not Interested', 'Patrick', 'Came to showroom. WIll meet with her client on Tuesday. Follow up on Wednesday. I just texted her 08/13. Follow up on 08/15 by text\r\nFollow up text - 08/25\r\n\r\nPer Alessandra - The client decided to remodel the entire kitchen, so the quote no longer applies.', '', '2495.00', '2025-08-22 08:16:33', '2025-08-25 04:15:49', 0, 0, NULL, NULL, NULL),
+(1618, '2025-08-06', 'Google Text', 'Michelle', '(954) 864-8784', 'michcamp1447@gmail.com', '2025-09-01', 'In Progress', 'Kim', 'sent follow up text and email. VM & TEXT on 08/08. VM on 08/13', 'I invited her to showroon on 08/15', '2195.00', '2025-08-22 08:17:14', '2025-08-25 04:18:51', 0, 0, NULL, NULL, NULL),
+(1619, '2025-08-06', 'Google Text', 'Melissa Izquierdo', '(305) 301-9808', 'Melissa@igkhair.com', '2025-08-28', 'In Progress', 'Patrick', 'Speak French / sent follow up text and email / She is coming today 08/08\r\nGood afternoon Melissa. Did you get my answer regarding the off-white sample that we can give you?\r\n\r\n8/24/2025 - Sent a text -  08/24.  Icould passby but only thursday 08/28 this week.  Would 11am work for you?', 'Long Message regarding thewood grain parttern and sample booklet 08/13. Last chance. 08/15 I am sending the simple booklet today', '3295.00', '2025-08-22 08:18:01', '2025-08-25 05:09:13', 0, 0, NULL, NULL, NULL),
+(1620, '2025-08-06', 'Website', 'Ernesto Pesaola', '(786) 657-5101', 'epesaola@gmail.com', '2025-09-30', 'In Progress', 'Kim', 'On 08/08 he asked questions Thermofoil versus Vinyl. SPoke to him 08/08. He wants to come during the week. I texted him the address', 'I texted him on 08/13 to get any update', '2695.00', '2025-08-22 08:18:48', '2025-08-22 08:18:48', 0, 0, NULL, NULL, NULL),
+(1621, '2025-08-06', 'Google Text', 'Iouan safi', '(646) 280-6404', 'iouansafi@yahoo.com', '2025-09-08', 'Sold', 'Patrick', 'She is coming at the showroom on SATURDAY  08/09/2025', 'Came with her friend. will go for NEW DOORS options. NEED TO SEND HER REVISION quote and CHAT IMAGES. I texted her on 08/12 to get the deposit', '6795.00', '2025-08-22 08:19:29', '2025-08-23 07:09:36', 0, 0, NULL, NULL, NULL),
+(1622, '2025-08-05', 'Google Text', 'Marisel', '(305) 934-9605', 'mariselbarbeito@gmail.com', '2025-08-29', 'In Progress', 'Kim', 'sent follow up text and email 08/06\r\n\r\n08/25/2025 - Sent a text - Any decision?', 'GIVE HER a 20% discount IF she does her project NEXT WEEK. TEXTED & VM today 08/08 for the promotion for her project. She texted me.... Shopping around so discount will not work', '4995.00', '2025-08-22 08:20:10', '2025-08-25 12:27:51', 0, 0, NULL, NULL, NULL),
+(1623, '2025-08-04', 'Google Text', 'Greg and Kim Heath', '(708) 612-0136', 'kheath3362@gmail.com', NULL, 'Sold', 'Patrick', '', '', '3495.00', '2025-08-22 08:21:10', '2025-08-25 02:36:17', 1, 1, '2025-09-01', NULL, NULL),
+(1624, '2025-08-04', 'Google Text', 'Cristina Mederos', '(954) 274-4386', 'Cristina.mederos@gmail.com', NULL, 'Not Interested', 'Kim', '', '', '5995.00', '2025-08-22 08:21:56', '2025-08-23 07:12:13', 0, 0, NULL, NULL, NULL),
+(1625, '2025-08-04', 'Google Text', 'Silvana Zelaschi', '(786) 916-7571', 'silvanazelaschi@gmail.com', '2025-08-29', 'In Progress', 'Kim', 'sent a follow up email 08/06. She wants to come to our showroom. 06/07/25. TEXTED her on 08/08\r\n\r\n08/25/2025 - Sent a text - VM to come to showroom for a visit', 'INVITED HER TO SHOWROOM on 08/15', '2995.00', '2025-08-22 08:22:37', '2025-08-25 09:38:40', 0, 0, NULL, NULL, NULL),
+(1626, '2025-08-04', 'Website', 'Fran Rigi', '(323) 646-1660', 'franrigi60@gmail.com', NULL, 'Not Interested', 'Patrick', 'Good afternoon Fran. As per our conversation, the price for the product to wrap your kitchen countertops and the bathroom countertop is $1,195 + $90 shipping. Total: $1,285. Labor ( if you want our guys to install, it will be $1,000 extra . 08/15. KIM TEXTED HER. SHE texted on 08/15. Too high', '', '3495.00', '2025-08-22 08:30:17', '2025-08-25 04:20:56', 0, 0, NULL, NULL, NULL),
+(1627, '2025-08-03', 'Website', 'Ankit Kapoor', '(845) 240-0862', 'ANKITKAPOOR1985@GMAIL.COM', NULL, 'Not Service Area', 'Patrick', '', '', '0.00', '2025-08-22 08:33:22', '2025-08-22 08:33:22', 0, 0, NULL, NULL, NULL),
+(1628, '2025-08-03', 'Website', 'Oladayo Akorede', '(301) 768-9022', 'expositoto@rocketmail.com', NULL, 'Not Service Area', 'Kim', '', '', '0.00', '2025-08-22 08:36:03', '2025-08-22 08:36:03', 0, 0, NULL, NULL, NULL),
+(1629, '2025-08-03', 'Website', 'Laura Tallent', '(260) 349-8499', 'ltallent30@gmail.com', NULL, 'Not Service Area', 'Kim', '', '', '0.00', '2025-08-22 08:36:19', '2025-08-22 08:36:19', 0, 0, NULL, NULL, NULL),
+(1630, '2025-08-02', 'Website', 'Valerie Rangel', '(630) 687-5015', 'vrangel703@att.net', NULL, 'Not Service Area', 'Kim', '', '', '0.00', '2025-08-22 08:36:36', '2025-08-22 08:36:36', 0, 0, NULL, NULL, NULL),
+(1631, '2025-08-01', 'Website', 'Maria Alonso', '(954) 544-8072', 'malonso@edexadesign.com', '2025-08-27', 'In Progress', 'Kim', 'She Wants SAMPLE booklet sent to her. I told her to get it online or her directly. Texted me on 08/08. No answer yet from her client', 'ASKED her to share images of her client 08/13 / Still havent sent the pictures , sent a text message on 08/21', '895.00', '2025-08-22 09:02:55', '2025-08-26 04:20:13', 0, 0, NULL, NULL, NULL),
+(1632, '2025-08-01', 'Google Text', 'Andy', '(954) 715-9884', 'Sandyvo82@yahoo.com', NULL, 'Not Interested', 'Patrick', '', '', '0.00', '2025-08-22 09:04:00', '2025-08-22 09:04:00', 0, 0, NULL, NULL, NULL),
+(1633, '2025-08-01', 'Google Text', 'Tammy Gammerman', '(305) 528-0392', 'Tgammerman@gmail.com', NULL, 'Sold', 'Patrick', '', '', '4043.25', '2025-08-22 09:04:45', '2025-08-25 02:38:56', 1, 1, '2025-09-01', 'Brian', NULL),
+(1634, '2024-11-25', 'Trade Show', 'Nicki Sayward', '', 'nsayward@gmail.com', NULL, 'Sold', 'Patrick', '', '', '6495.00', '2025-08-22 13:43:43', '2025-08-22 14:16:53', 0, 0, NULL, NULL, NULL),
+(1635, '2024-11-25', 'Trade Show', 'Martin Kessler', '', 'thefourkesses@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1636, '2024-11-25', 'Trade Show', 'Shawna L Hamel', '', 'Slhamel2001@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1637, '2024-11-25', 'Trade Show', 'Cara Stull', '', 'carastull@yahoo.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1638, '2024-11-25', 'Facebook', 'Jose Requena', '', 'jreque33@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1639, '2024-11-26', 'Facebook', 'Yaquelin Illas', '', 'yaquiconde@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1640, '2024-11-26', 'Trade Show', '', '', 'Chevere71@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1641, '2024-11-26', 'Trade Show', 'Jonathan MacY', '', 'Famyse1@yahoo.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1642, '2024-11-26', 'Trade Show', 'ravanzan', '(305) 987-1481', 'Ravanzan@gmail.com', NULL, 'Sold', 'Patrick', '', '', '1995.00', '2025-08-22 13:43:43', '2025-08-22 14:15:56', 0, 0, NULL, NULL, NULL),
+(1643, '2024-11-26', 'Trade Show', 'Elena Belom Enrici', '(305) 333-7167', 'Elena.Enrici@hotmail.com', NULL, 'Sold', 'Patrick', '', '', '2495.00', '2025-08-22 13:43:43', '2025-08-22 14:16:26', 0, 0, NULL, NULL, NULL),
+(1644, '2024-11-26', 'Trade Show', 'Jerry Ramasami', '', 'Jramasami@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1645, '2024-11-26', 'Facebook', 'Gianfranco Di Campo', '', 'gianni@dicampo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1646, '2024-11-26', 'Facebook', 'Maria Ocampo', '', 'cristysmts@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1647, '2024-11-29', 'Facebook', 'Ramona Davila', '', 'ramonamdavila@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1648, '2024-11-30', 'Facebook', 'Tatiana Ospina', '', 'tospina11@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1649, '2024-12-01', 'Facebook', 'Dainaly Sosa', '', 'Dainalys@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1650, '2024-12-01', 'Facebook', 'Ashok Verma', '', 'akverma99@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1651, '2024-12-01', 'Facebook', 'Olga Reidy', '', 'olgareidy@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1652, '2024-12-02', 'Google Text', 'Benita P Koenig', '', 'Benitajune@aol.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1653, '2024-12-02', 'Google Text', 'Edbenavidescitroen', '(917) 214-5116', 'Edbenavidescitroen@gmail.com', NULL, 'Sold', 'Patrick', '', '', '5495.00', '2025-08-22 13:43:43', '2025-08-22 14:15:20', 0, 0, NULL, NULL, NULL),
+(1654, '2024-12-03', 'Trade Show', 'Sion Pereira', '', 'Sionp777@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1655, '2024-12-03', 'Website', 'Samantha Freedman', '', 'sfreed730@aol.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1656, '2024-12-03', 'Facebook', 'Nancy Rodriguez', '', 'nrodv60@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1657, '2024-12-03', 'Facebook', 'Sergio Rojas', '', 'sdrojas41@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1658, '2024-12-04', 'Facebook', 'Kelly Laessig', '', 'klaessig84@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1659, '2024-12-06', 'Google Text', 'Thomas Stewart', '', 'Stewartjosephthomas@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1660, '2024-12-06', 'Google Text', 'Justin Giamre', '', 'Justingiamre@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1661, '2024-12-06', 'Google Text', 'Jazmine Marie Farrior', '', 'Jmfarrior@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1662, '2024-12-07', 'Facebook', 'John santana', '', 'santanaj991@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1663, '2024-12-08', 'Website', 'Natalia Beltran', '', 'nataliabh94@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1664, '2024-12-08', 'Facebook', 'Diego CARRENO', '', 'diegocarreno61@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1665, '2024-12-09', 'Google Text', '', '', 'lmbrown016@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1666, '2024-12-09', 'Google Text', 'Stefan O. Rulli', '', 'stefanorulli@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1667, '2024-12-09', 'Facebook', 'Francisco Rodriguez', '', 'Lipps750@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1668, '2024-12-09', 'Website', 'tugrul tale', '', 'tugrultale@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1669, '2024-12-10', 'Google Text', '', '', 'Isleidydiazabiega@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1670, '2024-12-10', 'Google Text', '', '', 'Glamourbymay01@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1671, '2024-12-10', 'Website', 'Ana Abreu', '', 'anaraquelarquitetura@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1672, '2024-12-11', 'Facebook', 'Genile Morris', '', 'genilemorris@msn.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1673, '2024-12-11', 'Google Text', 'Keem R', '', 'keemsidekick@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1674, '2024-12-11', 'Facebook', 'Nicole billiot', '', 'nicole@pawfectpalsmiami.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1675, '2024-12-12', 'Facebook', 'Carla Ghipsmann', '', 'carla@kgroupholdings.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1676, '2024-12-12', 'Facebook', 'Carolina Tannhauser', '', 'carolinatannhauser@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1677, '2024-12-12', 'Instagram', 'Sarah Rivera', '', 'Sarah@sarahrivera.net', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1678, '2024-12-12', 'Trade Show', 'Jackie Hart', '', 'jackie.hart50@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1679, '2024-12-13', 'Facebook', 'Geraldine DeTommaso', '', 'sweetgd62@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1680, '2024-12-13', 'Facebook', 'Vu Lam', '', 'lamvvu86@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1681, '2024-12-13', 'Google Text', 'Abdul Sabour', '', 'asabour@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1682, '2024-12-13', 'Google Text', '', '', 'Lizgarcia1107@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1683, '2024-12-13', 'Website', 'Jamia Cooper', '', 'jamia.mitchell30@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1684, '2024-12-14', 'Google Text', '', '', 'Ssattas@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1685, '2024-12-14', 'Website', 'Sean Kramer', '', 'volunteerguy@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1686, '2024-12-14', 'Website', 'Lenny W', '', 'lemnyw05@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1687, '2024-12-15', 'Facebook', 'Lucy ayala', '', 'lucyayala0814@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1688, '2024-12-15', 'Facebook', 'Ken Moll', '', 'mollkendry1176@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1689, '2024-12-16', 'Google Text', '', '', 'bclarke013@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1690, '2024-12-17', 'Facebook', 'Willie Floyd', '', 'wfloyd0717@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1691, '2024-12-18', 'Google Text', '', '', 'bookservices_plus@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1692, '2024-12-18', 'Website', 'Willie', '', 'Wfloyd0718@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1693, '2024-12-19', 'Google Text', 'Christian', '(786) 394-7087', 'Brinzicorp@gmail.com', NULL, 'Sold', 'Patrick', '', '', '595.00', '2025-08-22 13:43:43', '2025-08-22 14:14:48', 0, 0, NULL, NULL, NULL),
+(1694, '2024-12-19', 'Google Text', 'Stephanie Pinder', '', 'Stephpinder.broker@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1695, '2024-12-19', 'Website', 'Camille Mazza', '', 'cmazza.cm@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1696, '2024-12-19', 'Facebook', 'James Douglas', '', 'jayd31313@yahoo.com', NULL, 'Not Compatible', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1697, '2024-12-20', 'Referral', '', '', 'atozkitchenfactory@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1698, '2024-12-20', 'Website', 'CASSIE HOLMES', '', 'monikaalessandrini73@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1699, '2024-12-21', 'Facebook', 'Barnette Diggs', '', 'brdiggs11@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1700, '2024-12-21', 'Google Text', '', '', 'latoyasampson88@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1701, '2024-12-22', 'Facebook', 'Kimberly Gayle', '', 'luckystransportation@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1702, '2024-12-22', 'Facebook', 'Igmar Mendoza', '', 'igmarstyle.luxe@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1703, '2024-12-22', 'Facebook', 'steven Mechanic', '', 'stevenmechanic@comcast.net', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1704, '2024-12-22', 'Facebook', 'Jerry Carter', '', 'lesjerry@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1705, '2024-12-22', 'Facebook', 'Marc Scavuzzo', '', 'marc@scavuzzoassociates.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1706, '2024-12-23', 'Facebook', 'Steve Goodman', '', 'steve@kbrtrading.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1707, '2024-12-23', 'Facebook', 'Susan L', '', '9800lucky@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1708, '2024-12-23', 'Google Text', 'Alan G Garson', '(954) 288-7080', 'Alang952@gmail.com', NULL, 'Sold', 'Patrick', '', '', '5995.00', '2025-08-22 13:43:43', '2025-08-22 14:14:17', 0, 0, NULL, NULL, NULL),
+(1709, '2024-12-23', 'Google Text', '', '', 'richarnp@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1710, '2024-12-24', 'Website', 'Luke Nuttall', '', 'lukenut@telus.net', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1711, '2024-12-25', 'Facebook', 'Uri Aqua', '', 'uri.aqua@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1712, '2024-12-25', 'Facebook', 'Thercilia Surin', '', 'therciliasurin@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1713, '2024-12-25', 'Facebook', 'Randy Natour', '', 'randynatour@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1714, '2024-12-26', 'Facebook', 'Anthony Valentin', '', 'anthony.valentin@live.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1715, '2024-12-26', 'Facebook', 'Kevin Coughlin', '(954) 793-3383', '1caseycoughlin@gmail.com', NULL, 'Sold', 'Patrick', '', '', '995.00', '2025-08-22 13:43:43', '2025-08-22 14:13:58', 0, 0, NULL, NULL, NULL),
+(1716, '2024-12-26', 'Website', 'Justin Huynh', '', 'azncupid22@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1717, '2024-12-27', 'Google Text', 'Ronald London', '(305) 332-4169', 'JLondon460@aol.com', NULL, 'Sold', 'Patrick', '', '', '495.00', '2025-08-22 13:43:43', '2025-08-22 14:12:50', 0, 0, NULL, NULL, NULL),
+(1718, '2024-12-27', 'Google Text', '', '', 'bwvossen@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1719, '2024-12-27', 'Google Text', 'Nancy Serrano Galvis', '(786) 643-1318', 'nancyser2@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2595.00', '2025-08-22 13:43:43', '2025-08-22 14:13:26', 0, 0, NULL, NULL, NULL),
+(1720, '2024-12-28', 'Facebook', 'Chuck Boccio', '', 'chuckboccio@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1721, '2024-12-28', 'Referral', 'Horacio', '(346) 606-85842', 'hcalvo5@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2495.00', '2025-08-22 13:43:43', '2025-08-22 14:12:30', 0, 0, NULL, NULL, NULL),
+(1722, '2024-12-29', 'Facebook', 'Teresa Mcbride', '', 'teresamcbridepitts@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1723, '2024-12-29', 'Website', 'Diane Facca', '', 'dianefacca71@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1724, '2024-12-30', 'Google Text', 'Liandra Montagnoli', '', 'Liamontagnoli@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1725, '2024-12-30', 'Google Text', 'Carlos Lopez', '', 'lopez1082@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1726, '2024-12-30', 'Website', 'Caron Rigg', '', 'Caronrigg@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1727, '2024-12-31', 'Google Text', 'Erika Pernas', '', 'Erikazworld@bellsouth.net', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1728, '2024-12-31', 'Website', 'Michael Caron', '', 'michaelcaron90@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1729, '2024-12-31', 'Website', 'Christina Selway', '', 'christee22@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1730, '2024-12-31', 'Facebook', 'Pamela Thomas', '', 'p3877207@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1731, '2025-01-02', 'Facebook', 'Rico Burgess', '', 'rico.burgess@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1732, '2025-01-02', 'Google Text', 'Anna Manfredi', '', 'Annamanfredi2727@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1733, '2025-01-02', 'Google Text', 'estebanzzz', '(305) 586-4371', 'estebanzzz@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2495.00', '2025-08-22 13:43:43', '2025-08-22 14:11:52', 0, 0, NULL, NULL, NULL),
+(1734, '2025-01-02', 'Google Text', 'Kevin Hernandez', '', 'Kevin1205hernandez@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1735, '2025-01-02', 'Website', 'Michael Luca', '', 'Michaellucafla@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1736, '2025-01-02', 'Website', 'Stephen Stanczyk', '', '1129delmar@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1737, '2025-01-03', 'Facebook', 'Lea Goller', '', 'leagoller@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1738, '2025-01-03', 'Google Text', 'Gerald Everett Myrick', '', 'myrick5471@bellsouth.net', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1739, '2025-01-03', 'Website', 'Richard Santos', '', 'rsantos04@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1740, '2025-01-04', 'Facebook', 'Debra Sanabria-Monroig', '', 'debbiemonroig@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1741, '2025-01-04', 'Facebook', 'Hercule Gin', '', 'herculegelin@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1742, '2025-01-04', 'Facebook', 'Donna Gibson', '', 'donnagibson1960@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1743, '2025-01-04', 'Facebook', 'Chiquita Grace', '', 'cpgrace88@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1744, '2025-01-05', 'Facebook', 'Way Day', '', 'garconthezan@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1745, '2025-01-05', 'Facebook', 'carlos sarue', '', 'carlos.sarue@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1746, '2025-01-05', 'Facebook', 'Maria Leon', '', 'Stregaleon@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1747, '2025-01-05', 'Facebook', 'Mary Leyva', '', 'leyvamary@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1748, '2025-01-05', 'Facebook', 'Sara Harel', '', 'orenharel123@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1749, '2025-01-05', 'Facebook', 'Alfonso Morales', '', 'fonzn79@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1750, '2025-01-05', 'Website', 'Way Day', '', 'jean.garcon05@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1751, '2025-01-05', 'Website', 'Carlos Ansuarez', '', 'diani614@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1752, '2025-01-06', 'Facebook', 'Juan ramirez', '', 'jramirezd78@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1753, '2025-01-06', 'Facebook', 'Junie Crawford', '', 'juniecrawford@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1754, '2025-01-06', 'Facebook', 'cott McCartney', '', 'scottsmccartney@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1755, '2025-01-06', 'Facebook', 'Frank Ocque', '', 'focque@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1756, '2025-01-06', 'Google Text', '', '', 'carva@mail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1757, '2025-01-07', 'Facebook', 'Margarita Otero-Alvarez', '', 'moteroalvarez46@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1758, '2025-01-08', 'Website', 'Sunny Darlington', '', 'Darlington@elitefiscalservices.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1759, '2025-01-09', 'Facebook', 'JB Kell', '', 'titanviii@comcast.net', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1760, '2025-01-09', 'Google Text', 'Reineiro Rosales', '', 'Truana@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1761, '2025-01-10', 'Facebook', 'Jose Nieto', '', 'nietojj@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1762, '2025-01-10', 'Facebook', 'Dropatie Jailall', '', 'dropatiej@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1763, '2025-01-10', 'Google Text', 'Ariera', '(305) 216-4869', 'Ariera@catalfumo.com', NULL, 'Sold', 'Patrick', '', '', '4495.00', '2025-08-22 13:43:43', '2025-08-22 14:11:29', 0, 0, NULL, NULL, NULL),
+(1764, '2025-01-11', 'Facebook', 'Rosa Lemus', '', 'rosalemus18@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1765, '2025-01-11', 'Facebook', 'Sharon Jones', '', 'shezjones64@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1766, '2025-01-11', 'Facebook', 'Klaudia Ilyes', '', 'klaudiailyes@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1767, '2025-01-11', 'Facebook', 'Ted Gross', '(970) 749-0444', 'tgross@trinitydelray.com', '2025-08-28', 'New', 'Kim', 'TEXTED him or her this morning ( 08/26 ) to get an update on their project', '', '3295.00', '2025-08-22 13:43:43', '2025-08-26 02:28:31', 0, 0, NULL, NULL, NULL),
+(1768, '2025-01-11', 'Google Text', '', '', 'Moradi58@comcast.net', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1769, '2025-01-12', 'Facebook', 'Kirsys Cedano', '', 'kaylanastar2019@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1770, '2025-01-12', 'Facebook', 'Lily Rodriguez', '', 'Lilyr270@msn.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1771, '2025-01-13', 'Facebook', 'Beth Ann Middlebrook', '', 'bethannmiddlebrook@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1772, '2025-01-13', 'Facebook', 'Melissa Kowal', '', 'mtripp2@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1773, '2025-01-13', 'Facebook', 'Mirtha Diaz', '', 'madiaz1156@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1774, '2025-01-13', 'Google Text', 'Willena Bowen', '', 'willenabowen@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1775, '2025-01-13', 'Google Text', '', '', '123cbs@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1776, '2025-01-14', 'Google Text', 'Rebeca Holzmann', '', 'xum@msn.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1777, '2025-01-14', 'Google Text', 'Fred Stein', '', 'Fred.stein@mac.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1778, '2025-01-14', 'Google Text', '', '', 'samendamaignan@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1779, '2025-01-15', 'Facebook', 'Franklin De la torre', '', 'intlcaparrini@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1780, '2025-01-16', 'Website', 'Constance Gleeson', '', 'cagleeson@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1781, '2025-01-16', 'Facebook', 'Evan Resnick', '', 'evansprod@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1782, '2025-01-16', 'Facebook', 'Gino Baranello', '', 'blanca.marin@comcast.net', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1783, '2025-01-17', 'Google Text', '', '', 'Stephaniecamachox@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1784, '2025-01-17', 'Google Text', '', '', 'Ljmnapier@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1785, '2025-01-17', 'Google Text', 'Elsa Olivera', '', 'elsa.olivera4008@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1786, '2025-01-17', 'Website', 'Steve Fishman', '', 'sjfishman1@aol.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1787, '2025-01-17', 'Facebook', 'Bianka stecher', '', 'biankastecher@me.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1788, '2025-01-17', 'Facebook', 'Bianka stecher', '', 'biankasrecher@me.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1789, '2025-01-18', 'Google Text', '', '', 'Audreacaro@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1790, '2025-01-18', 'Facebook', 'Marlen Garcia', '', 'grumpy500@icloud.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1791, '2025-01-19', 'Facebook', 'George Neal', '', 'intrepidnw@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1792, '2025-01-19', 'Facebook', 'Laurie Davidson', '', 'lauriedavidson196@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1793, '2025-01-19', 'Website', 'Roxaida Rodríguez', '', 'rodriguezroxaida@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1794, '2025-01-19', 'Facebook', 'Argelia HernandeZ', '', 'argeliahernandez789@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1795, '2025-01-20', 'Facebook', 'Mariffer De Armas', '(305) 987-8100', 'mariffer574@gmail.com', NULL, 'Sold', 'Patrick', '', '', '4995.00', '2025-08-22 13:43:43', '2025-08-22 14:11:07', 0, 0, NULL, NULL, NULL),
+(1796, '2025-01-20', 'Google Text', '', '', 'Dadri002@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1797, '2025-01-20', 'Facebook', 'Carmen Zavarce', '', 'caita60@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1798, '2025-01-21', 'Facebook', 'Claudia Leon', '', 'claudiamark@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1799, '2025-01-21', 'Website', 'Cleber Oliari', '', 'kelly@rex22.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1800, '2025-01-21', 'Facebook', 'Tom DiCicco', '', 'tomdicicco@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL);
+INSERT INTO `leads` (`id`, `date_created`, `lead_origin`, `name`, `phone`, `email`, `next_followup_date`, `remarks`, `assigned_to`, `notes`, `additional_notes`, `project_amount`, `created_at`, `updated_at`, `deposit_paid`, `balance_paid`, `installation_date`, `assigned_installer`, `address`) VALUES
+(1801, '2025-01-22', 'Facebook', 'Joe Cain', '', 'joecain@msn.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1802, '2025-01-22', 'Google Text', '', '', 'Neilan76.nd@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1803, '2025-01-22', 'Google Text', '', '', 'Estrellahc80@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1804, '2025-01-22', 'Website', 'Alaina Pappas', '', 'alainamariepappas@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1805, '2025-01-22', 'Facebook', 'Ed Leite', '', 'eddieleite@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1806, '2025-01-22', 'Facebook', 'Javier Granobles', '', 'teamgranobles@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1807, '2025-01-24', 'Facebook', 'Juan Rey', '', 'havana305@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1808, '2025-01-24', 'Google Text', 'Christopher Sy', '', 'christopherjksy@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1809, '2025-01-24', 'Facebook', 'Amanda Weyers', '', 'Amandawey08@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1810, '2025-01-25', 'Facebook', 'Mercedes Cortes', '', 'mrscortesclass@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1811, '2025-01-26', 'Website', 'Graham King', '', 'gk@grahamking.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1812, '2025-01-27', 'Google Text', 'Ana Puig', '', 'puig9778@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1813, '2025-01-27', 'Facebook', 'Steven Katz', '', 'nglamp@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1814, '2025-01-28', 'Facebook', 'Gabriel Ohayon', '', 'friendinme18@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1815, '2025-01-28', 'Google Text', '', '', 'Meli111187@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1816, '2025-01-28', 'Google Text', 'Clara', '(859) 536-2058', '4lion@jamesonkane.com', NULL, 'Sold', 'Patrick', '', '', '2495.00', '2025-08-22 13:43:43', '2025-08-22 14:10:42', 0, 0, NULL, NULL, NULL),
+(1817, '2025-01-28', 'Website', 'Wendy Rogers', '', 'wendylrogers21@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1818, '2025-01-29', 'Google Text', 'Carolina Arrieta', '', 'Macaro7@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1819, '2025-01-29', 'Google Text', '', '', 'mperlof@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1820, '2025-01-29', 'Website', 'Miriam Linder', '', 'miriaml1234@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1821, '2025-01-29', 'Facebook', 'Daniel Parabak', '', 'daNparabak@icloud.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1822, '2025-01-29', 'Facebook', 'Daniel Parabak', '', 'dNparabak@icloud.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1823, '2025-01-30', 'Google Text', 'Cristian Correa', '', 'Info@candmecs.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1824, '2025-01-30', 'Website', 'Ruta Romer', '', 'wwwzjb@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1825, '2025-01-30', 'Facebook', 'Tawonna Clayton', '', 'Tawonna24@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1826, '2025-01-31', 'Website', 'Tony Leon', '', 'mechlive@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1827, '2025-02-03', 'Trade Show', 'Craig Kolnick', '', 'tck44@bellsouth.net', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1828, '2025-02-03', 'Trade Show', 'Lizbeth Beauchamp', '', 'Lizbeauchamp@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1829, '2025-02-03', 'Trade Show', '', '', 'chrisn32@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1830, '2025-02-03', 'Trade Show', '', '', 'mrod0525@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1831, '2025-02-03', 'Trade Show', 'Sheila Mokhtari', '', '2daysunnyday@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1832, '2025-02-03', 'Trade Show', '', '', '75claudiam@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1833, '2025-02-03', 'Trade Show', '', '', 'RealtorRivero16@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1834, '2025-02-03', 'Google Text', '', '', 'Aschuldiner4u@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1835, '2025-02-03', 'Google Text', 'Emiliano Luna', '', 'Jasonluna111@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1836, '2025-02-03', 'Google Text', '', '', 'Swrobinson54@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1837, '2025-02-03', 'Google Text', '', '', 'teodrosw@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1838, '2025-02-03', 'Google Text', '', '', 'mharpenau1009@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1839, '2025-02-03', 'Google Text', 'Karina Dominguez', '', 'Kdominguezb@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1840, '2025-02-03', 'Google Text', '', '', 'Lucianonoronhax@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1841, '2025-02-03', 'Facebook', 'Gustavo Chacon', '', 'vacaciones7718@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1842, '2025-02-04', 'Trade Show', '', '', 'Karinajmani@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1843, '2025-02-05', 'Google Text', '', '', 'ossette@verdaydesign.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1844, '2025-02-05', 'Trade Show', '', '', 'Stefanialessio488@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1845, '2025-02-06', 'Google Text', '', '', 'victorycapital@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1846, '2025-02-06', 'Trade Show', '', '', 'Fprice7073@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1847, '2025-02-06', 'Website', 'Jim Sweetman', '', 'j_sweetm@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1848, '2025-02-07', 'Facebook', 'Donaldo Jimenez', '', 'donnypr34@gmail.com', NULL, 'Not Service Area', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1849, '2025-02-08', 'Google Text', 'Juan Carlos', '(408) 981-4126', 'juancarlosbrahim@yahoo.ca', NULL, 'Sold', 'Patrick', '', '', '3995.00', '2025-08-22 13:43:43', '2025-08-22 14:10:14', 0, 0, NULL, NULL, NULL),
+(1850, '2025-02-10', 'Facebook', 'Rosy Figueroa', '', 'rosyfigueroa7@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1851, '2025-02-10', 'Website', 'Samah Mastoura', '', 'khalfasameh@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1852, '2025-02-10', 'Website', 'Tina Yeargin', '', 'cyeargin@outlook.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1853, '2025-02-10', 'Facebook', 'Pedro Barquin', '', 'pbarquin2@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1854, '2025-02-10', 'Facebook', 'Sandra Benjumea', '', 'sandyb1975@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1855, '2025-02-10', 'Website', 'Mike Sorrenti', '', 'gamepill@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1856, '2025-02-10', 'Google Text', '', '', 'Geneymenendez@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1857, '2025-02-10', 'Trade Show', '', '', 'Kathyn08@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1858, '2025-02-11', 'Facebook', 'Mislie Jean Pierre', '', 'mjp305@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1859, '2025-02-11', 'Google Text', 'Aileen Dentist Office', '(954) 937-4134', 'aileen73@hotmail.com', NULL, 'Sold', 'Patrick', '', '', '15735.00', '2025-08-22 13:43:43', '2025-08-22 14:09:47', 0, 0, NULL, NULL, NULL),
+(1860, '2025-02-12', 'Google Text', '', '', 'Celestin235@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1861, '2025-02-13', 'Facebook', 'Barrington Morris', '', 'biggaboss01@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1862, '2025-02-13', 'Google Text', 'ck', '(312) 804-6367', 'cknewman07@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2995.00', '2025-08-22 13:43:43', '2025-08-22 14:09:05', 0, 0, NULL, NULL, NULL),
+(1863, '2025-02-13', 'Website', 'Katie Reinisch', '', 'katiereinisch@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1864, '2025-02-14', 'Facebook', 'Tamika Jones', '', 'kiilyskids@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1865, '2025-02-14', 'Google Text', '', '', 'llange@videotron.ca', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1866, '2025-02-14', 'Google Text', '', '', 'Natyormo@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1867, '2025-02-14', 'Website', 'Dina Evans', '', 'dinaevans@hotmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1868, '2025-02-14', 'Facebook', 'Yasir Malik', '', 'yasiramalik@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1869, '2025-02-17', 'Facebook', 'Sebastian Ribes', '', 'sebaribes@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1870, '2025-02-17', 'Facebook', 'Juan Barberena', '', 'rompetoto74@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1871, '2025-02-17', 'Facebook', 'Any Garcia', '', 'anygarcia11855@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1872, '2025-02-17', 'Google Text', '', '', 'cumingtransport@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1873, '2025-02-17', 'Google Text', 'Arnie Vazquez', '', 'Arnievazquez@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1874, '2025-02-17', 'Google Text', '', '', 'Leibycohen4@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1875, '2025-02-17', 'Google Text', '', '', 'Pattiln247@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1876, '2025-02-18', 'Facebook', 'DeAdra Slowley', '', 'lips2dee@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1877, '2025-02-18', 'Facebook', 'Michael Palladino', '', 'mpall@adwinstonservice.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1878, '2025-02-18', 'Google Text', 'Loree Quinley', '(954) 610-9168', 'QQIGGLES@gmail.com', NULL, 'Sold', 'Patrick', '', '', '3495.00', '2025-08-22 13:43:43', '2025-08-22 14:08:39', 0, 0, NULL, NULL, NULL),
+(1879, '2025-02-19', 'Website', 'David Bader', '', 'd.baderdesign@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1880, '2025-02-20', 'Facebook', 'Dina Alon', '', 'dinaalon18@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1881, '2025-02-20', 'Facebook', 'Harry Duverger', '', 'harryd925@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1882, '2025-02-20', 'Google Text', 'Maria', '(786) 498-7657', 'mariasenjo@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2995.00', '2025-08-22 13:43:43', '2025-08-22 14:08:17', 0, 0, NULL, NULL, NULL),
+(1883, '2025-02-20', 'Website', 'Brooke Dounel', '', 'paysaeedian@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1884, '2025-02-24', 'Facebook', 'MaryLou Latimer', '', 'mutzie2555@aol.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1885, '2025-02-24', 'Facebook', 'Mark Sheehan', '', 'shee1114@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1886, '2025-02-24', 'Facebook', 'Rochelle Garrison', '', 'ortho4kids@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1887, '2025-02-24', 'Facebook', 'Anissa Costello', '', 'ac1228@nova.edu', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1888, '2025-02-24', 'Google Text', '', '', 'Maria.diaz1516@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:43', '2025-08-22 13:43:43', 0, 0, NULL, NULL, NULL),
+(1889, '2025-02-24', 'Google Text', '', '', 'Hedieh.samsam@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1890, '2025-02-24', 'Website', 'Noha Mohammed', '', 'noha@hawaii.edu', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1891, '2025-02-24', 'Website', 'Lib Montoya', '', 'lib.montoya@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1892, '2025-02-27', 'Facebook', 'angie grisetti', '', 'grisetti@att.net', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1893, '2025-02-27', 'Facebook', 'Casey Barber', '', 'caseybarber1111@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1894, '2025-02-27', 'Website', 'Yana Demeester', '', 'demeesteryana@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1895, '2025-02-28', 'Facebook', 'Nick Faiella', '', 'nf5877784@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1896, '2025-02-28', 'Google Text', 'Martha', '(786) 759-4423', 'marthaguerrero33@hotmail.com', NULL, 'Sold', 'Patrick', '', '', '7995.00', '2025-08-22 13:43:44', '2025-08-22 14:07:21', 0, 0, NULL, NULL, NULL),
+(1897, '2025-02-28', 'Google Text', '', '', 'corp.dsb.usa2@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1898, '2025-02-28', 'Google Text', 'noushka green', '(786) 252-8939', 'Noushkagreen@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2495.00', '2025-08-22 13:43:44', '2025-08-22 14:07:52', 0, 0, NULL, NULL, NULL),
+(1899, '2025-02-28', 'Facebook', 'Sean Hosein', '', 'whamtrini@yahoo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1900, '2025-03-03', 'Google Text', '', '', 'Kfconstruction305@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1901, '2025-03-03', 'Google Text', '', '', 'Gerenstein@comcast.net', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1902, '2025-03-03', 'Google Text', '', '', 'Josebautista3rshr@icloud.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1903, '2025-03-03', 'Google Text', '', '', 'jeremy.klein.co@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1904, '2025-03-03', 'Website', 'Tatiana Page-Relo', '', 'cody@page-relo.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1905, '2025-03-05', 'Facebook', 'Charles Morton', '', 'llctlb1@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1906, '2025-03-05', 'Facebook', 'Ayleen Quezada', '', 'ayleen_quezada@hotmail.com', NULL, 'Not Interested', 'Kim', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-25 11:37:53', 0, 0, NULL, NULL, NULL),
+(1907, '2025-03-05', 'Website', 'Tiano Crespo', '', 'tianocrespo@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1908, '2025-03-06', 'Google Text', '', '', 'irisiromero@gmail.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1909, '2025-03-06', 'Google Text', 'Mercy Cortes', '(305) 877-4714', 'Mercymcortes@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1910, '2025-03-06', 'Google Text', 'Mona', '(917) 855-2737', 'Maboelnaga@k6investments.com', NULL, 'In Progress', 'Kim', 'NY/ CALL 08/11/2025', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1911, '2025-03-07', 'Google Text', 'Gopal', '(919) 649-3530', 'kgtalluri@outlook.com', NULL, 'Sold', 'Patrick', '', '', '3995.00', '2025-08-22 13:43:44', '2025-08-22 14:06:58', 0, 0, NULL, NULL, NULL),
+(1912, '2025-03-07', 'Website', 'Shawn Fauntleroy', '(301) 653-9949', 'Shawn.fauntleroy@wholefoods.com', NULL, 'Not Service Area', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1913, '2025-03-09', 'Facebook', 'Joanna Contreras’s', '(786) 357-6671', 'jojodelacroix@hotmail.com', NULL, 'New', '', 'did not send the pictures', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1914, '2025-03-12', 'Google Text', 'Millie Silberberg', '', 'milliesilberberg@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1915, '2025-03-12', 'Website', 'David Felix', '(862) 368-1980', 'felixd13@gmail.com', NULL, 'Not Compatible', '', 'Not service area', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1916, '2025-03-12', 'Google Text', 'Claudia', '(305) 332-7007', 'claudiabradham@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1917, '2025-03-12', 'Google Text', '', '(305) 783-6850', 'Lisbetd@amerifast.com', '2025-08-28', 'In Progress', 'Patrick', 'VERY HOT', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1918, '2025-03-12', 'Google Text', 'Sandy', '(305) 342-9968', 'Sgh415@aol.com', '2025-08-28', 'In Progress', 'Patrick', 'VERY HOT', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1919, '2025-03-13', 'Google Text', '', '(786) 424-7211', 'lawcas10@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1920, '2025-03-13', 'Website', 'Alexander Jackson', '(917) 775-1135', 'alexander.o.jackson@gmail.com', NULL, 'New', '', 'Forwarded to NJ', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1921, '2025-03-14', 'Google Text', 'Nathalia', '(754) 801-9672', 'Info@ggrcconstruction.com', '2025-09-02', 'New', 'Kim', 'VERY HOT\r\n\r\n08/25/2025 - Sent a text - Any update?', 'Left a message on 08/11', '2495.00', '2025-08-22 13:43:44', '2025-08-25 12:20:14', 0, 0, NULL, NULL, NULL),
+(1922, '2025-03-18', 'Website', 'Alan Smith', '(561) 666-6023', 'taryn2006@gmail.com', NULL, 'In Progress', 'Kim', 'did not send the pictures', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1923, '2025-03-19', 'Google Text', 'Katie', '(917) 602-7393', 'katieessar@gmail.com', NULL, 'In Progress', 'Kim', 'DIY', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1924, '2025-03-20', 'Website', 'Michael m muria', '(321) 525-4747', 'rebecca9710@gmail.com', NULL, 'In Progress', 'Kim', 'did not send the pictures', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1925, '2025-03-20', 'Website', 'Juneid Khan', '(647) 472-5444', 'juneidkhan1983@gmail.com', NULL, 'In Progress', 'Kim', 'canada', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1926, '2025-03-20', 'Referral', 'ben', '516.297.6848', 'ben@trifectahc.com', '2025-08-28', 'In Progress', 'Patrick', 'GONZALO will be reaching out to her directly For your project', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1927, '2025-03-21', 'Google Text', '', '(954) 860-0361', 'liermojaneisy@icloud.com', '2025-08-28', 'In Progress', 'Patrick', 'CALL 08/11/2025', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1928, '2025-03-21', 'Google Text', '', '(786) 853-1411', 'Anitetoda@yahoo.com', '2025-08-28', 'In Progress', 'Patrick', 'CALL 08/11/2025', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1929, '2025-03-21', 'Google Text', '', '', 'Blakhausent@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1930, '2025-03-23', 'Website', 'Donna Dietz', '(754) 224-9392', 'fio169@comcast.net', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1931, '2025-03-24', 'Google Text', '', '(305) 389-9717', 'Meli725@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1932, '2025-03-24', 'Google Text', 'Melanie Rebolledo', '(315) 314-1701', 'Melanierebolledo3@gmail.com', NULL, 'New', '', 'DIY', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1933, '2025-03-26', 'Google Text', 'Richard', '(786) 271-0932', 'Arregui1750@gmail.com', NULL, 'New', '', 'Couldnt leave a message-Fridge only wrapping', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1934, '2025-03-26', 'Google Text', 'Tommy', '(321) 432-1706', 'Loganconstructiongrp@Yahoo.com', NULL, 'Sold', 'Patrick', '', '', '12495.00', '2025-08-22 13:43:44', '2025-08-22 14:05:28', 0, 0, NULL, NULL, NULL),
+(1935, '2025-03-26', 'Google Text', 'Carmen Jimenez', '(754) 234-0315', 'caliciajimenez@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1936, '2025-03-26', 'Google Text', 'Rolando', '(786) 826-1874', 'rolandovazquezlaw@icloud.com', NULL, 'Sold', 'Patrick', '', '', '3790.00', '2025-08-22 13:43:44', '2025-08-22 14:06:19', 0, 0, NULL, NULL, NULL),
+(1937, '2025-03-26', 'Google Text', 'Sara Kim', '(954) 815-8401', 'S.kim91@gmail.com', NULL, 'In Progress', 'Patrick', 'CALL 08/11/2025', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1938, '2025-03-27', 'Website', 'Bruce Rutsky', '(954) 470-5406', 'divepadi2@gmail.com', NULL, 'New', '', 'did not send the pictures', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1939, '2025-03-28', 'Website', 'Nathalie Lavallee', '(819) 729-3366', 'mariposavl@hotmail.com', NULL, 'New', '', 'did not send the pictures', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1940, '2025-03-28', 'Google Text', '', '(217) 246-6973', 'labeabout@gmail.com', NULL, 'New', '', 'Called -clould not leave a message', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1941, '2025-03-31', 'Website', 'Jay Patel3', '(615) 243-7197', 'jiteshpatel84@hotmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1942, '2025-04-06', 'Website', 'Amanda Daniels', '(813) 564-6114', 'maelynnsenters1710@icloud.com', NULL, 'New', '', 'did not send the pictures', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1943, '2025-04-08', 'Google Text', 'Ivette', '(786) 877-2208', 'Ivettealcoba1@gmail.com', NULL, 'New', '', 'For his best friend condon/Kim is doing the follow up', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1944, '2025-04-08', 'Google Text', 'Rhoda', '(908) 462-2315', 'rhodagasante@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1945, '2025-04-08', 'Google Text', 'Ehud M', '(202) 568-5976', 'Ehudm86@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1946, '2025-04-09', 'Google Text', 'Lennis Vielma', '(305) 318-5558', 'lenvie28@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1947, '2025-04-09', 'Google Text', 'Aimee Sanborn', '(214) 794-8581', 'afontsanborn@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1948, '2025-04-09', 'Website', 'Helen Vargas', '(954) 670-8714', 'zoie.bartolet@hotmail.com', NULL, 'New', '', 'invalid email', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1949, '2025-04-10', 'Google Text', '', '(786) 873-3978', 'Nic31855@yahoo.com', NULL, 'Not Interested', '', 'He did himself', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1950, '2025-04-12', 'Google Text', '', '(305) 713-8621', 'arochetteg@icloud.com', NULL, 'Not Interested', '', 'Already did it', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1951, '2025-04-12', 'Website', 'Marcos Garci', '(305) 494-6835', 'marcos.mia@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1952, '2025-04-14', 'Google Text', 'Josey', '(813) 335-1766', 'Josey@thebaezcollective.com', NULL, 'Sold', 'Patrick', '', '', '3495.00', '2025-08-22 13:43:44', '2025-08-22 14:04:50', 0, 0, NULL, NULL, NULL),
+(1953, '2025-04-14', 'Website', 'ellen mangaroo', '(770) 864-7489', 'ellen_mangaroo@aol.com', NULL, 'In Progress', 'Kim', 'invalid email', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1954, '2025-04-15', 'Google Text', 'Cynthia', '(954) 558-2815', 'Greatestpotential@gmail.com', NULL, 'Not Interested', '', 'Realtor/Price too high/No compatible I offered doors at cost and She said she’d think about it but didn’t seem very interested.', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1955, '2025-04-15', 'Google Text', '', '(939) 401-9005', 'Mcolon0725@gmail.com', NULL, 'Not Service Area', '', 'Left a voice and sent a text-No rebate was offered since it is in Orlando', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1956, '2025-04-16', 'Google Text', 'Adria', '(305) 525-4422', 'Adriaalmeida05@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2995.00', '2025-08-22 13:43:44', '2025-08-22 14:04:02', 0, 0, NULL, NULL, NULL),
+(1957, '2025-04-16', 'Google Text', 'Jeff Zemito Jr.', '(440) 309-3342', 'jmzj@hotmail.com', NULL, 'Not Interested', '', 'The company came and did repair the damages.', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1958, '2025-04-16', 'Google Text', 'Daniel', '(646) 725-6277', 'Daniel_megira@yahoo.com', NULL, 'Sold', 'Patrick', '', '', '2000.00', '2025-08-22 13:43:44', '2025-08-22 14:04:26', 0, 0, NULL, NULL, NULL),
+(1959, '2025-04-17', 'Google Text', 'Nati Andreu', '(305) 283-5962', 'eilatan477@hotmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1960, '2025-04-17', 'Website', 'Barbara Munoz', '(561) 245-1596', 'bmunoz1596@gmail.com', NULL, 'In Progress', 'Kim', 'never sent the picture of the entire kitchen', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1961, '2025-04-18', 'Google Text', 'Paula', '(954) 479-0818', 'pauperez2214@live.com', NULL, 'In Progress', 'Kim', 'Offered $200 rebater-Via text & talked to her briefly', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1962, '2025-04-18', 'Google Text', 'Cleide', '(786) 223-3600', 'services@algebra.net', NULL, 'Sold', '', 'JC/Kim offered 10% rebate via email\n\n[8/27/2025] Installation completed and moved to completed projects.', 'We sold this project to CLEIDE in Aprill\n[8/27/2025] Installation completed and moved to completed projects.', '3495.00', '2025-08-22 13:43:44', '2025-08-27 11:48:11', 1, 0, '2025-08-27', 'Angel', NULL),
+(1963, '2025-04-18', 'Google Text', 'Bleask1', '(646) 465-4500', 'Bleask1@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2495.00', '2025-08-22 13:43:44', '2025-08-22 14:03:33', 0, 0, NULL, NULL, NULL),
+(1964, '2025-04-21', 'Website', 'Rachael Thomson', '(217) 725-1247', 'the_thomsons@comcast.net', NULL, 'Sold', 'Patrick', 'Rachael Thomson - San Diego - (217) 725-1247 - 1431 Pacific Highway, APT# 206, San Diego, CA, 92101\r\nI need to see with her and GONZALO for the installation date', '', '3995.00', '2025-08-22 13:43:44', '2025-08-25 12:35:31', 1, 0, '2025-08-29', NULL, NULL),
+(1965, '2025-04-21', 'Website', 'Tredessa Arrojo', '(646) 773-5353', 'brungroup@aol.com', NULL, 'Not Service Area', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1966, '2025-04-22', 'Google Text', 'Dane Kim', '(906) 281-6360', 'kdm090991@gmail.com', '2025-09-17', 'In Progress', 'Kim', 'NY Project\r\n\r\n08/25/2025 - Sent a text - Are you still thinking about changing the color of your kitchen?', '', '0.00', '2025-08-22 13:43:44', '2025-08-25 09:53:41', 0, 0, NULL, NULL, NULL),
+(1967, '2025-04-23', 'Referral', 'Diana Chen ( refered by alex )415-828-4652', '305.297.2220 ( Alex)', 'diana.chen@gmail.com', NULL, 'New', '', 'Offered $200 rebater-Via text & voicemail', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1968, '2025-04-24', 'Google Text', 'Dani Urreasch', '(954) 401-0005', 'Daniurreasch@gmail.com', '2025-08-28', 'New', 'Kim', 'Offered $200 rebater-Via text & voicemail', '', '2495.00', '2025-08-22 13:43:44', '2025-08-25 12:46:20', 0, 0, NULL, NULL, NULL),
+(1969, '2025-04-24', 'Google Text', 'Rosy', '305 466 7914', 'rosyharari@gmail.com', NULL, 'Not Interested', '', 'Price too high -she wants to pay $1500 :( (I offered $500 rebate and she said no)', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1970, '2025-04-24', 'Google Text', 'Andres', '(954) 294-7949', 'Andresycarolina2019@gmail.com', NULL, 'Not Interested', '', 'They did other way', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1971, '2025-04-24', 'Google Text', 'Michael', '(312) 919-6189', 'mstaudte@yahoo.com', NULL, 'Sold', 'Patrick', '', '', '3995.00', '2025-08-22 13:43:44', '2025-08-22 14:02:05', 0, 0, NULL, NULL, NULL),
+(1972, '2025-04-25', 'Website', 'Carl Bossi', '6177552860', 'carlbossi@me.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1973, '2025-04-26', 'Website', 'Melissa Mannheim', '(407) 484-0213', 'melissamannheim@gmail.com', NULL, 'New', '', 'Orlando- texted and left a message(08/01)', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1974, '2025-04-27', 'Website', 'Apar Patel', '(443) 839-8389', 'draparpatel@gmail.com', NULL, 'Not Service Area', '', 'Countertop only-        Myrtle Beach', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1975, '2025-04-28', 'Google Text', 'Analia', '(786) 985-7390', 'anialtamiranoa@gmail.com', NULL, 'New', '', 'Offered $200 rebate-Via text &voicemail', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1976, '2025-04-28', 'Google Text', 'Liran Zah', '(201) 468-4721', 'Liranlorenzo@gmail.com', NULL, 'Not Interested', '', 'do not follow up', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1977, '2025-04-28', 'Website', 'Jonathon Huber', '(516) 233-4650', 'jmhuber1983@gmail.com', NULL, 'New', '', 'levittown', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1978, '2025-04-30', 'Google Text', 'Jamie', '(516) 984-7385', 'jamiekletter@mac.com', '2025-09-03', 'In Progress', 'Kim', 'I just tried to call you in order to do a follow up and see if you are still interested on doing your kitchen wrapping. Please let us know since we have a promotion of 20% on the vinyl until August 8th- Patrick', 'VM and Text on 08/06. Text on 08/13', '2895.00', '2025-08-22 13:43:44', '2025-08-24 09:35:57', 0, 0, NULL, NULL, NULL),
+(1979, '2025-05-01', 'Google Text', '', '', 'Helick68@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1980, '2025-05-05', 'Website', 'Najam Sheikh', '(917) 658-7300', 'naj9999@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2695.00', '2025-08-22 13:43:44', '2025-08-22 14:01:03', 0, 0, NULL, NULL, NULL),
+(1981, '2025-05-05', 'Trade Show', '', '', 'Robkaleky@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1982, '2025-05-05', 'Trade Show', 'Carlen', '(786) 663-1795', 'Carlen_2001@yahoo.com', NULL, 'Sold', 'Patrick', '', '', '3995.00', '2025-08-22 13:43:44', '2025-08-22 14:01:33', 0, 0, NULL, NULL, NULL),
+(1983, '2025-05-05', 'Trade Show', 'Maggie Vergara', '(570) 242-7130', 'Mkvergaras@gmail.com', NULL, 'Not Interested', '', 'Left a VM. - Texted her as well - Follow up 08/05', 'She wants to paint herself.. NO more follow up', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1984, '2025-05-05', 'Trade Show', '', '(305) 497-8877', 'sambranco@live.com', NULL, 'New', '', 'Sent a text with a promotion of 50% off on material-until August 8th', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1985, '2025-05-05', 'Trade Show', '', '(786) 512-7307', 'Freebirdhilda@hotmail.com', NULL, 'New', '', 'Trasde show/Kim doing follow up', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1986, '2025-05-05', 'Trade Show', '', '(786) 223-9914', 'Kazaconstructionservices@gmail.com', NULL, 'New', '', 'Kim follow up/ JC', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1987, '2025-05-06', 'Website', 'Milton Sanchez', '(786) 318-9961', 'msg_1962@hotmail.com', NULL, 'New', '', 'Asking for someone to go to her house/Never sent the pictures', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1988, '2025-05-06', 'Website', 'Anabel Firvida', '(561) 907-2022', 'frvidaanabel@yahoo.com', NULL, 'In Progress', 'Patrick', 'Left a VM. $900 rebate - Texted her as well', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1989, '2025-05-06', 'WhatsApp', 'Mabe Alonzo', '(786) 542-3559', 'mabealazo22@yahoo.com', NULL, 'Sold', 'Patrick', '', '', '3995.00', '2025-08-22 13:43:44', '2025-08-22 14:00:40', 0, 0, NULL, NULL, NULL),
+(1990, '2025-05-06', 'WhatsApp', '', '', 'carolinapignatti@outlook.com', NULL, 'New', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1991, '2025-05-07', 'Trade Show', '', '(954) 261-7831', 'Geemondc@gmail.com', NULL, 'New', '', 'Call back/waiting for a friend to his first', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1992, '2025-05-08', 'Google Text', '', '(954) 829-8533', 'Kyleone@bellsouth.net', NULL, 'New', '', 'Her mom passed/Compatible', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1993, '2025-05-08', 'Website', 'Daisy Paez', '(786) 234-3082', 'daisypaez@live.com', NULL, 'New', '', 'No compatible/ Kim is doing the follow up', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1994, '2025-05-10', 'Google Text', 'Dayme', '(786) 333-6716', 'fabianpuig@comcast.net', NULL, 'In Progress', 'Patrick', 'Spoke to her... Coming this weekend to close the business', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1995, '2025-05-12', 'Google Text', '', '', 'at.trustfix@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1996, '2025-05-13', 'Google Text', 'fabijrusa', '(754) 231-6239', 'fabijrusa@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2695.00', '2025-08-22 13:43:44', '2025-08-22 13:59:27', 0, 0, NULL, NULL, NULL),
+(1997, '2025-05-13', 'Google Text', 'Michael Hein', '(502) 407-8272', 'indianochka29@gmail.com', NULL, 'Sold', 'Patrick', '', '', '3995.00', '2025-08-22 13:43:44', '2025-08-22 14:00:05', 0, 0, NULL, NULL, NULL),
+(1998, '2025-05-13', 'Website', 'Dianne Morello', '', 'dimorl1012@gmail.com', NULL, 'Not Service Area', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(1999, '2025-05-13', 'Website', 'adam wu', '(403) 554-3402', 'awu8888@gmail.com', NULL, 'New', '', 'Richmond/CALL BACK/', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2000, '2025-05-14', 'Website', 'Ricardo Day', '(954) 665-3982', 'rick.rd23@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2001, '2025-05-15', 'Google Text', '', '', 'sarymizrahi@yahoo.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2002, '2025-05-15', 'Website', 'Billy Hale', '(281) 798-7238', 'billyhale@gmail.com', NULL, 'New', '', 'Houston/Call back', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2003, '2025-05-15', 'Website', 'Thao Luu-Brinberg', '(561) 510-5857', 'thao@nusensuelle.com', '2025-10-01', 'In Progress', 'Kim', 'SPOKE TO HER... She will discuss with her husband tonight 01/30. TEXTED her on 08/01 to get an update', 'Need to call her by end of day 08/01. TEXTED HER on 08/20', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2004, '2025-05-17', 'Website', 'Rivka Uziel', '(347) 902-6006', 'ramcpipe@gmail.com', NULL, 'New', '', 'She wanted countertop only/Call back', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2005, '2025-05-18', 'Website', 'Shawn Hunt', '(949) 945-8505', 'pchshawn@gmail.com', NULL, 'New', '', '2 wines Fridges/2refrigerators/Call back/Pompano Beach', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2006, '2025-05-20', 'Website', 'Ricky Alietti', '(305) 992-6626', 'Rickyalietti@gmail.com', NULL, 'Not Interested', '', 'Realtor/client already fixed the kitchen', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2007, '2025-05-22', 'Website', 'Camila Gusmao', '(954) 821-2179', 'camila@decoratingden.com', NULL, 'Sold', 'Patrick', '', '', '2000.00', '2025-08-22 13:43:44', '2025-08-22 13:58:55', 0, 0, NULL, NULL, NULL),
+(2008, '2025-05-22', 'Website', 'Eduardo Cordova', '(786) 867-0785', 'cordovagroup@gmail.com', NULL, 'Not Interested', '', 'NOT interested change all the KITCHEN', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2009, '2025-05-23', 'Google Text', '', '(847) 707-4035', 'Nick@fredpaulgcservices.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2010, '2025-05-24', 'Website', 'Margarita Perez', '(305) 275-6744', 'jamillepe@yahoo.com', NULL, 'Not Interested', '', 'Does not want to spend any money., Will patch the Kitchen ONLY', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2011, '2025-05-27', 'Google Text', '', '(786) 897-5675', 'Casamirmiami@gmail.com', NULL, 'Not Interested', '', 'Material was cut', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2012, '2025-05-27', 'Google Text', 'Leiva', '(305) 613-2621', 'Leiva74@yahoo.com', NULL, 'Sold', 'Patrick', '', '', '2695.00', '2025-08-22 13:43:44', '2025-08-22 13:58:27', 0, 0, NULL, NULL, NULL),
+(2013, '2025-05-28', 'Google Text', 'James', '(703) 579-7708', 'Jameslaflamme@outlook.com', NULL, 'Sold', 'Patrick', '', '', '1995.00', '2025-08-22 13:43:44', '2025-08-22 13:57:57', 0, 0, NULL, NULL, NULL),
+(2014, '2025-05-28', 'Google Text', '', '(561) 809-5669', 'Friedmann.nicholas@gmail.com', NULL, 'Not Interested', '', 'No interested /Price', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2015, '2025-05-28', 'Google Text', '', '(954) 789-7558', 'RJ@AndersonLuxuryRentals.com', NULL, 'New', '', 'RV/Material only/ CALL NOW', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2016, '2025-05-30', 'Google Text', '', '(786) 757-3006', 'judicarlos@yahoo.com', NULL, 'New', '', 'Reviewing budget', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2017, '2025-05-30', 'Google Text', 'Maria', '(305) 924-4751', 'Maria@mariamorainteriors.com', NULL, 'New', '', 'Budget/Designer discount', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2018, '2025-05-30', 'Google Text', 'Paul', '(954) 709-2206', 'paulmgraham08@gmail.com', NULL, 'Not Interested', '', 'No Compatible/reimplancing the whole kitchen', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2019, '2025-05-31', 'Website', 'Jennifer Renfro', '', 'jmlowe83@yahoo.com', NULL, 'Not Service Area', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2020, '2025-05-31', 'Website', 'John Barr', '(305) 450-5837', 'johnbarrdvm@gnail.com', NULL, 'Sold', 'Patrick', 'SOLD', '', '2195.00', '2025-08-22 13:43:44', '2025-08-22 13:57:31', 0, 0, NULL, NULL, NULL),
+(2021, '2025-05-31', 'Website', 'Chris Smitn', '(931) 315-3652', 'wrapsmithtn@gmail.com', NULL, 'Not Interested', '', 'Open Franchise Tenness/ Spoke to him.. Too small town', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2022, '2025-06-02', 'Website', 'Yonadav Madar', '(786) 658-8375', 'yonadav.madar@gmail.com', NULL, 'Not Interested', '', 'Spoke to him. WIll speak to his client RBNB - $500 Rebate & Email', 'Last follow  up on 08/13 . Last rebate of $100 instead of $500 since promo is over - 08/13', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2023, '2025-06-02', 'WhatsApp', 'Maria Alejandra', '(407) 458-4483', 'mariale.oseguera10@gmail.com', NULL, 'Not Interested', '', 'Left a VM. $500 rebate - Texted her as well. SHE REPLIED TO REMOVE HER PHONE THE LIST', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2024, '2025-06-04', 'Google Text', 'Rebecca Hunter', '(561) 598-3165', 'rhunter@duck.com', '2027-08-27', 'In Progress', 'Kim', 'Spoke to Rebecca. $2000 rebate on project if they move now. I texted and Email as well\r\n\r\n08/25/2025 - Sent a text - She sent a text to wait 2 years for the project', '', '0.00', '2025-08-22 13:43:44', '2025-08-25 10:06:04', 0, 0, NULL, NULL, NULL),
+(2025, '2025-06-04', 'Google Text', 'Go Places - LA', '(516) 721-1881', 'Goplaces13@gmail.com', NULL, 'Not Interested', 'Patrick', 'Project in Long Beach California. Not interested text on 08/21', '', '1195.00', '2025-08-22 13:43:44', '2025-08-25 04:23:53', 0, 0, NULL, NULL, NULL),
+(2026, '2025-06-05', 'Google Text', 'LYNN - NJ', '(401) 258-3511', 'lyndsley@ncpsmd.com', NULL, 'Sold', 'Patrick', 'NJ Project - Clinic', '', '12995.00', '2025-08-22 13:43:44', '2025-08-22 13:57:07', 0, 0, NULL, NULL, NULL),
+(2027, '2025-06-05', 'Google Text', 'Akbar Jumabhoy', '(510) 566-1120', 'akbarjumabhoy@gmail.com', '2025-09-03', 'In Progress', 'Kim', 'San Francisco Project\r\n\r\n08/25/2025 - Sent a text - Any update?', '', '0.00', '2025-08-22 13:43:44', '2025-08-25 09:51:25', 0, 0, NULL, NULL, NULL),
+(2028, '2025-06-05', 'Google Text', '', '', 'luis@blueskydesigncorp.com', NULL, 'Not Interested', '', 'Client decided to do a NEW KITCHEN', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2029, '2025-06-05', 'Google Text', 'Keisha', '(903) 413-5733', 'tamarrhooms@yahoo.com', NULL, 'Not Interested', 'Patrick', 'Left a VM. $900 rebate - Texted her as well. Too expensive reply', '', '4995.00', '2025-08-22 13:43:44', '2025-08-25 04:50:22', 0, 0, NULL, NULL, NULL),
+(2030, '2025-06-05', 'Google Text', 'Masha', '(857) 222-3367', 'Mj8495@yahoo.com', '2025-09-16', 'In Progress', 'Kim', 'Left a VM. $400 rebate - SPOKE to her 08/01. She is coming tomorrow showroom\r\n\r\n08/25/2025 - Sent a text - Are you still thinking about changing the color of your kitchen?', 'MARSHA is coming at showroom tomorrow 08/02. She will give me an answer on Thursday', '2295.00', '2025-08-22 13:43:44', '2025-08-25 09:58:06', 0, 0, NULL, NULL, NULL),
+(2031, '2025-06-06', 'Google Text', 'VICKY RAY', '(305) 505-9096', 'Vrayestudio@gmail.com', NULL, 'Not Interested', 'Patrick', 'Spoke to her. text and email $1000 rebate.\r\n\r\n08/25/2025 - Talked to client - NOT INTERESTED- Too Expensive even with the super discount I gave her few months ago', '', '4995.00', '2025-08-22 13:43:44', '2025-08-25 10:04:58', 0, 0, NULL, NULL, NULL),
+(2032, '2025-06-09', 'Google Text', '', '(786) 452-3311', 'rodolforondon.rr0275771@gmail.com', NULL, 'Not Interested', '', 'Spoke to him briefly., $800 rebate offer... Lets see', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2033, '2025-06-09', 'Google Text', 'Jenny Vega', '(305) 989-8368', 'jennyminvega@gmail.com', NULL, 'Not Interested', '', 'Spoke to her. text and email $1000 rebate.She is doing a full remodel finally', 'KIM NOTE', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2034, '2025-06-11', 'Google Text', 'Debbie', '(305) 332-5570', 'dismark93@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2495.00', '2025-08-22 13:43:44', '2025-08-22 13:56:30', 0, 0, NULL, NULL, NULL),
+(2035, '2025-06-12', 'Website', 'Leslie Binder', '(858) 722-4014', 'lesliebkix@gmail.com', NULL, 'New', '', 'SanDiego California', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2036, '2025-06-12', 'Website', 'Olu Adeniyi', '(403) 401-9999', 'olusegunjnr@gmail.com', NULL, 'New', '', 'Never sent the pictures', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL);
+INSERT INTO `leads` (`id`, `date_created`, `lead_origin`, `name`, `phone`, `email`, `next_followup_date`, `remarks`, `assigned_to`, `notes`, `additional_notes`, `project_amount`, `created_at`, `updated_at`, `deposit_paid`, `balance_paid`, `installation_date`, `assigned_installer`, `address`) VALUES
+(2037, '2025-06-12', 'Website', 'Natalia Cure', '(786) 582-4744', 'nataliacure@hotmail.com', NULL, 'Sold', 'Patrick', '', '', '2995.00', '2025-08-22 13:43:44', '2025-08-22 13:55:53', 0, 0, NULL, NULL, NULL),
+(2038, '2025-06-13', 'Google Text', 'ezekiel', '(954) 394-6185', 'ezekielgod7676@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2039, '2025-06-14', 'Google Text', '', '(916) 521-7995', 'nail.Steph.a@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2040, '2025-06-15', 'Website', 'Berenice Villanueva', '(626) 627-0987', 'bvcuba@gmail.com', '2025-09-25', 'New', 'Patrick', 'CALL NOW\n[Aug 28, 2025] Please followup on her, WARM LEAD! ', '', '0.00', '2025-08-22 13:43:44', '2025-08-27 17:50:33', 0, 0, NULL, NULL, NULL),
+(2041, '2025-06-15', 'Website', 'Tara Parry', '(503) 354-4786', 'taralparry@gmail.com', NULL, 'New', '', 'CALL NOW', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2042, '2025-06-16', 'Google Text', '', '(305) 519-8852', 'Bevone305@gmail.com', NULL, 'New', '', 'CALL NOW', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2043, '2025-06-16', 'Google Text', 'Cindy', '(973) 464-7663', 'Cinjack3@aol.com', NULL, 'Sold', '', '083G KITCHEN AND INFEEL BACKSPLASH', '', '5195.00', '2025-08-22 13:43:44', '2025-08-26 02:32:42', 1, 0, '2025-08-29', 'Brian', NULL),
+(2044, '2025-06-17', 'Referral', 'Flor Guevara', '(305) 215-2130', 'pincheflower@gmail.com', NULL, 'Sold', 'Patrick', '', '', '4995.00', '2025-08-22 13:43:44', '2025-08-22 13:54:31', 0, 0, NULL, NULL, NULL),
+(2045, '2025-06-17', 'Google Text', 'Justin', '(416) 271-1028', 'justin@chronicinktattoo.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2046, '2025-06-17', 'Google Text', 'Titiana', '(352) 281-0187', 'tatisantosmd@gmail.com', NULL, 'Sold', 'Patrick', '', '', '2895.00', '2025-08-22 13:43:44', '2025-08-22 13:54:51', 0, 0, NULL, NULL, NULL),
+(2047, '2025-06-17', 'Website', 'Bob Zhi Bao', '', 'zlbaoy@gmail.com', NULL, 'Not Service Area', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2048, '2025-06-18', 'Website', 'Becky Bennett', '', 'beckbenn99@gmail.com', NULL, 'Not Service Area', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2049, '2025-06-19', 'Google Text', 'Maria', '(929) 323-8980', 'malawi84@hotmail.com', NULL, 'Sold', 'Patrick', 'SOLD', '', '2295.00', '2025-08-22 13:43:44', '2025-08-22 13:53:58', 0, 0, NULL, NULL, NULL),
+(2050, '2025-06-19', 'Google Text', 'Jeffrey Stout', '(510) 589-7077', 'Chefstout99@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2051, '2025-06-19', 'Google Text', '', '(786) 237-8170', 'ioffe@myyahoo.com', NULL, 'New', '', 'It is a contractor so call back', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2052, '2025-06-20', 'Google Text', 'Alejandro', '(786) 759-2865', 'Dynamictrackers@gmail.com', NULL, 'New', '', 'CALL NOW', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2053, '2025-06-20', 'Google Text', 'Butch', '(913) 481-9817', 'Butch@exclusiveliving.net', NULL, 'New', '', 'CALL NOW', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2054, '2025-06-21', 'Google Text', '', '(657) 647-9186', 'shixuewen19971206@gmail.com', NULL, 'New', '', 'Irvine/California', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2055, '2025-06-21', 'Website', 'Joerg Flachowsky', '(917) 406-4210', 'jflachowsky@msn.com', NULL, 'New', '', 'CALL NOW', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2056, '2025-06-23', 'Google Text', 'MELISA', '(786) 287-6986', 'MelisaCuetara@gmail.com', NULL, 'Sold', 'Patrick', '', 'For her client Christina', '5495.00', '2025-08-22 13:43:44', '2025-08-22 13:53:41', 0, 0, NULL, NULL, NULL),
+(2057, '2025-06-24', 'Google Text', 'Rick Chen', '(651) 246-8940', 'Rick.Chen@elliman.com', NULL, 'New', '', 'CALL NOW', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2058, '2025-06-25', 'Google Text', 'Jason', '(917) 733-8645', 'Jasonasteinberg@yahoo.com', NULL, 'New', '', 'NY no part of the promotion', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2059, '2025-06-25', 'Google Text', 'Johanny Parra', '(305) 587-6133', 'Johannyparramd@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2060, '2025-06-25', 'Google Text', 'Sara', '(786) 836-0811', 'saragonzalezmo@gmail.com', '2025-09-04', 'In Progress', 'Kim', 'Offer -1000. and color change chat GPT\r\n\r\n08/25/2025 - Sent a text - ¿Todavía estás pensando en cambiar el color de tu cocina?', 'Texted her on 08/06 that promo is ending soon', '5995.00', '2025-08-22 13:43:44', '2025-08-25 09:56:14', 0, 0, NULL, NULL, NULL),
+(2061, '2025-06-25', 'Referral', 'Elisabete', 'Referral by Nina No ', 'rodrigues.ejr19@gmail.com', NULL, 'In Progress', 'Patrick', 'Send promotion via email', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2062, '2025-06-26', 'Google Text', 'Carmel', '(317) 755-8390', 'pmwalters4@gmail.com', NULL, 'Not Service Area', '', 'DIY Option only', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2063, '2025-06-26', 'Google Text', '', '(305) 343-1296', 'Cdcabreja@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2064, '2025-07-01', 'Google Text', '', '(786) 716-4766', 'contacto@miancaservices.com', NULL, 'Not Interested', '', 'GC and Installed a cheap vinyl', 'Jul-25', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2065, '2025-07-01', 'Website', 'Kiara Hill', '(347) 586-1367', 'khill732@gmail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2066, '2025-07-02', 'Google Text', 'doris johnson', '(404) 427-1624', 'dwjegi@gmail.com', '2025-08-29', 'In Progress', 'Patrick', 'I just called her and left a message... UNIT 603 diff than 4109.  DORIS JOHNSON - Aston Martin Building Miami for the end of August for a showroom visit. She is going on vacation for 2 weeks tomorrow - 08/31 follow up', 'CALL BACK for showroom visit 08/31', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2067, '2025-07-02', 'Google Text', '', '(305) 588-9969', 'J.packin@gmail.com', NULL, 'Not Interested', '', 'CALL NOW/no compatible', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2068, '2025-07-03', 'Google Text', '', '(312) 607-2113', 'Josh@olympusfinancial.co', '2025-09-01', 'In Progress', 'Kim', 'CALL NOW', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2069, '2025-07-03', 'Google Text', 'Lidya', '(305) 457-0701', 'lidya1@gmail.com', '2025-09-01', 'In Progress', 'Kim', 'CALL NOW/Half price', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2070, '2025-07-03', 'Website', 'Jenny Oldham', '', 'jenny.oldham@ymail.com', NULL, 'Not Interested', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2071, '2025-07-05', 'Google Text', '', '(919) 600-3270', 'rumy.kgp03@gmail.com', NULL, 'Not Service Area', '', 'Chicago, IL', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2072, '2025-07-06', 'Website', 'Jefflyn Brown', '(414) 388-2445', 'je_rn2010@yahoo.com', '2025-09-01', 'In Progress', 'Kim', 'No pictures/ no estimate', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2073, '2025-07-07', 'Google Text', 'Juan Salgado', '(570) 854-4972', 'jcsalgado@me.com', NULL, 'Sold', 'Patrick', 'Left a message on 07/30.. Hot lead. Spoke on 08/01 am', 'SPOKE TO HIM 08/01 . Wants to  move forward on Monday. Will connect with him over the weekend 08/02. HE MADE HIS DEPOSIT ON 08/04/2025', '3000.00', '2025-08-22 13:43:44', '2025-08-22 13:52:58', 0, 0, NULL, NULL, NULL),
+(2074, '2025-07-07', 'Google Text', '', '(305) 632-8803', 'Mendelfellig@gmail.com', NULL, 'Not Interested', '', 'Too expernsive/No compatible', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2075, '2025-07-07', 'Referral', 'Brandon White', '(850) 319-7043', 'white.brandon2013@gmail.com', NULL, 'Sold', 'Patrick', 'Talked to him and he will call back - $250 Rebate discount', 'She is coming at the showroom on SATURDAY  08/09/2025', '2495.00', '2025-08-22 13:43:44', '2025-08-22 13:53:13', 0, 0, NULL, NULL, NULL),
+(2076, '2025-07-09', 'Google Text', 'Cleide & Yorghi', '(786) 223-3600', 'cleidealgebra@gmail.com', NULL, 'Sold', 'Patrick', 'Left a VM and TEXT and email - 07/30 today', 'Meeting with Client ONSITE on 08/07/2025. I sent the new estimate on 08/07/25. SPOKE TO HIM on 08/08. Response on MONDAY 08/11. I texted him on 08/11 - VM & TExt on 08/13', '3495.00', '2025-08-22 13:43:44', '2025-08-22 13:52:38', 0, 0, NULL, NULL, NULL),
+(2077, '2025-07-10', 'Google Text', 'Kathleen M. Fahy', '(215) 901-2778', 'Kmfahy2011@gmail.com', '2025-09-01', 'In Progress', 'Kim', 'Philadelphia', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2078, '2025-07-10', 'Website', 'Allison', '(514) 419-5846', 'admin@lukehavekesdesign.com', NULL, 'Not Interested', 'Patrick', 'Left a VM and email to Luke. The Instalation is in NY but the work with us in the past in MTL', '', '0.00', '2025-08-22 13:43:44', '2025-08-25 11:35:02', 0, 0, NULL, NULL, NULL),
+(2079, '2025-07-11', 'Website', 'Martha Sandoval', '(553) 951-2599', 'marthamnazteca@hotmail.com', '2025-09-01', 'In Progress', 'Kim', 'Mexico project?', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2080, '2025-07-13', 'Website', 'Athela Aleta', '(808) 391-7222', 'athelathea@gmail.com', NULL, 'Not Service Area', '', 'forwarded to Canada Team', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2081, '2025-07-13', 'Website', 'Luis Pedroza', '(305) 890-3524', 'lpedroza7@gmail.com', NULL, 'In Progress', 'Kim', 'CALL NOW/ Thinking about the budget', 'SENT PROMO 15%', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2082, '2025-07-13', 'Website', 'Maria Agostini/Genny', '(305) 582-0547', 'gennyagostini@gmail.com', '2025-08-29', 'In Progress', 'Kim', 'CALL NOW/VERY HOT/ the Taupe color.', 'She wants to come to he showroom. I texted her on  08/06/2025. INVITED her on 08/15', '2195.00', '2025-08-22 13:43:44', '2025-08-25 06:32:09', 0, 0, NULL, NULL, NULL),
+(2083, '2025-07-14', 'Google Text', 'Barbara Robins', '(954) 254-6252', 'Sparky18971@juno.com', '2025-09-01', 'In Progress', 'Kim', 'CALL NOW/daugther estimate/ no compatible', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2084, '2025-07-15', 'Google Text', 'Jonise Frink', '(954) 559-1440', 'jonisefrink@yahoo.com', '2025-09-01', 'In Progress', 'Kim', 'CALL NOW/ Finance options/No Compatible', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2085, '2025-07-16', 'Google Text', 'Margaret', '(786) 669-1282', 'Margret.kasem@gmail.com', '2025-09-01', 'In Progress', 'Kim', '2 Bathrooms/', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2086, '2025-07-16', 'Google Text', 'Robson Prado Silva', '(954) 534-4903', 'Robpsilva@hotmail.com', '2025-09-01', 'In Progress', 'Kim', 'No compatible/ call and offer discount', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2087, '2025-07-17', 'Google Text', 'Vera Franceschi', '(954) 854-0003', 'veruzk78@gmail.com', NULL, 'Sold', '', 'She came to the showroom/waiting for answer', 'Friend of Lina. Got divorse and waiting for money to do the project', '2895.00', '2025-08-22 13:43:44', '2025-08-25 10:01:36', 1, 0, '2025-09-02', 'Angel', NULL),
+(2088, '2025-07-17', 'Website', 'Joanne Post', '9178818414', 'jwexler54@gmail.com', NULL, 'Sold', 'Patrick', 'samples underway / delivered  - NJ', 'INSTALLATION AFTER  08/21', '3495.00', '2025-08-22 13:43:44', '2025-08-22 13:52:15', 0, 0, NULL, NULL, NULL),
+(2089, '2025-07-18', 'Website', 'Rana Abouregeila', '(289) 772-5559', 'rana_reg@hotmail.com', '2025-09-01', 'In Progress', 'Kim', 'to Canada Team', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2090, '2025-07-19', 'Website', 'Kelly Ballance', '(503) 939-7825', 'kellyballance@yahoo.com', NULL, 'Not Service Area', '', 'Portland/CA', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2091, '2025-07-20', 'Website', 'Diana Blackman', '305) 797-1017', 'blacd17@gmail.com', '2025-09-01', 'In Progress', 'Kim', 'CALL NOW/Came to the showroom/countertop', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2092, '2025-07-20', 'Website', 'Priscila Ramirez', '(954) 303-7066', 'ramirezcallejaspriscila1979@gmail.com', '2025-09-01', 'In Progress', 'Kim', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2093, '2025-07-21', 'Website', 'Allan Yeung', '(650) 309-9668', 'allan.yeung@gmail.com', NULL, 'Not Service Area', '', 'Shaker but  no one to do the work in San Carlos', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2094, '2025-07-22', 'Website', 'Raul Leoni', '(954) 805-9838', 'info@theyachtingagency.com', '2025-09-03', 'In Progress', 'Kim', 'Need to visit the BOAT in Pompano - 5510 Bayview Dr Fort laudardale\r\n\r\n08/25/2025 - Sent a text - did you wrap your boat or not yet... Budget of 10K and he had 4K budget so I will not visit the boat if he is not serious.\r\nTEXT REPLY: \r\nOk, so look, as much as I would like to help you on your project, last time we were way off in terms of budget, so from what I saw you were more than $10,000 and you had a quote of $4,000, so if you haven\'t pulled the trigger for the $4,000, I don\'t think we\'re going to be able to work on this project if you are expecting $4,000. simply let me know if you have the 10k budget and then i will make my visit. \r\nKim to follow up in Sept', '', '0.00', '2025-08-22 13:43:44', '2025-08-25 12:09:26', 0, 0, NULL, NULL, NULL),
+(2095, '2025-07-23', 'Instagram', '', '(305) 380-6053', 'Netgain1993@gmail.com', '2025-09-01', 'In Progress', 'Kim', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2096, '2025-07-23', 'Google Text', 'DEEPAK KHULLAR', '(929) 408-9012', 'deepakkhullar@mac.com', '2025-09-01', 'In Progress', 'Kim', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2097, '2025-07-23', 'Website', 'Wezven Dorvil', '(908) 356-2778', 'dwezven@gmail.com', NULL, 'Not Service Area', '', '$1295 for material + gave he a price of $2000 for installation + $1000 extra for countertops... WANTED have a discount', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2098, '2025-07-23', 'Website', 'Evelyn Thompson Greene', '(347) 238-9229', 'thompsonhoyt@hotmail.com', NULL, 'Not Compatible', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2099, '2025-07-24', 'Google Text', 'William Priest', '(954) 817-8135', 'William@williampriest.com', '2025-09-24', 'In Progress', 'Kim', 'Left a text & Email message, Rebate of $500 if they do the project now. Spoke to him. Client wants to over do it but they will convince him to move NOW\r\n\r\n08/25/2025 - Talked to client - William told me that the client HAS NOT done anything yet... Follow up in 20 days to see where they are at', 'TEXTED HIM 08/01. I asked him if YES or NO we should plan his installation? He texted me on 08/04. Wednesday 08/06 he should get an update. Left him a text messge. Promo is ending soon. HE TEXTED ME. CLIENT DOES NOT GET BACK TO HIM... SO follow up in 3 weeks', '0.00', '2025-08-22 13:43:44', '2025-08-25 12:33:17', 0, 0, NULL, NULL, NULL),
+(2100, '2025-07-24', 'Google Text', 'Vijay', '(407) 492-1880', 'Vijay@dattanicorp.com', '2025-09-01', 'In Progress', 'Kim', 'ORLANDO - Referal from Kunal. Offer the DYI option for $1000 instead of 4K', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2101, '2025-07-24', 'Google Text', 'Jennifer - NJ', '(973) 393-1282', 'jennms8@hotmail.com', NULL, 'Not Compatible', '', 'NJ - PLEASE DONT FOLLOW UP', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2102, '2025-07-24', 'Website', 'Robert Byers', '713-399-3580', 'info@rivianafoodsinc.com', '2025-09-01', 'In Progress', 'Kim', 'TEXAS project. Spoke to Robert. He will send me the pictures', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2103, '2025-07-24', 'Website', 'Emmmanuel Ligeralde', '(858) 336-9375', 'ppligeralde@gmail.com', '2025-09-01', 'In Progress', 'Kim', 'San Diego', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2104, '2025-07-25', 'Google Text', 'Allan Mark Cohen', '(561) 451-5247', 'Allanmarkcohen@gmail.com', '2025-09-01', 'In Progress', 'Kim', 'GC - Gave a $2000 rebate and NOT interessed', 'Finally got back to me... MAYBE wrap can be an option', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2105, '2025-07-25', 'Google Text', 'Jerelin', '(347) 200-1016', 'Jerelinarvaez40@gmail.com', '2025-09-01', 'In Progress', 'Kim', 'NOT PART OF PROMO - NY Midtown', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2106, '2025-07-22', 'Website', 'kathy lious', '(989) 672-2798', 'fphelps145@aol.com', NULL, 'Not Compatible', '', 'invalid email.. Probably FAKE', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2107, '2025-07-28', 'Google Text', 'Izabel', '(718) 290-0545', 'Izabelfrauche@gmail.com', '2025-09-10', 'In Progress', 'Kim', 'Spoke to her, Rebate of $500 if they do the project now... NOT READY for the project. Follow up in few weeks BUT WITHOUT THE PROMO price\r\n\r\n08/26/2025 - Sent a text - Good morning. Sorry for not following up before but I was wondering if you still wanted to change the color of your kitchen?', 'SPOKE to her 08/01... Not moving forward for now but follow up in 1 month - 09/01', '3995.00', '2025-08-22 13:43:44', '2025-08-26 02:32:01', 0, 0, NULL, NULL, NULL),
+(2108, '2025-07-28', 'Google Text', 'Danette Davis', '(772) 418-3649', 'danettedavis73@yahoo.com', NULL, 'Sold', '', 'Spoke to her. $200 rebate yet as this is a very small project', '', '1395.00', '2025-08-22 13:43:44', '2025-08-25 12:36:07', 1, 1, '2025-09-01', 'Not Assigned', NULL),
+(2109, '2025-07-28', 'Website', 'Larry Amos', '(321) 947-5995', 'lamos72@aol.com', NULL, 'Not Service Area', '', '', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2110, '2025-07-28', 'Google Text', 'Armando Cacalieri', '', 'acavalieri@fededesignusa.com', NULL, 'Not Interested', '', 'Meeting with him CARBONELL on 0/28/2025. He works for FEDE - APT 2404 quote', '', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2111, '2025-07-28', 'Google Text', 'Jackielyn Sabangan', '(907) 942-4021', 'jackielyn.sabangan@gmail.com', '2025-09-01', 'In Progress', 'Kim', 'SAN DIEGO INSTALL', 'KIM follow up... NOT ME', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2112, '2025-07-29', 'Google Text', 'Maria realtor for Elizabeth', '(954) 865-2274', 'jokhleila20@gmail.com', '2025-09-01', 'In Progress', 'Kim', 'Client of Maria Denise Realtor - Island', 'TEXTED Maria via my cell phone 08/01. She is coming back on Monday 08/04. She will probably going to do the island. I texted Her on 08/07. TEXTED her on 08/15. This will be the last follow up. KIM to follow up', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2113, '2025-07-29', 'Google Text', 'Jane Jesterand', '(786) 282-1182', 'Jesterandjane@gmail.com', NULL, 'Not Interested', '', 'Not interested. Wanted to change all cabinets but might be interested in DIY', 'We sent your website to her. Let’s wait a little bit. The project will be after tenant leaves. Sept 1', '0.00', '2025-08-22 13:43:44', '2025-08-22 13:43:44', 0, 0, NULL, NULL, NULL),
+(2114, '2025-07-29', 'Google Text', 'Federico', '305.905.1177', 'fteran@fededesignusa.com', '2025-09-08', 'In Progress', 'Kim', 'Follow up for unit 3102 Carbonell and 2 other units in ASTON MARTIN. TEXTED him again on 08/01 for 3102, 2404 and Aston 4109\r\n\r\n8/24/2025 - Sent a text - Last text from me. Kim will follow up each 15 days', 'TEXTED HIM 08/01 . I need an answer on 3102 / 2404 and Aston Martin 4109. He got back to me and no answer yet. I texted him on 08/06. Spoke by text on 08/07.. Looking for the quote Unit 2404. I called on 08/08 and he texted me that he will get back to me later... TEXTED him on 08/11. Texted on 08/13. TEXTED him on 08/15. HE REPLIED on 08/15. NO NEWS', '4495.00', '2025-08-22 13:43:44', '2025-08-25 09:40:03', 0, 0, NULL, NULL, NULL),
+(2115, '2025-07-29', 'Website', 'Evan Schechtman', '(856) 938-9213', 'eschechtman34@gmail.com', NULL, 'Not Interested', '', 'SPoke to him on the phone 07/30. Will do a follow up by PHONE on 08/01', 'TEXTED HIM 08/01. I invited him at the showroom this weekend. Invite for this saturday at 11am', '0.00', '2025-08-22 13:43:44', '2025-08-25 11:34:56', 0, 0, NULL, NULL, NULL),
+(2116, '2025-07-29', 'Referral', 'Stuart', '(305) 502-1717', 'Sdrossner@gmail.com', NULL, 'Not Interested', 'Patrick', 'REALTOR - needed to move quickly in Aventura. NEED TO CALL BY PHONE on 08/01\r\nHe blasted me because I did not want to do a small job when he referred me a client', 'TEXTED HIM 08/01. I asked him if YES or NO we should plan his installation? GAVE ME A REFERAL with LUIS. I texted him on 08/08 to see if any update. I texted him', '0.00', '2025-08-22 13:43:45', '2025-08-25 11:38:50', 0, 0, NULL, NULL, NULL),
+(2117, '2025-07-29', 'Google Text', 'Paul', '(954) 663-3951', 'Dancarol23@gmail.com', '2025-08-29', 'In Progress', 'Kim', 'SPoke to him on the phone 07/29. Wants to come to showroom. Will do a follow up by PHONE on 08/01\r\n\r\n8/25/2025 - Sent a text', 'TEXTED HIM 08/01. I invited him at the showroom this weekend. VM & texyed on 08/13. I sent him my final TEXT on 08/15. NO MORE FOLLOW UP from Patrick. HE replied on 08/15... KIM to follow up from now on', '0.00', '2025-08-22 13:43:45', '2025-08-25 06:39:31', 0, 0, NULL, NULL, NULL),
+(2118, '2025-07-30', 'Website', 'oscar contreras', '(702) 591-2996', 'lasvegasomar@aol.com', NULL, 'Not Service Area', '', '', '', '0.00', '2025-08-22 13:43:45', '2025-08-22 13:43:45', 0, 0, NULL, NULL, NULL),
+(2119, '2025-07-30', 'Google Text', '', '(424) 470-4427', 'Contact@novellebuildgroup.com', NULL, 'Not Interested', '', 'sent a follow up text this morning..Morrons. Stop following', 'Cooper city install. KIM NOTE', '0.00', '2025-08-22 13:43:45', '2025-08-22 13:43:45', 0, 0, NULL, NULL, NULL),
+(2120, '2025-07-30', 'Google Text', 'Marsha Bromberg', '(305) 972-9826', 'maya@gmail.com', NULL, 'Not Interested', '', 'I spoke to Marsha on 07/30. She is doing renovation. Need to contact her by PHONE on 08/01', 'She WILL REDO HER KITCHEN', '0.00', '2025-08-22 13:43:45', '2025-08-22 13:43:45', 0, 0, NULL, NULL, NULL),
+(2121, '2025-07-31', 'Website', 'Antonio Grant', '(254) 317-6093', 'TONIOGRANT@HOTmail.com', NULL, 'Sold', '', 'Request from 2024 but the price was higher at the time... 400 more. He would like to move forward\r\nWMK-061 and WMK-083G for cabinets', 'SPOKE to him  08/01...HE is coming at showroom 08/04 at 3h30pm. 061 for countertops and white on cabinets', '4895.00', '2025-08-22 13:43:45', '2025-08-25 06:19:54', 1, 0, '2025-09-04', 'Brian', NULL),
+(2122, '2025-07-31', 'Google Text', 'Christie Marie', '(305) 281-0636', 'Christiemarie1103@gmail.com', '2025-09-01', 'In Progress', 'Kim', 'sent a follow up text this morning', 'Only appliance ... Kim follow ups', '0.00', '2025-08-22 13:43:45', '2025-08-22 13:43:45', 0, 0, NULL, NULL, NULL),
+(2123, '2025-07-31', 'Google Text', 'Emmanuel) -Antony', '(305) 804-8093', 'orbitenterprizes@yahoo.com', NULL, 'Sold', 'Patrick', 'MONDAY 08/03 Installation', '', '4895.00', '2025-08-22 13:43:45', '2025-08-25 02:40:20', 1, 1, '2025-09-01', NULL, NULL),
+(2124, '2025-08-12', 'Google Text', 'Ashley Gray', '(954) 703-9983', 'Ashleygray1040@gmail.com', NULL, 'Not Interested', '', 'sent a follow up text and email', 'She replied. I told her to come the showroom before making any decision - 08/13. INVITED her at showroom 08/15. ON 08/18. TEXTED her that we are ready to help her NOW', '0.00', '2025-08-22 13:43:45', '2025-08-22 13:43:45', 0, 0, NULL, NULL, NULL),
+(2125, '2025-08-13', 'Website', 'Christopher Blasco', '(514) 576-7153', 'chrisblasco001@gmail.com', NULL, 'Not Service Area', '', '', '', '0.00', '2025-08-22 13:43:45', '2025-08-22 13:43:45', 0, 0, NULL, NULL, NULL),
+(2126, '2025-08-16', 'Google Text', 'Shane', '(818) 941-0481', 'shane.adauta12@gmail.com', NULL, 'Not Interested', '', 'sent a follow up text and email', '', '0.00', '2025-08-22 13:43:45', '2025-08-22 13:43:45', 0, 0, NULL, NULL, NULL),
+(2676, '2025-08-25', 'Google Text', 'Lina Fraifeld', '(818) 927-5628', 'Linafraifeld20@gmail.com', '2025-09-01', 'In Progress', 'Patrick', '8/25/2025 - Sent a text\r\nI asked her to call me to review project\r\n\r\n08/26/2025 - She will get back to us next week.', '', '6290.00', '2025-08-25 03:55:04', '2025-08-26 09:33:03', 0, 0, NULL, NULL, NULL),
+(2677, '2025-08-23', 'Website', 'James Wise', '(551) 202-1452', 'info@newlinecatering.com', '2025-08-27', 'New', 'Patrick', '(551) 202-1452 - Are they in NJ or NY or where?\r\n\r\n08/26/2025 - Sent a text , confirming where is he located. Confirmed, client is NJ. Patrick will call him.', '', '0.00', '2025-08-25 04:06:49', '2025-08-26 04:52:19', 0, 0, NULL, NULL, NULL),
+(2678, '2025-08-25', 'Google Text', 'Elise egozi', '(305) 469-4048', 'Eliseegozi@homail.com', '2025-09-05', 'In Progress', 'Kim', '08/26/2025 - Sent a text and Email\n[Aug 27, 2025] Sent a text message', '', '1295.00', '2025-08-25 06:36:21', '2025-08-27 13:12:44', 0, 0, NULL, NULL, NULL),
+(2679, '2025-08-25', 'Google Text', 'Lizbeth Castle', '(954) 675-5227', 'Lizbethcastle@integrityanalysis.net', '2025-08-27', 'New', 'Patrick', 'Hello, hope you are doing well. We would like to book an appointment to come into your showroom to look at some samples. Please let me know you availability.\r\n-Lizbeth Castle\r\n\r\n08/25/2025 - Sent a text - Invited her tommorrow or wednesday\r\nReplied on zero 826 she’s coming tomorrow on the 27th at 2pm', '', '2995.00', '2025-08-25 11:33:31', '2025-08-26 13:13:48', 0, 0, NULL, NULL, NULL),
+(2680, '2025-08-25', 'Google Text', 'Josey', '(813) 335-1766', 'Josey@thebaezcollective.com', '2025-09-03', 'In Progress', 'Patrick', 'Repairs - (813) 335-1766\r\nJosey@thebaezcollective.com\r\n\r\nNew project for existing client (Previous: No previous notes)', '', '0.00', '2025-08-25 11:53:19', '2025-08-25 11:53:48', 0, 0, NULL, NULL, NULL),
+(2681, '2025-08-25', 'Google Text', 'No name for now', '(305) 731-9401', '', '2025-08-29', 'New', 'Kim', 'IGood afternoon, this is Patrick from WrapMyKitchen. I just left you a Voicemail. Could you please text me your email address so I can send you the estimate?\r\n\r\n08/26/2025 - Sent a text', '', '3495.00', '2025-08-25 12:14:12', '2025-08-26 03:58:02', 0, 0, NULL, NULL, NULL),
+(2682, '2025-08-25', 'Website', 'Arusha Sav', '(647) 336-0150', 'arusha@phoenixgreydesign.com', NULL, 'Not Service Area', 'Kim', 'No carpenter', '', '0.00', '2025-08-25 12:15:18', '2025-08-25 12:15:18', 0, 0, NULL, NULL, NULL),
+(2683, '2025-08-25', 'Referral', 'Marcial Paez - Business card in door', '(954) 642-6855', 'hi.mcabinets@gmail.com', '2025-09-10', 'New', 'Kim', 'DYI option ($895) or us installing at 1200', '', '2195.00', '2025-08-25 12:18:24', '2025-08-26 04:14:50', 0, 0, NULL, NULL, NULL),
+(2684, '2025-08-25', 'Google Text', 'Cesar - Commercial Display', '(786) 395-2800', '', '2025-09-05', 'New', 'Kim', 'See haymarket\n[Aug 27, 2025] Sent a text message', '', '7995.00', '2025-08-25 12:22:49', '2025-08-27 13:13:14', 0, 0, NULL, NULL, NULL),
+(2685, '2025-08-25', 'Google Text', 'Diana', '(305) 797-1017', '', '2025-09-05', 'New', 'Kim', 'Give her a discount in July... Nothing every since that\n[Aug 27, 2025] Sent a text message', '', '2695.00', '2025-08-25 12:26:05', '2025-08-27 13:13:40', 0, 0, NULL, NULL, NULL),
+(2686, '2025-08-26', 'Google Text', 'C Wasiela', '(954) 305-2408', 'C.wasiela@outlook.com', '2025-08-29', 'In Progress', 'Kim', '[Aug 27, 2025] Sent a text message', '', '4995.00', '2025-08-26 03:50:54', '2025-08-27 13:12:13', 0, 0, NULL, NULL, NULL),
+(2687, '2025-08-26', 'Referral', 'Greg and Kim Heath', '(708) 612-0136', 'kheath3362@gmail.com', NULL, 'Not Interested', 'Kim', 'New project for existing client (Previous: No previous notes)\r\nTC furniture\r\ntoo expensive finally', '', '2995.00', '2025-08-26 06:04:35', '2025-08-26 12:52:46', 0, 0, NULL, NULL, NULL),
+(2688, '2025-08-26', 'Google Text', 'Greg and Kim Heath - Furniture', '(708) 612-0136', 'kheath3362@gmail.com', NULL, 'Not Interested', 'Kim', 'New project for existing client (Previous: New project for existing client (Previous: No previous notes)\r\nTC furniture)\r\n\r\n08/26/2025 - Sent a text - NO go... Too much', '', '2995.00', '2025-08-26 06:06:23', '2025-08-26 06:27:35', 0, 0, NULL, NULL, NULL),
+(2689, '2025-08-26', 'Google Text', 'Felippe - Orlando Dental Clinic', '(407) 219-6178', '', '2025-08-28', 'New', 'Kim', 'This is a job in Orlando, so I\'m just fishing for price because I\'m not sure if I\'m interested, so I put the price very high. It\'s a commercial project', '', '19995.00', '2025-08-26 13:09:52', '2025-08-26 13:09:52', 0, 0, NULL, NULL, NULL),
+(2690, '2025-08-26', 'Google Text', 'Chris - GC around Stuart', '(631) 774-5048', '', '2025-11-19', 'New', 'Patrick', 'This is a GC that called me this morning, and he\'s in Stewart, Florida, and he wants to have the price for one of his clients to rephrase the question. He said that he\'s managing over 2,500 units.\r\n\r\n08/26/2025 - Sent a text - Not interested but I left my foot in the door for other project.... WIll follow with him in 3 months', '', '0.00', '2025-08-26 13:11:58', '2025-08-26 13:36:55', 0, 0, NULL, NULL, NULL),
+(2694, '2025-08-27', 'Facebook', 'Beth Shelhamer', '(813) 528-1250', 'philskawngur@gmail.com', '2025-08-28', 'Sold', 'Kim', '[8/27/2025] Installation completed and moved to completed projects.\n[Aug 27, 2025] Sent an email\n[Aug 28, 2025] Assigned installers: Angel\n[Aug 28, 2025] Selected colors: WMK-005\n[Aug 28, 2025] Assigned installers: Angel\n[Aug 28, 2025] Selected colors: WMK-005', '[8/27/2025] Installation completed and moved to completed projects.', '0.00', '2025-08-27 11:54:08', '2025-08-27 19:17:06', 1, 0, '2025-08-28', 'angel', NULL),
+(2695, '2025-08-27', 'Facebook', 'This is a test', '800800800', 'thisisatest@gmail.com', '2025-08-27', 'In Progress', 'Kim', NULL, NULL, '0.00', '2025-08-27 18:53:12', '2025-08-27 18:53:12', 0, 0, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `repair_requests`
+--
+
+CREATE TABLE `repair_requests` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) DEFAULT NULL,
+  `customer_name` varchar(255) NOT NULL,
+  `phone` varchar(20) NOT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `address` text NOT NULL,
+  `issue_description` text NOT NULL,
+  `priority` enum('Low','Medium','High','Urgent') DEFAULT 'Medium',
+  `status` enum('Pending','In Progress','Completed','Cancelled') DEFAULT 'Pending',
+  `date_reported` date NOT NULL,
+  `completion_date` date DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `repair_requests`
+--
+
+INSERT INTO `repair_requests` (`id`, `project_id`, `customer_name`, `phone`, `email`, `address`, `issue_description`, `priority`, `status`, `date_reported`, `completion_date`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 1962, 'Cleide', '(786) 223-3600', 'services@algebra.net', '3155 Lazy River Ln', 'testing', 'High', 'In Progress', '2025-08-27', NULL, '', '2025-08-27 13:38:46', '2025-08-27 08:01:50');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sample_booklets`
+--
+
+CREATE TABLE `sample_booklets` (
+  `id` int(11) NOT NULL,
+  `order_number` varchar(100) NOT NULL,
+  `customer_name` varchar(255) NOT NULL,
+  `address` text NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `phone` varchar(20) NOT NULL,
+  `product_type` enum('Demo Kit & Sample Booklet','Sample Booklet Only','Trial Kit','Demo Kit Only') NOT NULL,
+  `tracking_number` varchar(100) DEFAULT NULL,
+  `status` enum('Pending','Shipped','Delivered','Refunded') DEFAULT 'Pending',
+  `date_ordered` date NOT NULL,
+  `date_shipped` date DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `sample_booklets`
+--
+
+INSERT INTO `sample_booklets` (`id`, `order_number`, `customer_name`, `address`, `email`, `phone`, `product_type`, `tracking_number`, `status`, `date_ordered`, `date_shipped`, `notes`, `created_at`, `updated_at`) VALUES
+(1, '21507', 'Joanne Post', '9 Marquis Ct\r\nEdgewater, NJ 07020\r\nUnited States (US)', 'joannepost54@gmail.com', '(917) 881-8414', 'Sample Booklet Only', '9505514509015206843796', 'Delivered', '2025-07-18', '2025-07-25', NULL, '2025-08-23 14:08:52', '2025-08-27 13:10:40'),
+(2, '21524', 'Alma de la Rosa', '1519 39th Avenue\r\nSan Francisco, CA 94122\r\nUnited States (US)', 'Xtsonnytx@gmail.com', '(415) 992-2274', 'Sample Booklet Only', NULL, 'Refunded', '2025-08-23', NULL, 'Confirming if the doors are compatible or not.\r\nDOORS NOT COMPATIBLE... NEed to cancel the order', '2025-08-23 14:18:36', '2025-08-27 13:18:12');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `smtp_settings`
+--
+
+CREATE TABLE `smtp_settings` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `host` varchar(255) NOT NULL,
+  `port` int(11) NOT NULL,
+  `secure` tinyint(1) DEFAULT 0,
+  `username` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `from_email` varchar(255) NOT NULL,
+  `from_name` varchar(100) NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `full_name` varchar(100) NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `role` enum('installer','sales_rep','manager','owner','admin','administrator') NOT NULL DEFAULT 'sales_rep',
+  `permissions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`permissions`)),
+  `last_login` timestamp NULL DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `username`, `password`, `full_name`, `email`, `role`, `permissions`, `last_login`, `is_active`, `created_at`) VALUES
+(1, 'kim', 'password', 'Kim', 'kim@company.com', 'admin', '[\"dashboard\", \"leads\", \"followups\", \"installations\", \"installers\", \"sample-booklets\", \"reports\", \"admin\", \"user-management\", \"system-settings\"]', NULL, 1, '2025-08-23 05:19:38'),
+(2, 'patrick', '$2y$10$DegK8bybk/cka6yi.amuReqLUp7BqjUV1Y6vA2tXxUG1GVq2l6S/2', 'Patrick Henri', 'infofloridawmk@gmail.com', 'owner', '[\"dashboard\",\"leads\",\"followups\",\"installations\",\"installers\",\"sample-booklets\",\"reports\",\"admin\",\"user-management\"]', NULL, 1, '2025-08-23 05:19:38'),
+(3, 'lina', '$2y$10$oHF1gkMgHm2B8r0/M/UHkeF4WjNItsrHTNn2IFUzIKKVecC71VZMm', 'Lina ', 'lina@company.com', 'owner', '[\"dashboard\",\"leads\",\"followups\",\"installations\",\"installers\",\"sample-booklets\",\"reports\",\"admin\",\"user-management\"]', NULL, 1, '2025-08-23 05:19:39'),
+(7, 'testing', 'password', 'testing', NULL, 'installer', '[\"dashboard\",\"installations\"]', NULL, 1, '2025-08-27 17:26:51'),
+(6, 'test', 'password', 'test', NULL, 'installer', '[]', NULL, 1, '2025-08-27 16:58:23');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_sessions`
+--
+
+CREATE TABLE `user_sessions` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `session_id` varchar(128) NOT NULL,
+  `ip_address` varchar(45) NOT NULL,
+  `user_agent` text DEFAULT NULL,
+  `login_time` timestamp NOT NULL DEFAULT current_timestamp(),
+  `last_activity` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `is_active` tinyint(1) DEFAULT 1,
+  `logout_time` timestamp NULL DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `user_sessions`
+--
+
+INSERT INTO `user_sessions` (`id`, `user_id`, `session_id`, `ip_address`, `user_agent`, `login_time`, `last_activity`, `is_active`, `logout_time`) VALUES
+(1, 1, '853gg0lojhaj9i2tdtvvepnatr', '136.158.17.162', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36', '2025-08-23 14:45:15', '2025-08-25 12:45:36', 0, '2025-08-25 12:45:36'),
+(2, 1, 'rk8g4a371184cit5viotmk6n94', '136.158.17.190', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36', '2025-08-24 05:50:47', '2025-08-25 12:45:36', 0, '2025-08-25 12:45:36'),
+(3, 2, '1ctrsuae6e6b5cqkgprmvhrqi1', '159.250.156.107', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15', '2025-08-25 02:44:54', '2025-08-26 06:18:52', 0, '2025-08-26 06:18:52'),
+(4, 1, 'ts7ne2jgd6otlmh4ph5ue0kcbc', '136.158.17.190', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36', '2025-08-25 03:04:50', '2025-08-25 12:45:37', 0, '2025-08-25 12:45:37'),
+(5, 2, 'crmoa090guavmn211o9hqftmp5', '174.48.156.34', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36', '2025-08-26 06:18:43', '2025-08-26 06:19:02', 0, '2025-08-26 06:19:02');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `wmk_colors`
+--
+
+CREATE TABLE `wmk_colors` (
+  `id` int(11) NOT NULL,
+  `code` varchar(20) NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `wmk_colors`
+--
+
+INSERT INTO `wmk_colors` (`id`, `code`, `name`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'WMK-005', 'WMK-005', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(2, 'WMK-006', 'WMK-006', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(3, 'WMK-008', 'WMK-008', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(4, 'WMK-009', 'WMK-009', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(5, 'WMK-013', 'WMK-013', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(6, 'WMK-014', 'WMK-014', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(7, 'WMK-015', 'WMK-015', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(8, 'WMK-019', 'WMK-019', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(9, 'WMK-020', 'WMK-020', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(10, 'WMK-021', 'WMK-021', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(11, 'WMK-022', 'WMK-022', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(12, 'WMK-023', 'WMK-023', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(13, 'WMK-024', 'WMK-024', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(14, 'WMK-025', 'WMK-025', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(15, 'WMK-026', 'WMK-026', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(16, 'WMK-027', 'WMK-027', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(18, 'WMK-041', 'WMK-041', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(19, 'WMK-042', 'WMK-042', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(20, 'WMK-043', 'WMK-043', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(21, 'WMK-044', 'WMK-044', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(22, 'WMK-045-B', 'WMK-045-B', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(23, 'WMK-049', 'WMK-049', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(24, 'WMK-050', 'WMK-050', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(25, 'WMK-051', 'WMK-051', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(26, 'WMK-056', 'WMK-056', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(27, 'WMK-057', 'WMK-057', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(28, 'WMK-058', 'WMK-058', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(29, 'WMK-059', 'WMK-059', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(30, 'WMK-060', 'WMK-060', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(31, 'WMK-061', 'WMK-061', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(32, 'WMK-065', 'WMK-065', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(33, 'WMK-071', 'WMK-071', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(34, 'WMK-080', 'WMK-080', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(35, 'WMK-083', 'WMK-083', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(36, 'WMK-089', 'WMK-089', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33'),
+(37, 'WMK-095', 'WMK-095', NULL, 1, '2025-08-27 18:45:33', '2025-08-27 18:45:33');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `__drizzle_migrations`
+--
+
+CREATE TABLE `__drizzle_migrations` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `hash` text NOT NULL,
+  `created_at` bigint(20) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `completed_projects`
+--
+ALTER TABLE `completed_projects`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_completion_date` (`completion_date`),
+  ADD KEY `idx_customer_name` (`customer_name`),
+  ADD KEY `idx_assigned_installer` (`assigned_installer`),
+  ADD KEY `idx_lead_id` (`lead_id`),
+  ADD KEY `idx_completed_projects_customer` (`customer_name`),
+  ADD KEY `idx_completed_projects_completion` (`completion_date`),
+  ADD KEY `idx_completed_projects_installer` (`assigned_installer`);
+
+--
+-- Indexes for table `email_templates`
+--
+ALTER TABLE `email_templates`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `installers`
+--
+ALTER TABLE `installers`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_installer_name` (`name`),
+  ADD KEY `idx_installer_status` (`status`);
+
+--
+-- Indexes for table `leads`
+--
+ALTER TABLE `leads`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `repair_requests`
+--
+ALTER TABLE `repair_requests`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `project_id` (`project_id`);
+
+--
+-- Indexes for table `sample_booklets`
+--
+ALTER TABLE `sample_booklets`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `order_number` (`order_number`),
+  ADD KEY `idx_order_number` (`order_number`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_date_ordered` (`date_ordered`);
+
+--
+-- Indexes for table `smtp_settings`
+--
+ALTER TABLE `smtp_settings`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexes for table `user_sessions`
+--
+ALTER TABLE `user_sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_session_id` (`session_id`),
+  ADD KEY `idx_last_activity` (`last_activity`),
+  ADD KEY `idx_is_active` (`is_active`);
+
+--
+-- Indexes for table `wmk_colors`
+--
+ALTER TABLE `wmk_colors`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `code` (`code`);
+
+--
+-- Indexes for table `__drizzle_migrations`
+--
+ALTER TABLE `__drizzle_migrations`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `completed_projects`
+--
+ALTER TABLE `completed_projects`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `email_templates`
+--
+ALTER TABLE `email_templates`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `installers`
+--
+ALTER TABLE `installers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `leads`
+--
+ALTER TABLE `leads`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2696;
+
+--
+-- AUTO_INCREMENT for table `repair_requests`
+--
+ALTER TABLE `repair_requests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `sample_booklets`
+--
+ALTER TABLE `sample_booklets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `smtp_settings`
+--
+ALTER TABLE `smtp_settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `user_sessions`
+--
+ALTER TABLE `user_sessions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `wmk_colors`
+--
+ALTER TABLE `wmk_colors`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+
+--
+-- AUTO_INCREMENT for table `__drizzle_migrations`
+--
+ALTER TABLE `__drizzle_migrations`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
