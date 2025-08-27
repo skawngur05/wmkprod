@@ -43,7 +43,7 @@ export function BusinessCalendar() {
 
   // Convert installations to calendar events
   const installationEvents: CalendarEventDisplay[] = installations
-    .filter(lead => lead.installation_date && lead.remarks === 'sold')
+    .filter(lead => lead.installation_date && lead.remarks === 'Sold')
     .map(lead => ({
       id: `installation-${lead.id}`,
       title: `Installation: ${lead.name}`,

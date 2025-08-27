@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
-import { capitalizeFirst, formatCurrency, formatDate, getStatusColor } from '@/lib/auth';
+import { capitalizeFirst, formatCurrency, formatDate, getStatusColor, getOriginColor } from '@/lib/auth';
 import { Lead } from '@shared/schema';
 import { useState } from 'react';
 import { QuickEditModal } from '@/components/modals/quick-edit-modal';
@@ -289,14 +289,81 @@ export default function Dashboard() {
                             </div>
                           </td>
                           <td>
-                            <span className={`badge bg-primary`}>
-                              {lead.lead_origin}
-                            </span>
+                            {(() => {
+                              const originColors = getOriginColor(lead.lead_origin);
+                              return (
+                                <div
+                                  style={{
+                                    backgroundColor: originColors.backgroundColor,
+                                    color: originColors.color,
+                                    border: `1px solid ${originColors.borderColor}`,
+                                    borderRadius: '9999px',
+                                    padding: '0.125rem 0.625rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    textTransform: 'capitalize'
+                                  }}
+                                >
+                                  {lead.lead_origin.replace('-', ' ')}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td>
-                            <span className={`badge bg-${getStatusColor(lead.remarks)} status-badge`}>
-                              {lead.remarks}
-                            </span>
+                            {(() => {
+                              const status = lead.remarks;
+                              let bgColor = '';
+                              let textColor = '';
+                              
+                              switch (status) {
+                                case 'Sold':
+                                  bgColor = '#22c55e';  // Green
+                                  textColor = '#ffffff';
+                                  break;
+                                case 'In Progress':
+                                  bgColor = '#f59e0b';  // Yellow/orange
+                                  textColor = '#ffffff';
+                                  break;
+                                case 'New':
+                                  bgColor = '#3b82f6';  // Blue
+                                  textColor = '#ffffff';
+                                  break;
+                                case 'Not Interested':
+                                  bgColor = '#6b7280';  // Gray
+                                  textColor = '#ffffff';
+                                  break;
+                                case 'Not Service Area':
+                                  bgColor = '#ea580c';  // Orange
+                                  textColor = '#ffffff';
+                                  break;
+                                case 'Not Compatible':
+                                  bgColor = '#dc2626';  // Red
+                                  textColor = '#ffffff';
+                                  break;
+                                default:
+                                  bgColor = '#6b7280';  // Gray
+                                  textColor = '#ffffff';
+                              }
+                              
+                              return (
+                                <div
+                                  style={{
+                                    backgroundColor: bgColor,
+                                    color: textColor,
+                                    borderRadius: '9999px',
+                                    padding: '0.125rem 0.625rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    display: 'inline-flex',
+                                    alignItems: 'center'
+                                  }}
+                                >
+                                  {status}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td>
                             {lead.project_amount ? formatCurrency(lead.project_amount) : '-'}

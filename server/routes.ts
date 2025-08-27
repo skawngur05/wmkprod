@@ -1,11 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertLeadSchema, updateLeadSchema, insertSampleBookletSchema, updateSampleBookletSchema, insertCalendarEventSchema, updateCalendarEventSchema } from "@shared/schema";
+import { insertLeadSchema, updateLeadSchema, insertSampleBookletSchema, updateSampleBookletSchema, insertCalendarEventSchema, updateCalendarEventSchema, insertRepairRequestSchema, repairRequests, leads as leadsTable, wmkColors } from "@shared/schema";
 import { uspsService } from "./usps-service";
 import { trackingScheduler } from "./tracking-scheduler";
 import { z } from "zod";
 import { emailService } from "./email-service";
+import { eq, like, or, desc, and } from 'drizzle-orm';
+import { db } from './db';
 
 const loginSchema = z.object({
   username: z.string(),
@@ -23,11 +25,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { username, password } = loginSchema.parse(req.body);
       const user = await storage.getUserByUsername(username.toLowerCase());
       
+      console.log("Retrieved user:", user);
+      console.log("User permissions type:", typeof user?.permissions);
+      console.log("User permissions value:", user?.permissions);
+      
       if (!user || user.password !== password) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      // Ensure permissions is always an array
+      let permissions = [];
+      if (user.permissions) {
+        if (Array.isArray(user.permissions)) {
+          permissions = user.permissions;
+        } else if (typeof user.permissions === 'string') {
+          try {
+            permissions = JSON.parse(user.permissions);
+            if (!Array.isArray(permissions)) {
+              permissions = [];
+            }
+          } catch (error) {
+            console.error('Error parsing permissions string:', error);
+            permissions = [];
+          }
+        }
+      }
 
+      console.log("Final permissions array:", permissions);
 
       // Simple session - in production use proper session management
       res.json({ 
@@ -35,7 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: user.id, 
           username: user.username, 
           role: user.role,
-          permissions: user.permissions || []
+          permissions: permissions
         } 
       });
     } catch (error) {
@@ -56,7 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
       
       const totalLeads = allLeads.length;
-      const soldLeads = allLeads.filter(lead => lead.remarks === "sold").length;
+      const soldLeads = allLeads.filter(lead => lead.remarks === "Sold").length;
       const todayFollowups = (await storage.getLeadsWithFollowupsDue(today)).length;
       const newToday = (await storage.getLeadsCreatedAfter(weekAgo)).length;
 
@@ -98,6 +122,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Internal enrichment endpoint - find existing lead by email (MUST be before /:id route)
+  app.get("/api/leads/enrich", async (req, res) => {
+    try {
+      const { email } = req.query;
+      
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: "Email parameter is required" });
+      }
+
+      // Search for existing lead with this email
+      const existingLead = await storage.getLeadByEmail(email);
+      
+      if (existingLead) {
+        res.json({
+          found: true,
+          name: existingLead.name,
+          phone: existingLead.phone,
+          email: existingLead.email
+        });
+      } else {
+        res.json({
+          found: false,
+          name: '',
+          phone: '',
+          email
+        });
+      }
+    } catch (error) {
+      console.error('Error in internal enrichment:', error);
+      res.status(500).json({ message: "Failed to enrich lead data" });
+    }
+  });
+
   app.get("/api/leads/:id", async (req, res) => {
     try {
       const lead = await storage.getLead(req.params.id);
@@ -111,21 +168,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/leads", async (req, res) => {
+    console.log("POST /api/leads - Request received");
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+    
     try {
+      console.log("Validating lead data with schema...");
       const leadData = insertLeadSchema.parse(req.body);
+      console.log("Lead data validated successfully:", leadData);
+      
+      console.log("Creating lead in database...");
       const lead = await storage.createLead(leadData);
+      console.log("Lead created successfully:", lead);
+      
       res.status(201).json(lead);
     } catch (error) {
+      console.error("Error creating lead:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
         return res.status(400).json({ message: "Invalid lead data", errors: error.errors });
       }
+      console.error("General error:", error);
       res.status(500).json({ message: "Failed to create lead" });
     }
   });
 
   app.put("/api/leads/:id", async (req, res) => {
     try {
+      console.log('Received lead update request for ID:', req.params.id);
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      
       const updates = updateLeadSchema.parse(req.body);
+      console.log('Parsed updates:', JSON.stringify(updates, null, 2));
+      
       const lead = await storage.updateLead(req.params.id, updates);
       
       if (!lead) {
@@ -162,14 +236,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
       
       const allLeads = await storage.getLeads();
-      const overdue = allLeads.filter(lead => {
+      // Filter out leads with "Not Interested" status from follow-ups
+      const activeLeads = allLeads.filter(lead => 
+        lead.remarks !== 'Not Interested' && 
+        lead.remarks !== 'Not Service Area' && 
+        lead.remarks !== 'Not Compatible'
+      );
+      
+      const overdue = activeLeads.filter(lead => {
         if (!lead.next_followup_date) return false;
         return new Date(lead.next_followup_date) < yesterday;
       });
 
-      const dueToday = await storage.getLeadsWithFollowupsDue(today);
+      const dueToday = activeLeads.filter(lead => {
+        if (!lead.next_followup_date) return false;
+        const followupDate = new Date(lead.next_followup_date);
+        return followupDate.toDateString() === today.toDateString();
+      });
       
-      const upcoming = allLeads.filter(lead => {
+      const upcoming = activeLeads.filter(lead => {
         if (!lead.next_followup_date) return false;
         return new Date(lead.next_followup_date) > today;
       }).slice(0, 10); // Limit to next 10
@@ -189,12 +274,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const allLeads = await storage.getLeads();
       const installations = allLeads.filter(lead => 
-        lead.remarks === "sold" && lead.installation_date
+        lead.remarks === "Sold" && 
+        lead.installation_date
+        // Keep all installations, including completed ones - let frontend categorize them
       );
 
       res.json(installations);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch installations" });
+    }
+  });
+
+  // Complete Installation endpoint
+  app.post("/api/installations/:id/complete", async (req, res) => {
+    try {
+      const installationId = req.params.id;
+      
+      // Get the installation (lead) first
+      const installation = await storage.getLead(installationId);
+      if (!installation) {
+        return res.status(404).json({ message: "Installation not found" });
+      }
+
+      // Validate that this is actually an installation
+      if (installation.remarks !== "Sold" || !installation.installation_date) {
+        return res.status(400).json({ message: "This lead is not a valid installation" });
+      }
+
+      // Create completed project record
+      const completedProject = {
+        lead_id: installation.id,
+        customer_name: installation.name,
+        phone: installation.phone,
+        email: installation.email,
+        address: installation.address,
+        project_amount: installation.project_amount,
+        deposit_paid: installation.deposit_paid,
+        balance_paid: installation.balance_paid,
+        installation_date: installation.installation_date,
+        completion_date: new Date(),
+        assigned_installer: installation.assigned_installer,
+        notes: installation.notes,
+        original_lead_origin: installation.lead_origin === "Website" ? null : installation.lead_origin,
+        original_date_created: installation.date_created,
+        original_assigned_to: installation.assigned_to,
+      };
+
+      // Try to create the completed project record in the database
+      let dbCreationSuccess = false;
+      try {
+        const createdProject = await storage.createCompletedProject(completedProject);
+        console.log('Successfully created completed project:', createdProject);
+        dbCreationSuccess = true;
+      } catch (dbError) {
+        console.error('Failed to create completed project in database:', dbError);
+        console.log('This is expected if the completed_projects table does not exist yet.');
+        console.log('The installation will still be marked as complete using the notes field.');
+      }
+      
+      // Mark the lead with completion notes
+      const completionNote = `[${new Date().toLocaleDateString()}] Installation completed and moved to completed projects.`;
+      const updatedNotes = installation.notes 
+        ? `${installation.notes}\n\n${completionNote}`
+        : completionNote;
+      
+      const updatedAdditionalNotes = installation.additional_notes
+        ? `${installation.additional_notes}\n${completionNote}`
+        : completionNote;
+
+      await storage.updateLead(installationId, {
+        notes: updatedNotes,
+        additional_notes: updatedAdditionalNotes
+      });
+
+      res.json({ 
+        message: "Installation marked as completed successfully",
+        completedProject: completedProject,
+        dbCreationSuccess: dbCreationSuccess
+      });
+    } catch (error) {
+      console.error("Error completing installation:", error);
+      res.status(500).json({ message: "Failed to complete installation" });
+    }
+  });
+
+  // Temporary endpoint to create completed_projects table
+  app.post("/api/create-completed-projects-table", async (req, res) => {
+    try {
+      // Execute the table creation SQL directly
+      await storage.db.execute(`
+        CREATE TABLE IF NOT EXISTS completed_projects (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          lead_id INT NOT NULL,
+          customer_name VARCHAR(100) NOT NULL,
+          phone VARCHAR(20),
+          email VARCHAR(100),
+          address TEXT,
+          project_amount DECIMAL(10,2),
+          deposit_paid DECIMAL(10,2),
+          balance_paid DECIMAL(10,2),
+          installation_date DATE,
+          completion_date DATETIME NOT NULL,
+          assigned_installer VARCHAR(100),
+          notes TEXT,
+          original_lead_origin VARCHAR(50),
+          original_date_created DATETIME,
+          original_assigned_to VARCHAR(100),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_lead_id (lead_id),
+          INDEX idx_completion_date (completion_date),
+          INDEX idx_installer (assigned_installer)
+        )
+      `);
+      
+      res.json({ message: "completed_projects table created successfully" });
+    } catch (error) {
+      console.error("Error creating completed_projects table:", error);
+      res.status(500).json({ 
+        message: "Failed to create completed_projects table", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Temporary endpoint to create completed_projects table
+  app.post("/api/create-completed-projects-table", async (req, res) => {
+    try {
+      // Execute the table creation SQL directly
+      await storage.db.execute(`
+        CREATE TABLE IF NOT EXISTS completed_projects (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          lead_id INT NOT NULL,
+          customer_name VARCHAR(100) NOT NULL,
+          phone VARCHAR(20),
+          email VARCHAR(100),
+          address TEXT,
+          project_amount DECIMAL(10,2),
+          deposit_paid DECIMAL(10,2),
+          balance_paid DECIMAL(10,2),
+          installation_date DATE,
+          completion_date DATETIME NOT NULL,
+          assigned_installer VARCHAR(100),
+          notes TEXT,
+          original_lead_origin VARCHAR(50),
+          original_date_created DATETIME,
+          original_assigned_to VARCHAR(100),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_lead_id (lead_id),
+          INDEX idx_completion_date (completion_date),
+          INDEX idx_installer (assigned_installer)
+        )
+      `);
+      
+      res.json({ message: "completed_projects table created successfully" });
+    } catch (error) {
+      console.error("Error creating completed_projects table:", error);
+      res.status(500).json({ 
+        message: "Failed to create completed_projects table", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Get completed projects endpoint
+  app.get("/api/completed-projects", async (req, res) => {
+    try {
+      const completedProjects = await storage.getCompletedProjects();
+      res.json(completedProjects);
+    } catch (error) {
+      console.error("Error fetching completed projects:", error);
+      res.status(500).json({ message: "Failed to fetch completed projects" });
     }
   });
 
@@ -241,6 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/sample-booklets/:id", async (req, res) => {
     try {
+      console.log('PUT request body:', JSON.stringify(req.body, null, 2));
       const updates = updateSampleBookletSchema.parse(req.body);
       const booklet = await storage.updateSampleBooklet(req.params.id, updates);
       
@@ -251,8 +503,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(booklet);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error('Zod validation error:', error.errors);
         return res.status(400).json({ message: "Invalid booklet data", errors: error.errors });
       }
+      console.error('Update error:', error);
       res.status(500).json({ message: "Failed to update sample booklet" });
     }
   });
@@ -312,12 +566,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sample-booklets/stats/dashboard", async (req, res) => {
     try {
       const allBooklets = await storage.getSampleBooklets();
-      const pending = allBooklets.filter(b => b.status === "pending").length;
-      const shipped = allBooklets.filter(b => b.status === "shipped").length;
-      const inTransit = allBooklets.filter(b => b.status === "in-transit").length;
-      const outForDelivery = allBooklets.filter(b => b.status === "out-for-delivery").length;
-      const delivered = allBooklets.filter(b => b.status === "delivered").length;
-      const refunded = allBooklets.filter(b => b.status === "refunded").length;
+      const pending = allBooklets.filter(b => b.status === "Pending").length;
+      const shipped = allBooklets.filter(b => b.status === "Shipped").length;
+      const inTransit = allBooklets.filter(b => b.status === "Shipped").length; // Use "Shipped" for in-transit
+      const outForDelivery = allBooklets.filter(b => b.status === "Shipped").length; // Use "Shipped" for out-for-delivery
+      const delivered = allBooklets.filter(b => b.status === "Delivered").length;
+      const refunded = allBooklets.filter(b => b.status === "Delivered").length; // Use "Delivered" for refunded status
       const thisWeek = allBooklets.filter(b => {
         const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         return new Date(b.date_ordered) > weekAgo;
@@ -365,7 +619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Executive Dashboard Metrics
       const totalLeads = filteredLeads.length;
-      const soldLeads = filteredLeads.filter(lead => lead.remarks === 'sold');
+      const soldLeads = filteredLeads.filter(lead => lead.remarks === 'Sold');
       const soldCount = soldLeads.length;
       const conversionRate = totalLeads > 0 ? ((soldCount / totalLeads) * 100) : 0;
       
@@ -382,7 +636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           acc[origin] = { total: 0, sold: 0, revenue: 0 };
         }
         acc[origin].total += 1;
-        if (lead.remarks === 'sold') {
+        if (lead.remarks === 'Sold') {
           acc[origin].sold += 1;
           acc[origin].revenue += parseFloat(lead.project_amount || '0');
         }
@@ -405,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           acc[member] = { total: 0, sold: 0, revenue: 0 };
         }
         acc[member].total += 1;
-        if (lead.remarks === 'sold') {
+        if (lead.remarks === 'Sold') {
           acc[member].sold += 1;
           acc[member].revenue += parseFloat(lead.project_amount || '0');
         }
@@ -431,10 +685,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRevenue: number;
         averageDealSize: number;
       }> = [];
-      if (!month && year) {
+      if (!month) {
+        // Use specified year or default to current year for monthly breakdown
+        const targetYear = year ? parseInt(year as string) : new Date().getFullYear();
         const yearLeads = allLeads.filter(lead => {
           const leadYear = new Date(lead.date_created).getFullYear();
-          return leadYear === parseInt(year as string);
+          return leadYear === targetYear;
         });
         
         monthlyBreakdown = Array.from({ length: 12 }, (_, monthIndex) => {
@@ -443,7 +699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return leadMonth === monthIndex;
           });
           
-          const monthSoldLeads = monthLeads.filter(lead => lead.remarks === 'sold');
+          const monthSoldLeads = monthLeads.filter(lead => lead.remarks === 'Sold');
           const monthRevenue = monthSoldLeads.reduce((sum, lead) => {
             return sum + (parseFloat(lead.project_amount || '0'));
           }, 0);
@@ -1078,59 +1334,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
-  // Admin Users Management
-  app.get("/api/admin/users", async (req, res) => {
-    try {
-      const users = await storage.getUsers();
-      res.json(users.map(user => ({ ...user, password: undefined }))); // Don't send passwords
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch users" });
-    }
-  });
 
-  app.post("/api/admin/users", async (req, res) => {
-    try {
-      const { username, password, role } = req.body;
-      if (!username || !password || !role) {
-        return res.status(400).json({ message: "Username, password, and role are required" });
-      }
-      
-      const user = await storage.createUser({ username, password, role });
-      res.status(201).json({ ...user, password: undefined });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to create user" });
-    }
-  });
 
-  app.put("/api/admin/users/:id", async (req, res) => {
-    try {
-      const { username, password, role } = req.body;
-      const updates: any = {};
-      if (username) updates.username = username;
-      if (password) updates.password = password;
-      if (role) updates.role = role;
-      
-      const user = await storage.updateUser(req.params.id, updates);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      res.json({ ...user, password: undefined });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to update user" });
-    }
-  });
 
-  app.delete("/api/admin/users/:id", async (req, res) => {
-    try {
-      const deleted = await storage.deleteUser(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete user" });
-    }
-  });
 
   // Admin Settings Management
   app.get("/api/admin/settings", async (req, res) => {
@@ -1152,6 +1358,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(setting);
     } catch (error) {
       res.status(500).json({ message: "Failed to update setting" });
+    }
+  });
+
+  // WMK Colors API
+  app.get("/api/wmk-colors", async (req, res) => {
+    try {
+      const colors = await db.select().from(wmkColors).where(eq(wmkColors.is_active, true)).orderBy(wmkColors.code);
+      res.json(colors);
+    } catch (error) {
+      console.error('Error fetching WMK colors:', error);
+      res.status(500).json({ message: "Failed to fetch WMK colors" });
     }
   });
 
@@ -1247,35 +1464,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin SMTP Settings Management
+  // Admin SMTP Settings Management (using config file)
   app.get("/api/admin/smtp-settings", async (req, res) => {
     try {
-      const settings = await storage.getSMTPSettings();
-      res.json(settings);
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const configPath = path.join(process.cwd(), 'server', 'config', 'smtp-config.json');
+      
+      try {
+        const configData = await fs.readFile(configPath, 'utf8');
+        const config = JSON.parse(configData);
+        
+        // Transform to match frontend expectations
+        const settings = [{
+          id: 1,
+          name: 'SMTP Configuration',
+          host: config.host,
+          port: config.port,
+          secure: config.secure,
+          username: config.auth.user,
+          password: config.auth.pass,
+          from_email: config.from.email,
+          from_name: config.from.name,
+          is_active: config.isActive,
+          created_at: new Date().toISOString(),
+          updated_at: config.lastUpdated
+        }];
+        
+        res.json(settings);
+      } catch (error) {
+        // If config file doesn't exist, return empty array
+        res.json([]);
+      }
     } catch (error) {
+      console.error('Error reading SMTP config:', error);
       res.status(500).json({ message: "Failed to fetch SMTP settings" });
     }
   });
 
   app.post("/api/admin/smtp-settings", async (req, res) => {
     try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const configPath = path.join(process.cwd(), 'server', 'config', 'smtp-config.json');
+      
       const settingsData = req.body;
-      const settings = await storage.createSMTPSettings(settingsData);
-      res.status(201).json(settings);
+      
+      // Transform frontend data to config format
+      const config = {
+        host: settingsData.host,
+        port: settingsData.port,
+        secure: settingsData.secure,
+        auth: {
+          user: settingsData.username,
+          pass: settingsData.password
+        },
+        from: {
+          email: settingsData.from_email,
+          name: settingsData.from_name
+        },
+        isActive: settingsData.is_active,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      // Ensure config directory exists
+      const configDir = path.dirname(configPath);
+      await fs.mkdir(configDir, { recursive: true });
+      
+      // Write config file
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+      
+      // Return the saved settings in frontend format
+      const response = {
+        id: 1,
+        name: settingsData.name || 'SMTP Configuration',
+        ...settingsData
+      };
+      
+      res.status(201).json(response);
     } catch (error) {
+      console.error('Error saving SMTP config:', error);
       res.status(500).json({ message: "Failed to create SMTP settings" });
     }
   });
 
   app.put("/api/admin/smtp-settings/:id", async (req, res) => {
     try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const configPath = path.join(process.cwd(), 'server', 'config', 'smtp-config.json');
+      
       const updates = req.body;
-      const settings = await storage.updateSMTPSettings(req.params.id, updates);
-      if (!settings) {
-        return res.status(404).json({ message: "SMTP settings not found" });
-      }
-      res.json(settings);
+      
+      // Transform frontend data to config format
+      const config = {
+        host: updates.host,
+        port: updates.port,
+        secure: updates.secure,
+        auth: {
+          user: updates.username,
+          pass: updates.password
+        },
+        from: {
+          email: updates.from_email,
+          name: updates.from_name
+        },
+        isActive: updates.is_active,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      // Ensure config directory exists
+      const configDir = path.dirname(configPath);
+      await fs.mkdir(configDir, { recursive: true });
+      
+      // Write config file
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+      
+      // Return the updated settings in frontend format
+      const response = {
+        id: parseInt(req.params.id),
+        name: updates.name || 'SMTP Configuration',
+        ...updates
+      };
+      
+      res.json(response);
     } catch (error) {
+      console.error('Error updating SMTP config:', error);
       res.status(500).json({ message: "Failed to update SMTP settings" });
     }
   });
@@ -1284,11 +1598,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { test_email, ...smtpConfig } = req.body;
       
-      // Here you would test the SMTP settings by sending a test email
-      // For now, we'll just return success
+      if (!test_email) {
+        return res.status(400).json({ message: "Test email address is required" });
+      }
+
+      // Save the config temporarily and send test email
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const configPath = path.join(process.cwd(), 'server', 'config', 'smtp-config.json');
+      
+      // Update config with test data
+      const config = {
+        host: smtpConfig.host,
+        port: smtpConfig.port,
+        secure: smtpConfig.secure,
+        auth: {
+          user: smtpConfig.username,
+          pass: smtpConfig.password
+        },
+        from: {
+          email: smtpConfig.from_email,
+          name: smtpConfig.from_name
+        },
+        isActive: true,
+        lastUpdated: new Date().toISOString()
+      };
+
+      // Ensure config directory exists
+      const configDir = path.dirname(configPath);
+      await fs.mkdir(configDir, { recursive: true });
+      
+      // Write config file
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+
+      // Reinitialize email service to use new config
+      const { emailService } = await import('./email-service');
+      await emailService.initializeTransporter();
+
+      // Send test email
+      await emailService.sendEmail({
+        to: test_email,
+        subject: 'SMTP Configuration Test - WMK CRM',
+        text: `Hello!
+
+This is a test email to verify your SMTP configuration for the WMK CRM system.
+
+SMTP Settings:
+- Host: ${smtpConfig.host}
+- Port: ${smtpConfig.port}
+- Secure: ${smtpConfig.secure ? 'Yes (SSL)' : 'No (TLS)'}
+- From: ${smtpConfig.from_name} <${smtpConfig.from_email}>
+
+If you received this email, your SMTP configuration is working correctly!
+
+Best regards,
+WMK CRM System`
+      });
+
       res.json({ message: "Test email sent successfully" });
     } catch (error) {
-      res.status(500).json({ message: "Failed to send test email" });
+      console.error('SMTP test error:', error);
+      res.status(500).json({ 
+        message: "Failed to send test email", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
@@ -1384,7 +1757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/users", async (req, res) => {
     try {
       const users = await storage.getUsers();
-      res.json(users);
+      res.json(users.map(user => ({ ...user, password: undefined }))); // Don't send passwords
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch users" });
     }
@@ -1392,7 +1765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/users", async (req, res) => {
     try {
-      const { username, password, role, permissions, is_active } = req.body;
+      const { username, password, full_name, email, role, permissions, is_active } = req.body;
       
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
@@ -1401,6 +1774,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newUser = await storage.createUser({
         username: username.toLowerCase(),
         password,
+        full_name: full_name || username,
+        email: email || null,
         role: role || 'sales_rep',
         permissions: permissions || [],
         is_active: is_active !== undefined ? is_active : true
@@ -1418,13 +1793,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updates = req.body;
       
+      console.log('Update user request:', { id, updates });
+      
       const updatedUser = await storage.updateUser(id, updates);
       if (!updatedUser) {
+        console.log('User not found:', id);
         return res.status(404).json({ message: "User not found" });
       }
       
+      console.log('User updated successfully:', updatedUser);
       res.json(updatedUser);
     } catch (error) {
+      console.error('Update user error:', error);
       res.status(500).json({ message: "Failed to update user" });
     }
   });
@@ -1441,6 +1821,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Reset user password
+  app.post("/api/admin/users/:id/reset-password", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { password } = req.body;
+      
+      if (!password) {
+        return res.status(400).json({ message: "Password is required" });
+      }
+      
+      const updatedUser = await storage.updateUser(id, { password });
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to reset password" });
     }
   });
 
@@ -1469,6 +1870,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch admin dashboard stats" });
+    }
+  });
+
+  // Repair Requests endpoints
+  app.get("/api/repair-requests", async (req, res) => {
+    try {
+      const requests = await db.select().from(repairRequests).orderBy(desc(repairRequests.created_at));
+      res.json(requests);
+    } catch (error) {
+      console.error('Error fetching repair requests:', error);
+      res.status(500).json({ error: 'Failed to fetch repair requests' });
+    }
+  });
+
+  app.post("/api/repair-requests", async (req, res) => {
+    try {
+      const validatedData = insertRepairRequestSchema.parse(req.body);
+      
+      const [newRequest] = await db.insert(repairRequests).values({
+        ...validatedData,
+        date_reported: new Date(validatedData.date_reported || new Date()),
+      });
+
+      res.json({ id: newRequest.insertId, ...validatedData });
+    } catch (error) {
+      console.error('Error creating repair request:', error);
+      res.status(400).json({ error: 'Failed to create repair request' });
+    }
+  });
+
+  app.put("/api/repair-requests/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      await db.update(repairRequests)
+        .set({
+          ...updates,
+          updated_at: new Date(),
+        })
+        .where(eq(repairRequests.id, parseInt(id)));
+
+      res.json({ message: 'Repair request updated successfully' });
+    } catch (error) {
+      console.error('Error updating repair request:', error);
+      res.status(500).json({ error: 'Failed to update repair request' });
+    }
+  });
+
+  app.delete("/api/repair-requests/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      await db.delete(repairRequests).where(eq(repairRequests.id, parseInt(id)));
+      
+      res.json({ message: 'Repair request deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting repair request:', error);
+      res.status(500).json({ error: 'Failed to delete repair request' });
+    }
+  });
+
+  // Completed Projects Search endpoint
+  app.get("/api/completed-projects/search", async (req, res) => {
+    try {
+      const { q } = req.query;
+      
+      if (!q || typeof q !== 'string') {
+        return res.json([]);
+      }
+      
+      const searchTerm = q.trim();
+      
+      // Search for leads that are marked as "Sold" and have installation_date (completed projects)
+      const results = await db.select()
+        .from(leadsTable)
+        .where(
+          and(
+            eq(leadsTable.remarks, 'Sold'),
+            or(
+              like(leadsTable.email, `%${searchTerm}%`),
+              like(leadsTable.phone, `%${searchTerm}%`),
+              like(leadsTable.name, `%${searchTerm}%`)
+            )
+          )
+        )
+        .orderBy(desc(leadsTable.installation_date))
+        .limit(10);
+      
+      res.json(results);
+    } catch (error) {
+      console.error('Error searching completed projects:', error);
+      res.status(500).json({ error: 'Failed to search completed projects' });
     }
   });
 

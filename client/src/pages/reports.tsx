@@ -360,7 +360,9 @@ export default function Reports() {
       {!selectedMonth && monthlyBreakdown.length > 0 && (
         <Card className="mb-8" data-testid="monthly-breakdown">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Monthly Breakdown - {selectedYear}</CardTitle>
+            <CardTitle className="text-xl font-semibold">
+              Monthly Breakdown - {selectedYear === 'all' ? new Date().getFullYear() : selectedYear}
+            </CardTitle>
             <p className="text-gray-600 text-sm">Trend analysis & seasonal insights</p>
           </CardHeader>
           <CardContent>

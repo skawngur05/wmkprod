@@ -25,6 +25,7 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
 
   const createLeadMutation = useMutation({
     mutationFn: async (leadData: any) => {
+      console.log('Sending lead data:', leadData);
       const response = await apiRequest('POST', '/api/leads', leadData);
       return response.json();
     },
@@ -35,8 +36,13 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
       resetForm();
       onHide();
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create lead", variant: "destructive" });
+    onError: (error: any) => {
+      console.error('Add lead error:', error);
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to create lead", 
+        variant: "destructive" 
+      });
     }
   });
 
@@ -55,6 +61,8 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Form data before validation:', formData);
+    
     // Validate required fields
     if (!formData.name || !formData.phone || !formData.lead_origin || !formData.assigned_to) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
@@ -67,9 +75,10 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
       email: formData.email || null,
       lead_origin: formData.lead_origin,
       assigned_to: formData.assigned_to,
-      project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null,
+      project_amount: formData.project_amount ? formData.project_amount : "0.00",
       notes: formData.notes || null,
-      remarks: "new", // Default status for new leads
+      remarks: "New", // Fixed: capital N to match enum
+      date_created: new Date().toISOString().split('T')[0], // Add required date_created field
       next_followup_date: null,
       additional_notes: null,
       deposit_paid: false,
@@ -78,6 +87,7 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
       assigned_installer: null
     };
 
+    console.log('Prepared lead data:', leadData);
     createLeadMutation.mutate(leadData);
   };
 

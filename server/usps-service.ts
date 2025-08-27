@@ -147,21 +147,32 @@ export class USPSService {
   }
 
   private getMockTrackingData(trackingNumber: string): USPSTrackingResponse {
-    // Mock data for development - simulates different tracking statuses
-    const mockStatuses = ['pending', 'shipped', 'in-transit', 'out-for-delivery', 'delivered'];
-    const randomStatus = mockStatuses[Math.floor(Math.random() * mockStatuses.length)];
+    // Use hash of tracking number to get consistent mock data (not random)
+    const hash = trackingNumber.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    // Simulate realistic progression based on time
+    const daysSinceTrackingCreated = Math.abs(hash) % 7; // Simulate 0-6 days since tracking
+    let status = 'pending';
+    
+    if (daysSinceTrackingCreated >= 1) status = 'shipped';
+    if (daysSinceTrackingCreated >= 3) status = 'in-transit';
+    if (daysSinceTrackingCreated >= 5) status = 'out-for-delivery';
+    if (daysSinceTrackingCreated >= 6) status = 'delivered';
     
     return {
       trackingNumber,
-      status: randomStatus,
-      statusDescription: this.getStatusDescription(randomStatus),
-      deliveryDate: randomStatus === 'delivered' ? new Date().toISOString() : undefined,
+      status,
+      statusDescription: this.getStatusDescription(status),
+      deliveryDate: status === 'delivered' ? new Date().toISOString() : undefined,
       lastUpdated: new Date().toISOString(),
       trackingEvents: [
         {
           eventDate: new Date().toISOString().split('T')[0],
           eventTime: new Date().toTimeString().split(' ')[0],
-          eventDescription: this.getStatusDescription(randomStatus),
+          eventDescription: this.getStatusDescription(status),
           eventCity: 'Miami',
           eventState: 'FL',
           eventZip: '33101',

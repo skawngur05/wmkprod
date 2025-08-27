@@ -56,7 +56,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
           <h4>Access Denied</h4>
           <p className="text-muted">You don't have permission to access this page.</p>
           <p className="text-muted small">Debug: User {user.username}, Role: {user.role}, Route: {location}</p>
-          <p className="text-muted small">Permissions: {user.permissions?.join(', ') || 'None'}</p>
+          <p className="text-muted small">Permissions: {Array.isArray(user.permissions) ? user.permissions.join(', ') : 'Invalid permissions data'}</p>
           <button 
             className="btn btn-danger mt-3 me-2"
             onClick={() => {

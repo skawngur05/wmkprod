@@ -17,6 +17,38 @@ class EmailService {
 
   private async initializeTransporter() {
     try {
+      // First, try to load SMTP config from file
+      let useConfigFile = false;
+      let smtpConfig: any = null;
+      
+      try {
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const configPath = path.join(process.cwd(), 'server', 'config', 'smtp-config.json');
+        const configData = await fs.readFile(configPath, 'utf8');
+        smtpConfig = JSON.parse(configData);
+        useConfigFile = smtpConfig.isActive;
+      } catch (error) {
+        console.log('No SMTP config file found, falling back to environment variables');
+      }
+
+      if (useConfigFile && smtpConfig) {
+        // Use SMTP configuration from file
+        this.transporter = nodemailer.createTransport({
+          host: smtpConfig.host,
+          port: smtpConfig.port,
+          secure: smtpConfig.secure, // true for 465, false for 587
+          auth: {
+            user: smtpConfig.auth.user,
+            pass: smtpConfig.auth.pass
+          }
+        });
+        
+        console.log(`Email service initialized with file config (${smtpConfig.host}:${smtpConfig.port})`);
+        this.isInitialized = true;
+        return;
+      }
+
       // Check if real SMTP credentials are provided
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         // Use real SMTP configuration
@@ -67,8 +99,24 @@ class EmailService {
       // Use provided HTML or convert plain text to HTML if needed
       const htmlContent = options.html || this.textToHtml(options.text);
       
+      // Get FROM address from config file if available
+      let fromAddress = process.env.EMAIL_FROM || '"WMK Installation Team" <noreply@wmk-crm.com>';
+      
+      try {
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const configPath = path.join(process.cwd(), 'server', 'config', 'smtp-config.json');
+        const configData = await fs.readFile(configPath, 'utf8');
+        const smtpConfig = JSON.parse(configData);
+        if (smtpConfig.isActive && smtpConfig.from) {
+          fromAddress = `"${smtpConfig.from.name}" <${smtpConfig.from.email}>`;
+        }
+      } catch (error) {
+        // Config file not found, use default
+      }
+      
       const mailOptions = {
-        from: process.env.EMAIL_FROM || '"WMK Installation Team" <noreply@wmk-crm.com>',
+        from: fromAddress,
         to: options.to,
         subject: options.subject,
         text: options.text,
@@ -79,7 +127,8 @@ class EmailService {
       console.log('Email sent successfully:', info.messageId);
       
       // For Ethereal Email, log the preview URL
-      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      const isUsingRealSMTP = await this.isUsingRealSMTP();
+      if (!isUsingRealSMTP) {
         const previewUrl = nodemailer.getTestMessageUrl(info);
         if (previewUrl) {
           console.log('📧 Email preview URL:', previewUrl);
@@ -146,6 +195,19 @@ class EmailService {
     } catch (error) {
       console.error('SMTP connection failed:', error);
       return false;
+    }
+  }
+
+  private async isUsingRealSMTP(): Promise<boolean> {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const configPath = path.join(process.cwd(), 'server', 'config', 'smtp-config.json');
+      const configData = await fs.readFile(configPath, 'utf8');
+      const smtpConfig = JSON.parse(configData);
+      return smtpConfig.isActive;
+    } catch (error) {
+      return !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
     }
   }
 }

@@ -30,27 +30,26 @@ export function formatDate(date: string | Date): string {
 
 export function getStatusColor(status: string): string {
   const statusColors: Record<string, string> = {
-    'new': 'success',
-    'in-progress': 'warning', 
-    'quoted': 'info',
-    'sold': 'success',
-    'not-interested': 'secondary',
-    'not-service-area': 'secondary',
-    'not-compatible': 'secondary'
+    'New': 'primary',           // Blue
+    'In Progress': 'warning',   // Yellow  
+    'Sold': 'success',          // Green - ONLY for sold
+    'Not Interested': 'secondary',
+    'Not Service Area': 'danger',
+    'Not Compatible': 'danger'
   };
   return statusColors[status] || 'secondary';
 }
 
-export function getOriginColor(origin: string): string {
-  const originColors: Record<string, string> = {
-    'facebook': 'bg-blue-600 text-white border-blue-600',
-    'google_text': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'instagram': 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-pink-400',
-    'trade_show': 'bg-violet-100 text-violet-800 border-violet-200',
-    'whatsapp': 'bg-green-500 text-white border-green-500',
-    'website': 'bg-sky-100 text-sky-800 border-sky-200',
-    'commercial': 'bg-gray-100 text-gray-800 border-gray-200',
-    'referral': 'bg-red-100 text-red-800 border-red-200'
+export function getOriginColor(origin: string): { backgroundColor: string; color: string; borderColor: string } {
+  const originColors: Record<string, { backgroundColor: string; color: string; borderColor: string }> = {
+    'facebook': { backgroundColor: '#2563eb', color: '#ffffff', borderColor: '#2563eb' },
+    'google_text': { backgroundColor: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' },
+    'instagram': { backgroundColor: '#ec4899', color: '#ffffff', borderColor: '#f472b6' },
+    'trade_show': { backgroundColor: '#ede9fe', color: '#7c3aed', borderColor: '#c4b5fd' },
+    'whatsapp': { backgroundColor: '#22c55e', color: '#ffffff', borderColor: '#22c55e' },
+    'website': { backgroundColor: '#e0f2fe', color: '#0c4a6e', borderColor: '#7dd3fc' },
+    'commercial': { backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#d1d5db' },
+    'referral': { backgroundColor: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5' }
   };
-  return originColors[origin] || 'bg-gray-100 text-gray-800 border-gray-200';
+  return originColors[origin] || { backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#d1d5db' };
 }

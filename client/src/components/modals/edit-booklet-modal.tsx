@@ -64,14 +64,32 @@ export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookl
     try {
       const processedData: UpdateSampleBooklet = {
         ...formData,
-        date_shipped: formData.date_shipped ? new Date(formData.date_shipped) : null
+        // Convert empty strings to null for optional fields
+        tracking_number: formData.tracking_number || null,
+        date_shipped: formData.date_shipped ? new Date(formData.date_shipped) : null,
+        notes: formData.notes || null
       };
+      
+      // Remove any undefined values
+      Object.keys(processedData).forEach(key => {
+        if (processedData[key as keyof UpdateSampleBooklet] === undefined) {
+          delete processedData[key as keyof UpdateSampleBooklet];
+        }
+      });
+      
       const validatedData = updateSampleBookletSchema.parse(processedData);
       updateBookletMutation.mutate(validatedData);
     } catch (error: any) {
+      console.error('Validation error:', error);
+      let errorMessage = "Please check all fields";
+      
+      if (error.errors && error.errors.length > 0) {
+        errorMessage = error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
+      }
+      
       toast({ 
         title: "Validation Error", 
-        description: "Please check all fields", 
+        description: errorMessage, 
         variant: "destructive" 
       });
     }
@@ -88,8 +106,8 @@ export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookl
   const handleStatusChange = (newStatus: string) => {
     setFormData(prev => ({
       ...prev,
-      status: newStatus,
-      date_shipped: newStatus === 'shipped' && !prev.date_shipped ? new Date().toISOString().split('T')[0] : prev.date_shipped
+      status: newStatus as "Pending" | "Shipped" | "Delivered" | "Refunded",
+      date_shipped: newStatus === 'Shipped' && !prev.date_shipped ? new Date().toISOString().split('T')[0] : prev.date_shipped
     }));
   };
 
@@ -133,10 +151,10 @@ export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookl
                     onChange={handleInputChange}
                     data-testid="select-edit-product-type"
                   >
-                    <option value="demo_kit_and_sample_booklet">Demo Kit & Sample Booklet</option>
-                    <option value="sample_booklet_only">Sample Booklet Only</option>
-                    <option value="trial_kit">Trial Kit</option>
-                    <option value="demo_kit_only">Demo Kit Only</option>
+                    <option value="Demo Kit & Sample Booklet">Demo Kit & Sample Booklet</option>
+                    <option value="Sample Booklet Only">Sample Booklet Only</option>
+                    <option value="Trial Kit">Trial Kit</option>
+                    <option value="Demo Kit Only">Demo Kit Only</option>
                   </select>
                 </div>
 
@@ -181,14 +199,14 @@ export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookl
                   <select
                     className="form-select"
                     name="status"
-                    value={formData.status || 'pending'}
+                    value={formData.status || 'Pending'}
                     onChange={(e) => handleStatusChange(e.target.value)}
                     data-testid="select-edit-status"
                   >
-                    <option value="pending">Pending</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="refunded">Refunded</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Refunded">Refunded</option>
                   </select>
                 </div>
 

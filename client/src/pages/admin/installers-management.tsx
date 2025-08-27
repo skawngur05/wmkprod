@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,20 +34,218 @@ interface Installer {
   updated_at: string;
 }
 
+// Separate memoized form component to prevent page re-renders
+const InstallerFormModal = memo(({ 
+  isOpen, 
+  setIsOpen, 
+  title, 
+  onSubmit, 
+  isEdit,
+  initialData,
+  isLoading 
+}: {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  title: string;
+  onSubmit: (data: any, isEdit: boolean) => void;
+  isEdit: boolean;
+  initialData?: any;
+  isLoading: boolean;
+}) => {
+  const [formData, setFormData] = useState({
+    name: initialData?.name || '',
+    phone: initialData?.phone || '',
+    email: initialData?.email || '',
+    status: initialData?.status || 'active',
+    hire_date: initialData?.hire_date || '',
+    hourly_rate: initialData?.hourly_rate || '',
+    specialty: initialData?.specialty || '',
+    notes: initialData?.notes || ''
+  });
+
+  // Update form data when initialData changes
+  useMemo(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        phone: initialData.phone || '',
+        email: initialData.email || '',
+        status: initialData.status || 'active',
+        hire_date: initialData.hire_date || '',
+        hourly_rate: initialData.hourly_rate || '',
+        specialty: initialData.specialty || '',
+        notes: initialData.notes || ''
+      });
+    }
+  }, [initialData]);
+
+  const handleFormChange = useCallback((field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSubmit(formData, isEdit);
+  }, [formData, isEdit, onSubmit]);
+
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+    // Reset form when closing
+    setTimeout(() => {
+      setFormData({
+        name: '',
+        phone: '',
+        email: '',
+        status: 'active',
+        hire_date: '',
+        hourly_rate: '',
+        specialty: '',
+        notes: ''
+      });
+    }, 300);
+  }, [setIsOpen]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Name *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleFormChange('name', e.target.value)}
+              data-testid="input-installer-name"
+              autoComplete="off"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => handleFormChange('phone', e.target.value)}
+                data-testid="input-installer-phone"
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleFormChange('email', e.target.value)}
+                data-testid="input-installer-email"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select 
+                value={formData.status} 
+                onValueChange={(value) => handleFormChange('status', value)}
+              >
+                <SelectTrigger data-testid="select-installer-status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="on_leave">On Leave</SelectItem>
+                  <SelectItem value="terminated">Terminated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="hire_date">Hire Date</Label>
+              <Input
+                id="hire_date"
+                type="date"
+                value={formData.hire_date}
+                onChange={(e) => handleFormChange('hire_date', e.target.value)}
+                data-testid="input-installer-hire-date"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="hourly_rate">Hourly Rate ($)</Label>
+              <Input
+                id="hourly_rate"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.hourly_rate}
+                onChange={(e) => handleFormChange('hourly_rate', e.target.value)}
+                data-testid="input-installer-hourly-rate"
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <Label htmlFor="specialty">Specialty</Label>
+              <Input
+                id="specialty"
+                value={formData.specialty}
+                onChange={(e) => handleFormChange('specialty', e.target.value)}
+                data-testid="input-installer-specialty"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              placeholder="Additional notes about the installer..."
+              rows={3}
+              value={formData.notes}
+              onChange={(e) => handleFormChange('notes', e.target.value)}
+              data-testid="textarea-installer-notes"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={handleClose}
+              data-testid="button-cancel"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit"
+              disabled={isLoading}
+              data-testid="button-save-installer"
+            >
+              {isLoading ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+});
+
+InstallerFormModal.displayName = 'InstallerFormModal';
+
 export default function InstallersManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingInstaller, setEditingInstaller] = useState<Installer | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    status: 'active',
-    hire_date: '',
-    hourly_rate: '',
-    specialty: '',
-    notes: ''
-  });
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -67,7 +265,6 @@ export default function InstallersManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/installers'] });
       setIsAddModalOpen(false);
-      resetForm();
       toast({ title: "Success", description: "Installer created successfully" });
     },
     onError: () => {
@@ -87,7 +284,6 @@ export default function InstallersManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/installers'] });
       setIsEditModalOpen(false);
       setEditingInstaller(null);
-      resetForm();
       toast({ title: "Success", description: "Installer updated successfully" });
     },
     onError: () => {
@@ -108,36 +304,12 @@ export default function InstallersManagement() {
     }
   });
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      phone: '',
-      email: '',
-      status: 'active',
-      hire_date: '',
-      hourly_rate: '',
-      specialty: '',
-      notes: ''
-    });
-  };
-
   const handleAdd = () => {
-    resetForm();
     setIsAddModalOpen(true);
   };
 
   const handleEdit = (installer: Installer) => {
     setEditingInstaller(installer);
-    setFormData({
-      name: installer.name,
-      phone: installer.phone || '',
-      email: installer.email || '',
-      status: installer.status,
-      hire_date: installer.hire_date || '',
-      hourly_rate: installer.hourly_rate?.toString() || '',
-      specialty: installer.specialty || '',
-      notes: installer.notes || ''
-    });
     setIsEditModalOpen(true);
   };
 
@@ -147,7 +319,7 @@ export default function InstallersManagement() {
     }
   };
 
-  const handleSubmit = (isEdit: boolean) => {
+  const handleFormSubmit = useCallback((formData: any, isEdit: boolean) => {
     if (!formData.name) {
       toast({ title: "Error", description: "Name is required", variant: "destructive" });
       return;
@@ -158,7 +330,7 @@ export default function InstallersManagement() {
     } else {
       createMutation.mutate(formData);
     }
-  };
+  }, [editingInstaller, updateMutation, createMutation, toast]);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
@@ -175,130 +347,7 @@ export default function InstallersManagement() {
     );
   };
 
-  const FormModal = ({ isOpen, setIsOpen, title, onSubmit, isEdit }: any) => (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="name">Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              data-testid="input-installer-name"
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                data-testid="input-installer-phone"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                data-testid="input-installer-email"
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-              >
-                <SelectTrigger data-testid="select-installer-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="on_leave">On Leave</SelectItem>
-                  <SelectItem value="terminated">Terminated</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="hire_date">Hire Date</Label>
-              <Input
-                id="hire_date"
-                type="date"
-                value={formData.hire_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, hire_date: e.target.value }))}
-                data-testid="input-installer-hire-date"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="hourly_rate">Hourly Rate</Label>
-              <Input
-                id="hourly_rate"
-                type="number"
-                step="0.01"
-                placeholder="25.00"
-                value={formData.hourly_rate}
-                onChange={(e) => setFormData(prev => ({ ...prev, hourly_rate: e.target.value }))}
-                data-testid="input-installer-hourly-rate"
-              />
-            </div>
-            <div>
-              <Label htmlFor="specialty">Specialty</Label>
-              <Input
-                id="specialty"
-                value={formData.specialty}
-                onChange={(e) => setFormData(prev => ({ ...prev, specialty: e.target.value }))}
-                data-testid="input-installer-specialty"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              rows={3}
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              data-testid="textarea-installer-notes"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsOpen(false)}
-              data-testid="button-cancel"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={() => onSubmit(isEdit)}
-              disabled={createMutation.isPending || updateMutation.isPending}
-              data-testid="button-save-installer"
-            >
-              {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
 
   return (
     <div className="space-y-6">
@@ -391,20 +440,24 @@ export default function InstallersManagement() {
         </CardContent>
       </Card>
 
-      <FormModal
+      <InstallerFormModal
         isOpen={isAddModalOpen}
         setIsOpen={setIsAddModalOpen}
         title="Add New Installer"
-        onSubmit={(isEdit: boolean) => handleSubmit(isEdit)}
+        onSubmit={handleFormSubmit}
         isEdit={false}
+        initialData={null}
+        isLoading={createMutation.isPending}
       />
 
-      <FormModal
+      <InstallerFormModal
         isOpen={isEditModalOpen}
         setIsOpen={setIsEditModalOpen}
         title="Edit Installer"
-        onSubmit={(isEdit: boolean) => handleSubmit(isEdit)}
+        onSubmit={handleFormSubmit}
         isEdit={true}
+        initialData={editingInstaller}
+        isLoading={updateMutation.isPending}
       />
     </div>
   );

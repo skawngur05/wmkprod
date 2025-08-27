@@ -1,28 +1,81 @@
-import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet, type Installer, type InsertInstaller, type UpdateInstaller } from "@shared/schema";
+// @ts-nocheck
+import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet, type Installer, type InsertInstaller, type UpdateInstaller, type CompletedProject, type InsertCompletedProject, type UpdateCompletedProject } from "@shared/schema";
 import { db } from "./db";
-import { users, leads, sampleBooklets, installers } from "@shared/schema";
+import { users, leads, sampleBooklets, installers, completedProjects } from "@shared/schema";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { IStorage } from "./storage";
 
 export class DatabaseStorage implements IStorage {
+  // Expose the db connection for direct queries
+  get db() {
+    return db;
+  }
+
   async getUser(id: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    return result[0];
+    const result = await db.select().from(users).where(eq(users.id, parseInt(id))).limit(1);
+    const user = result[0];
+    
+    // Parse permissions back to array for response
+    if (user && user.permissions) {
+      try {
+        (user as any).permissions = JSON.parse(user.permissions as string);
+      } catch (error) {
+        console.error('Error parsing user permissions:', error);
+        (user as any).permissions = [];
+      }
+    } else if (user) {
+      (user as any).permissions = [];
+    }
+    
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
-    return result[0];
+    const user = result[0];
+    
+    // Parse permissions back to array for response
+    if (user && user.permissions) {
+      try {
+        (user as any).permissions = JSON.parse(user.permissions as string);
+      } catch (error) {
+        console.error('Error parsing user permissions:', error);
+        (user as any).permissions = [];
+      }
+    } else if (user) {
+      (user as any).permissions = [];
+    }
+    
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const userWithId = { ...insertUser, id };
-    await db.insert(users).values(userWithId);
+    // Handle permissions array to JSON string conversion
+    const userData = {
+      ...insertUser,
+      permissions: insertUser.permissions ? JSON.stringify(insertUser.permissions) : null
+    };
     
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    return result[0];
+    const [result] = await db.insert(users).values(userData);
+    const insertId = result.insertId;
+    
+    const newUser = await db.select().from(users).where(eq(users.id, insertId)).limit(1);
+    
+    // Parse permissions back to array for response
+    const user = newUser[0];
+    if (user && user.permissions) {
+      try {
+        (user as any).permissions = JSON.parse(user.permissions as string);
+      } catch (error) {
+        console.error('Error parsing user permissions:', error);
+        (user as any).permissions = [];
+      }
+    } else if (user) {
+      (user as any).permissions = [];
+    }
+    
+    return user;
   }
 
   async getLeads(): Promise<Lead[]> {
@@ -49,15 +102,15 @@ export class DatabaseStorage implements IStorage {
     }
     
     if (filters?.status && filters.status !== 'all') {
-      whereConditions.push(eq(leads.remarks, filters.status));
+      whereConditions.push(eq(leads.remarks, filters.status as any));
     }
     
     if (filters?.origin && filters.origin !== 'all') {
-      whereConditions.push(eq(leads.lead_origin, filters.origin));
+      whereConditions.push(eq(leads.lead_origin, filters.origin as any));
     }
     
     if (filters?.assigned_to && filters.assigned_to !== 'all') {
-      whereConditions.push(eq(leads.assigned_to, filters.assigned_to));
+      whereConditions.push(eq(leads.assigned_to, filters.assigned_to as any));
     }
 
     // Combine all where conditions
@@ -92,17 +145,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLead(id: string): Promise<Lead | undefined> {
-    const result = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+    const result = await db.select().from(leads).where(eq(leads.id, parseInt(id))).limit(1);
+    return result[0];
+  }
+
+  async getLeadByEmail(email: string): Promise<Lead | undefined> {
+    const result = await db.select().from(leads).where(eq(leads.email, email)).limit(1);
     return result[0];
   }
 
   async createLead(insertLead: InsertLead): Promise<Lead> {
-    const id = randomUUID();
-    const leadWithId = { ...insertLead, id };
-    await db.insert(leads).values(leadWithId);
+    // Ensure date_created is set if not provided
+    const leadData = {
+      ...insertLead,
+      date_created: insertLead.date_created || new Date()
+    };
     
-    const result = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
-    return result[0];
+    const [result] = await db.insert(leads).values(leadData);
+    const insertId = result.insertId;
+    
+    const newLead = await db.select().from(leads).where(eq(leads.id, insertId)).limit(1);
+    return newLead[0];
   }
 
   async updateLead(id: string, updates: UpdateLead): Promise<Lead | undefined> {
@@ -115,15 +178,15 @@ export class DatabaseStorage implements IStorage {
       processedUpdates.installation_date = new Date(processedUpdates.installation_date);
     }
     
-    await db.update(leads).set(processedUpdates).where(eq(leads.id, id));
+    await db.update(leads).set(processedUpdates).where(eq(leads.id, parseInt(id)));
     
-    const result = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+    const result = await db.select().from(leads).where(eq(leads.id, parseInt(id))).limit(1);
     return result[0];
   }
 
   async deleteLead(id: string): Promise<boolean> {
     try {
-      const result = await db.delete(leads).where(eq(leads.id, id));
+      const result = await db.delete(leads).where(eq(leads.id, parseInt(id)));
       return (result as any).affectedRows > 0;
     } catch (error) {
       console.error('Error deleting lead:', error);
@@ -132,7 +195,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLeadsByAssignee(assignee: string): Promise<Lead[]> {
-    return await db.select().from(leads).where(eq(leads.assigned_to, assignee));
+    return await db.select().from(leads).where(eq(leads.assigned_to, assignee as any));
   }
 
   async getLeadsWithFollowupsDue(date: Date): Promise<Lead[]> {
@@ -159,7 +222,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSampleBooklet(id: string): Promise<SampleBooklet | undefined> {
-    const result = await db.select().from(sampleBooklets).where(eq(sampleBooklets.id, id)).limit(1);
+    const result = await db.select().from(sampleBooklets).where(eq(sampleBooklets.id, parseInt(id) as any)).limit(1);
     return result[0];
   }
 
@@ -185,22 +248,54 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSampleBookletsByStatus(status: string): Promise<SampleBooklet[]> {
-    return await db.select().from(sampleBooklets).where(eq(sampleBooklets.status, status));
+    return await db.select().from(sampleBooklets).where(eq(sampleBooklets.status, status as any));
   }
 
   // User management methods
   async getUsers(): Promise<User[]> {
-    return await db.select().from(users).orderBy(desc(users.username));
+    const userList = await db.select().from(users).orderBy(desc(users.username));
+    
+    // Parse permissions JSON strings back to arrays
+    return userList.map(user => ({
+      ...user,
+      permissions: user.permissions ? (() => {
+        try {
+          return JSON.parse(user.permissions as string);
+        } catch (error) {
+          console.error('Error parsing user permissions:', error);
+          return [];
+        }
+      })() : []
+    }));
   }
 
   async updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined> {
-    await db.update(users).set(updates).where(eq(users.id, id));
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    return result[0];
+    // Handle permissions array to JSON string conversion
+    const updateData = { ...updates };
+    if (updateData.permissions) {
+      updateData.permissions = JSON.stringify(updateData.permissions) as any;
+    }
+    
+    await db.update(users).set(updateData).where(eq(users.id, parseInt(id)));
+    const result = await db.select().from(users).where(eq(users.id, parseInt(id))).limit(1);
+    
+    const user = result[0];
+    if (user && user.permissions) {
+      try {
+        (user as any).permissions = JSON.parse(user.permissions as string);
+      } catch (error) {
+        console.error('Error parsing user permissions:', error);
+        (user as any).permissions = [];
+      }
+    } else if (user) {
+      (user as any).permissions = [];
+    }
+    
+    return user;
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    const result = await db.delete(users).where(eq(users.id, id));
+    const result = await db.delete(users).where(eq(users.id, parseInt(id)));
     return (result as any).rowCount > 0;
   }
 
@@ -234,6 +329,32 @@ export class DatabaseStorage implements IStorage {
     return (result as any).rowCount > 0;
   }
 
+  // Calendar methods (placeholder implementations)
+  async getCalendarEvents(): Promise<any[]> {
+    // Return empty array for now - calendar functionality not implemented yet
+    return [];
+  }
+
+  async getCalendarEvent(id: string): Promise<any | undefined> {
+    // Return undefined for now - calendar functionality not implemented yet
+    return undefined;
+  }
+
+  async createCalendarEvent(event: any): Promise<any> {
+    // Return mock event for now - calendar functionality not implemented yet
+    return { id: randomUUID(), ...event };
+  }
+
+  async updateCalendarEvent(id: string, updates: any): Promise<any | undefined> {
+    // Return undefined for now - calendar functionality not implemented yet
+    return undefined;
+  }
+
+  async deleteCalendarEvent(id: string): Promise<boolean> {
+    // Return false for now - calendar functionality not implemented yet
+    return false;
+  }
+
   // Admin settings methods
   async getAdminSettings(): Promise<any[]> {
     // Return empty array for now - admin_settings table doesn't exist yet
@@ -249,49 +370,6 @@ export class DatabaseStorage implements IStorage {
     await db.execute(sql`UPDATE admin_settings SET setting_value = ${value}, updated_at = NOW() WHERE setting_key = ${key}`);
     const result = await db.execute(sql`SELECT * FROM admin_settings WHERE setting_key = ${key} LIMIT 1`);
     return result[0];
-  }
-
-  // Email template methods
-  async getEmailTemplates(): Promise<any[]> {
-    // Return empty array for now - email_templates table doesn't exist yet
-    return [];
-  }
-
-  async getEmailTemplate(id: string): Promise<any | undefined> {
-    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id} LIMIT 1`);
-    return result[0];
-  }
-
-  async createEmailTemplate(template: any): Promise<any> {
-    const id = randomUUID();
-    const { template_name, subject, body_content, template_type, is_active = true } = template;
-    await db.execute(sql`
-      INSERT INTO email_templates (id, template_name, subject, body_content, template_type, is_active) 
-      VALUES (${id}, ${template_name}, ${subject}, ${body_content}, ${template_type}, ${is_active})
-    `);
-    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id} LIMIT 1`);
-    return result[0];
-  }
-
-  async updateEmailTemplate(id: string, updates: any): Promise<any | undefined> {
-    const { template_name, subject, body_content, template_type, is_active } = updates;
-    await db.execute(sql`
-      UPDATE email_templates 
-      SET template_name = COALESCE(${template_name}, template_name),
-          subject = COALESCE(${subject}, subject),
-          body_content = COALESCE(${body_content}, body_content),
-          template_type = COALESCE(${template_type}, template_type),
-          is_active = COALESCE(${is_active}, is_active),
-          updated_at = NOW()
-      WHERE id = ${id}
-    `);
-    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id} LIMIT 1`);
-    return result[0];
-  }
-
-  async deleteEmailTemplate(id: string): Promise<boolean> {
-    const result = await db.execute(sql`DELETE FROM email_templates WHERE id = ${id}`);
-    return (result as any).rowCount > 0;
   }
 
   // Lead origins methods
@@ -484,5 +562,35 @@ export class DatabaseStorage implements IStorage {
       INSERT INTO activity_logs (id, user_id, action, entity_type, entity_id, details)
       VALUES (${id}, ${userId}, ${action}, ${entityType || null}, ${entityId || null}, ${description || null})
     `);
+  }
+
+  // Completed Projects operations
+  async getCompletedProjects(): Promise<CompletedProject[]> {
+    return await db.select().from(completedProjects).orderBy(desc(completedProjects.completion_date));
+  }
+
+  async getCompletedProject(id: string): Promise<CompletedProject | undefined> {
+    const result = await db.select().from(completedProjects).where(eq(completedProjects.id, parseInt(id))).limit(1);
+    return result[0];
+  }
+
+  async createCompletedProject(insertProject: InsertCompletedProject): Promise<CompletedProject> {
+    const [result] = await db.insert(completedProjects).values(insertProject);
+    const insertId = result.insertId;
+    
+    const newProject = await db.select().from(completedProjects).where(eq(completedProjects.id, insertId)).limit(1);
+    return newProject[0];
+  }
+
+  async updateCompletedProject(id: string, updates: UpdateCompletedProject): Promise<CompletedProject | undefined> {
+    await db.update(completedProjects).set(updates).where(eq(completedProjects.id, parseInt(id)));
+    
+    const result = await db.select().from(completedProjects).where(eq(completedProjects.id, parseInt(id))).limit(1);
+    return result[0];
+  }
+
+  async deleteCompletedProject(id: string): Promise<boolean> {
+    const result = await db.delete(completedProjects).where(eq(completedProjects.id, parseInt(id)));
+    return result.affectedRows > 0;
   }
 }

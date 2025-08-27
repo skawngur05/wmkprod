@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Lead, LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES } from '@shared/schema';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { Lead, LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES, INSTALLERS } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { X } from 'lucide-react';
 
 interface QuickEditModalProps {
   lead: Lead | null;
@@ -33,12 +35,23 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     deposit_paid: false,
     balance_paid: false,
     installation_date: '',
-    assigned_installer: [] as string[]
+    assigned_installer: [] as string[],
+    selected_colors: [] as string[]
   });
   const [newNote, setNewNote] = useState('');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch WMK colors
+  const { data: wmkColors = [] } = useQuery({
+    queryKey: ['/api/wmk-colors'],
+    queryFn: async () => {
+      const response = await fetch('/api/wmk-colors');
+      if (!response.ok) throw new Error('Failed to fetch WMK colors');
+      return response.json();
+    }
+  });
 
   const updateLeadMutation = useMutation({
     mutationFn: async (updates: any) => {
@@ -75,7 +88,12 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         deposit_paid: lead.deposit_paid || false,
         balance_paid: lead.balance_paid || false,
         installation_date: lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : '',
-        assigned_installer: lead.assigned_installer || []
+        assigned_installer: (() => {
+          if (!lead.assigned_installer) return [];
+          if (Array.isArray(lead.assigned_installer)) return lead.assigned_installer;
+          return lead.assigned_installer.split(',').map(s => s.trim()).filter(s => s);
+        })(),
+        selected_colors: (lead as any).selected_colors || []
       });
     }
   }, [lead]);
@@ -83,12 +101,26 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Handle new note addition
+    // Handle new note addition and color selection note
     let updatedNotes = formData.notes || '';
     if (newNote.trim()) {
       const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const newNoteWithTimestamp = `[${timestamp}] ${newNote.trim()}`;
       updatedNotes = updatedNotes ? `${updatedNotes}\n${newNoteWithTimestamp}` : newNoteWithTimestamp;
+    }
+    
+    // Add installer assignment note if installers are assigned
+    if (formData.remarks === 'Sold' && formData.assigned_installer.length > 0) {
+      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const installerNote = `[${timestamp}] Assigned installers: ${formData.assigned_installer.map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ')}`;
+      updatedNotes = updatedNotes ? `${updatedNotes}\n${installerNote}` : installerNote;
+    }
+    
+    // Add color selection note after payment status if colors are selected
+    if (formData.remarks === 'Sold' && formData.selected_colors.length > 0 && (formData.deposit_paid || formData.balance_paid)) {
+      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const colorNote = `[${timestamp}] Selected colors: ${formData.selected_colors.join(', ')}`;
+      updatedNotes = updatedNotes ? `${updatedNotes}\n${colorNote}` : colorNote;
     }
 
     const updates = {
@@ -105,7 +137,8 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       deposit_paid: formData.deposit_paid,
       balance_paid: formData.balance_paid,
       installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
-      assigned_installer: formData.assigned_installer
+      assigned_installer: formData.assigned_installer,
+      selected_colors: formData.selected_colors
     };
 
     updateLeadMutation.mutate(updates);
@@ -118,6 +151,9 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col" data-testid="quick-edit-modal">
         <DialogHeader className="pb-4 flex-shrink-0">
           <DialogTitle>Edit Lead</DialogTitle>
+          <DialogDescription className="sr-only">
+            Edit lead information including contact details, status, payment information, and project assignments.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto pr-2">
@@ -171,7 +207,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
               </div>
               
               {/* Customer Address - Only show when status is sold */}
-              {formData.remarks === 'sold' && (
+              {formData.remarks === 'Sold' && (
                 <div className="space-y-1">
                   <Label htmlFor="customer_address" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
                     CUSTOMER ADDRESS FOR INSTALLATION
@@ -252,7 +288,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                 />
               </div>
               
-              {formData.remarks === 'sold' && (
+              {formData.remarks === 'Sold' && (
                 <div className="space-y-1">
                   <Label htmlFor="installation_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">INSTALLATION DATE</Label>
                   <Input
@@ -269,7 +305,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
           </div>
 
           {/* Payment Status - Only for Sold Status - First Priority */}
-          {formData.remarks === 'sold' && (
+          {formData.remarks === 'Sold' && (
             <div className="space-y-3 pt-2 border-t border-gray-200">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 PAYMENT STATUS
@@ -326,32 +362,108 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                 </div>
               </div>
 
-              {/* Installer Selection */}
+              {/* Installer Selection - Clean Dropdown */}
               <div className="space-y-3 pt-4 border-t border-gray-200">
                 <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  ASSIGNED INSTALLERS (Select Multiple)
+                  ASSIGNED INSTALLERS
                 </Label>
-                <div className="grid grid-cols-1 gap-3 p-3 border rounded-lg bg-gray-50">
-                  {['angel', 'brian', 'luis'].map((installer) => (
-                    <div key={installer} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`installer-${installer}`}
-                        checked={Array.isArray(formData.assigned_installer) ? formData.assigned_installer.includes(installer) : false}
-                        onCheckedChange={(checked) => {
-                          const currentInstallers = Array.isArray(formData.assigned_installer) ? formData.assigned_installer : [];
-                          const newInstallers = checked
-                            ? [...currentInstallers, installer]
-                            : currentInstallers.filter(i => i !== installer);
-                          setFormData({...formData, assigned_installer: newInstallers});
-                        }}
-                        data-testid={`checkbox-installer-${installer}`}
-                      />
-                      <Label htmlFor={`installer-${installer}`} className="text-sm font-medium capitalize cursor-pointer">
-                        {installer}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+                <Select
+                  value=""
+                  onValueChange={(installer) => {
+                    if (installer && !formData.assigned_installer.includes(installer)) {
+                      setFormData({
+                        ...formData,
+                        assigned_installer: [...formData.assigned_installer, installer]
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-installer" className="h-11 text-base">
+                    <SelectValue placeholder="Select installer to add..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INSTALLERS.filter(installer => !formData.assigned_installer.includes(installer)).map(installer => (
+                      <SelectItem key={installer} value={installer}>
+                        {installer.charAt(0).toUpperCase() + installer.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.assigned_installer.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.assigned_installer.map((installer) => (
+                      <Badge 
+                        key={installer} 
+                        variant="secondary" 
+                        className="flex items-center gap-1 px-2 py-1"
+                      >
+                        {installer.charAt(0).toUpperCase() + installer.slice(1)}
+                        <X 
+                          className="h-3 w-3 cursor-pointer hover:text-red-500" 
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              assigned_installer: formData.assigned_installer.filter(i => i !== installer)
+                            });
+                          }}
+                          data-testid={`remove-installer-${installer}`}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Color Selection - Clean Dropdown */}
+              <div className="space-y-3 pt-4 border-t border-gray-200">
+                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  COLOR SELECTION (Typically 2 colors)
+                </Label>
+                <Select
+                  value=""
+                  onValueChange={(color) => {
+                    if (color && !formData.selected_colors.includes(color)) {
+                      setFormData({
+                        ...formData,
+                        selected_colors: [...formData.selected_colors, color]
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-color" className="h-11 text-base">
+                    <SelectValue placeholder="Select color to add..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {wmkColors.filter((colorObj: any) => !formData.selected_colors.includes(colorObj.code)).map((colorObj: any) => (
+                      <SelectItem key={colorObj.code} value={colorObj.code}>
+                        {colorObj.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.selected_colors.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.selected_colors.map((color) => (
+                      <Badge 
+                        key={color} 
+                        variant="outline" 
+                        className="flex items-center gap-1 px-2 py-1 border-purple-200 text-purple-700"
+                      >
+                        {color}
+                        <X 
+                          className="h-3 w-3 cursor-pointer hover:text-red-500" 
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              selected_colors: formData.selected_colors.filter(c => c !== color)
+                            });
+                          }}
+                          data-testid={`remove-color-${color}`}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

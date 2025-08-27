@@ -16,8 +16,9 @@ export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProp
     address: '',
     email: '',
     phone: '',
-    product_type: 'sample_booklet_only',
-    status: 'pending',
+    product_type: 'Sample Booklet Only',
+    status: 'Pending',
+    date_ordered: new Date(),
     tracking_number: null,
     date_shipped: null,
     notes: null,
@@ -41,8 +42,9 @@ export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProp
         address: '',
         email: '',
         phone: '',
-        product_type: 'sample_booklet_only',
-        status: 'pending',
+        product_type: 'Sample Booklet Only',
+        status: 'Pending',
+        date_ordered: new Date(),
         tracking_number: null,
         date_shipped: null,
         notes: null,
@@ -123,10 +125,10 @@ export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProp
                     required
                     data-testid="select-product-type"
                   >
-                    <option value="demo_kit_and_sample_booklet">Demo Kit & Sample Booklet</option>
-                    <option value="sample_booklet_only">Sample Booklet Only</option>
-                    <option value="trial_kit">Trial Kit</option>
-                    <option value="demo_kit_only">Demo Kit Only</option>
+                    <option value="Demo Kit & Sample Booklet">Demo Kit & Sample Booklet</option>
+                    <option value="Sample Booklet Only">Sample Booklet Only</option>
+                    <option value="Trial Kit">Trial Kit</option>
+                    <option value="Demo Kit Only">Demo Kit Only</option>
                   </select>
                 </div>
 
@@ -174,14 +176,14 @@ export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProp
                   <select
                     className="form-select"
                     name="status"
-                    value={formData.status}
+                    value={formData.status || 'Pending'}
                     onChange={handleInputChange}
                     data-testid="select-status"
                   >
-                    <option value="pending">Pending</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="refunded">Refunded</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Refunded">Refunded</option>
                   </select>
                 </div>
 

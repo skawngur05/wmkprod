@@ -93,13 +93,27 @@ export default function SampleBooklets() {
   };
 
   const getProductTypeBadge = (productType: string) => {
-    const badges: Record<string, string> = {
-      'demo_kit_and_sample_booklet': 'success',
-      'sample_booklet_only': 'primary', 
-      'trial_kit': 'info',
-      'demo_kit_only': 'warning'
-    };
-    return badges[productType] || 'secondary';
+    let bgColor = '';
+    let textColor = '#ffffff';
+    
+    switch (productType) {
+      case 'demo_kit_and_sample_booklet':
+        bgColor = '#22c55e';  // Green
+        break;
+      case 'sample_booklet_only':
+        bgColor = '#3b82f6';  // Blue
+        break;
+      case 'trial_kit':
+        bgColor = '#06b6d4';  // Cyan
+        break;
+      case 'demo_kit_only':
+        bgColor = '#f59e0b';  // Yellow/orange
+        break;
+      default:
+        bgColor = '#6b7280';  // Gray
+    }
+    
+    return { backgroundColor: bgColor, color: textColor };
   };
 
   const getProductTypeLabel = (productType: string) => {
@@ -113,26 +127,40 @@ export default function SampleBooklets() {
   };
 
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, string> = {
-      'pending': 'warning',
-      'shipped': 'info',
-      'in-transit': 'primary',
-      'out-for-delivery': 'info',
-      'delivered': 'success',
-      'refunded': 'danger',
-      'unknown': 'secondary'
-    };
-    return badges[status] || 'secondary';
+    let bgColor = '';
+    let textColor = '#ffffff';
+    
+    switch (status) {
+      case 'pending':
+        bgColor = '#f59e0b';  // Yellow/orange
+        break;
+      case 'shipped':
+        bgColor = '#3b82f6';  // Blue
+        break;
+      case 'in-transit':
+        bgColor = '#8b5cf6';  // Purple
+        break;
+      case 'out-for-delivery':
+        bgColor = '#06b6d4';  // Cyan
+        break;
+      case 'delivered':
+        bgColor = '#22c55e';  // Green
+        break;
+      case 'refunded':
+        bgColor = '#ef4444';  // Red
+        break;
+      default:
+        bgColor = '#6b7280';  // Gray
+    }
+    
+    return { backgroundColor: bgColor, color: textColor };
   };
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      'pending': 'Pending',
-      'shipped': 'Shipped',
-      'in-transit': 'In Transit',
-      'out-for-delivery': 'Out for Delivery',
-      'delivered': 'Delivered',
-      'refunded': 'Refunded',
+      'Pending': 'Pending',
+      'Shipped': 'Shipped',
+      'Delivered': 'Delivered',
       'unknown': 'Unknown'
     };
     return labels[status] || status;
@@ -221,8 +249,8 @@ export default function SampleBooklets() {
           <div className="col-md-2 mb-3">
             <div className="stats-card card text-center">
               <div className="card-body">
-                <h3 className="text-danger">{stats.refundedOrders || 0}</h3>
-                <p className="mb-0">Refunded</p>
+                <h3 className="text-danger">{stats.deliveredOrders || 0}</h3>
+                <p className="mb-0">Delivered</p>
               </div>
             </div>
           </div>
@@ -250,12 +278,10 @@ export default function SampleBooklets() {
                 data-testid="select-filter-status"
               >
                 <option value="">All Orders</option>
-                <option value="pending">Pending</option>
-                <option value="shipped">Shipped</option>
-                <option value="in-transit">In Transit</option>
-                <option value="out-for-delivery">Out for Delivery</option>
-                <option value="delivered">Delivered</option>
-                <option value="refunded">Refunded</option>
+                <option value="Pending">Pending</option>
+                <option value="Shipped">Shipped</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Refunded">Refunded</option>
               </select>
             </div>
             <div className="col-md-3 d-flex align-items-end">
@@ -280,8 +306,8 @@ export default function SampleBooklets() {
                 <tr>
                   <th>Order #</th>
                   <th>Customer</th>
-                  <th>Product Type</th>
-                  <th>Status</th>
+                  <th style={{ minWidth: '180px', whiteSpace: 'nowrap' }}>Product Type</th>
+                  <th style={{ minWidth: '120px', whiteSpace: 'nowrap' }}>Status</th>
                   <th>Order Date</th>
                   <th>Tracking</th>
                   <th>Ship Date</th>
@@ -302,15 +328,105 @@ export default function SampleBooklets() {
                           <small className="text-muted">{booklet.email}</small>
                         </div>
                       </td>
-                      <td>
-                        <span className={`badge bg-${getProductTypeBadge(booklet.product_type)}`}>
-                          {getProductTypeLabel(booklet.product_type)}
-                        </span>
+                      <td style={{ minWidth: '180px', whiteSpace: 'nowrap' }}>
+                        {(() => {
+                          const productType = booklet.product_type;
+                          let className = '';
+                          
+                          switch (productType) {
+                            case 'Demo Kit & Sample Booklet':
+                              className = 'badge-demo-kit-sample';
+                              break;
+                            case 'Sample Booklet Only':
+                              className = 'badge-sample-only';
+                              break;
+                            case 'Trial Kit':
+                              className = 'badge-trial-kit';
+                              break;
+                            case 'Demo Kit Only':
+                              className = 'badge-demo-only';
+                              break;
+                            default:
+                              className = 'badge-product-default';
+                          }
+                          
+                          return (
+                            <>
+                              <style dangerouslySetInnerHTML={{
+                                __html: `
+                                  .badge-demo-kit-sample { background-color: #22c55e !important; color: #ffffff !important; }
+                                  .badge-sample-only { background-color: #3b82f6 !important; color: #ffffff !important; }
+                                  .badge-trial-kit { background-color: #06b6d4 !important; color: #ffffff !important; }
+                                  .badge-demo-only { background-color: #f59e0b !important; color: #ffffff !important; }
+                                  .badge-product-default { background-color: #6b7280 !important; color: #ffffff !important; }
+                                  .product-badge {
+                                    display: inline-block !important;
+                                    align-items: center !important;
+                                    border-radius: 9999px !important;
+                                    padding: 0.125rem 0.625rem !important;
+                                    font-size: 0.75rem !important;
+                                    font-weight: 600 !important;
+                                    white-space: nowrap !important;
+                                    max-width: 160px !important;
+                                    overflow: hidden !important;
+                                    text-overflow: ellipsis !important;
+                                  }
+                                `
+                              }} />
+                              <div className={`product-badge ${className}`}>
+                                {getProductTypeLabel(booklet.product_type)}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </td>
-                      <td>
-                        <span className={`badge bg-${getStatusBadge(booklet.status)} status-badge`}>
-                          {getStatusLabel(booklet.status)}
-                        </span>
+                      <td style={{ minWidth: '120px', whiteSpace: 'nowrap' }}>
+                        {(() => {
+                          const status = booklet.status;
+                          let className = '';
+                          
+                          switch (status) {
+                            case 'Pending':
+                              className = 'badge-status-pending';
+                              break;
+                            case 'Shipped':
+                              className = 'badge-status-shipped';
+                              break;
+                            case 'Delivered':
+                              className = 'badge-status-delivered';
+                              break;
+                            default:
+                              className = 'badge-status-default';
+                          }
+                          
+                          return (
+                            <>
+                              <style dangerouslySetInnerHTML={{
+                                __html: `
+                                  .badge-status-pending { background-color: #f59e0b !important; color: #ffffff !important; }
+                                  .badge-status-shipped { background-color: #3b82f6 !important; color: #ffffff !important; }
+                                  .badge-status-transit { background-color: #8b5cf6 !important; color: #ffffff !important; }
+                                  .badge-status-delivery { background-color: #06b6d4 !important; color: #ffffff !important; }
+                                  .badge-status-delivered { background-color: #22c55e !important; color: #ffffff !important; }
+                                  .badge-status-refunded { background-color: #ef4444 !important; color: #ffffff !important; }
+                                  .badge-status-default { background-color: #6b7280 !important; color: #ffffff !important; }
+                                  .status-badge-booklet {
+                                    display: inline-block !important;
+                                    align-items: center !important;
+                                    border-radius: 9999px !important;
+                                    padding: 0.125rem 0.625rem !important;
+                                    font-size: 0.75rem !important;
+                                    font-weight: 600 !important;
+                                    white-space: nowrap !important;
+                                  }
+                                `
+                              }} />
+                              <div className={`status-badge-booklet ${className}`}>
+                                {getStatusLabel(booklet.status || 'unknown')}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </td>
                       <td>{formatDate(booklet.date_ordered)}</td>
                       <td>
@@ -347,7 +463,7 @@ export default function SampleBooklets() {
                         >
                           <i className="fas fa-edit"></i>
                         </button>
-                        {booklet.status === 'pending' && (
+                        {booklet.status === 'Pending' && (
                           <button
                             className="btn btn-circle btn-outline-info btn-sm me-1"
                             onClick={() => {
@@ -361,7 +477,7 @@ export default function SampleBooklets() {
                         )}
                         <button
                           className="btn btn-circle btn-outline-danger btn-sm"
-                          onClick={() => handleDelete(booklet.id)}
+                          onClick={() => handleDelete(booklet.id.toString())}
                           disabled={deleteBookletMutation.isPending}
                           data-testid={`button-delete-booklet-${booklet.id}`}
                         >

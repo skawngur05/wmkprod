@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1756300514122,
+      "tag": "0000_cloudy_mandroid",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1756303883714,
+      "tag": "0001_sleepy_phantom_reporter",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1756322344313,
+      "tag": "0002_low_squadron_supreme",
+      "breakpoints": true
+    }
+  ]
+}

@@ -631,7 +631,7 @@ export default function UserManagement() {
                     id: editingUser.id, 
                     data: { 
                       username: editingUser.username,
-                      name: editingUser.name,
+                      full_name: editingUser.name,
                       email: editingUser.email,
                       role: editingUser.role, 
                       permissions: editingUser.permissions,

@@ -51,7 +51,7 @@ export function hasPermission(user: User | null, route: string): boolean {
   if (!requiredPermission) return true;
   
   // Check if user has the required permission
-  return user.permissions?.includes(requiredPermission) || false;
+  return Array.isArray(user.permissions) && user.permissions.includes(requiredPermission) || false;
 }
 
 /**
@@ -66,7 +66,7 @@ export function hasAnyPermission(user: User | null, permissions: string[]): bool
   }
   
   return permissions.some(permission => 
-    user.permissions?.includes(permission) || false
+    Array.isArray(user.permissions) && user.permissions.includes(permission) || false
   );
 }
 

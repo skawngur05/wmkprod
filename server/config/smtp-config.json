@@ -1,0 +1,15 @@
+{
+  "host": "smtp.gmail.com",
+  "port": 465,
+  "secure": true,
+  "auth": {
+    "user": "infofloridawmk@gmail.com",
+    "pass": "fvil brcy qjfj lhyu"
+  },
+  "from": {
+    "email": "infofloridawmk@gmail.com",
+    "name": "Wrap My Kitchen"
+  },
+  "isActive": true,
+  "lastUpdated": "2025-08-27T16:40:10.806Z"
+}

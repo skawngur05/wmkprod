@@ -12,8 +12,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, User, Phone, Mail, Share2, Flag, Users, DollarSign, Calendar, FileText, Save, X, Building, MapPin, ExternalLink, Loader2, CheckCircle, AlertCircle, HardHat } from 'lucide-react';
-import { enrichEmail, type EnrichmentData, getConfidenceColor, getConfidenceLabel } from '@/lib/email-enrichment';
+import { ArrowLeft, User, Phone, Mail, Share2, Flag, Users, DollarSign, Calendar, FileText, Save, X, Loader2, HardHat } from 'lucide-react';
+import { enrichFromDatabase, type InternalEnrichmentData } from '@/lib/internal-enrichment';
+import { EnrichmentModal } from '@/components/enrichment-modal';
 
 export default function AddLead() {
   const [formData, setFormData] = useState({
@@ -21,22 +22,23 @@ export default function AddLead() {
     phone: '',
     email: '',
     lead_origin: 'facebook',
-    remarks: 'new',
+    remarks: 'New', // Fixed: capital N to match enum
     assigned_to: 'kim',
     project_amount: '',
     next_followup_date: '',
     notes: '',
     installation_date: '',
-    assigned_installer: [] as string[],
+    assigned_installer: [] as string[], // Keep as array for UI, will convert for submission
     deposit_paid: false,
-    balance_paid: false
+    balance_paid: false,
+    date_created: new Date().toISOString().split('T')[0] // Default to today, but allow editing
   });
   
-  const [enrichmentData, setEnrichmentData] = useState<EnrichmentData | null>(null);
+  // Internal enrichment state
+  const [enrichmentData, setEnrichmentData] = useState<InternalEnrichmentData | null>(null);
   const [isEnriching, setIsEnriching] = useState(false);
-  const [enrichmentError, setEnrichmentError] = useState<string | null>(null);
-  const [showEnrichment, setShowEnrichment] = useState(false);
-
+  const [showEnrichmentModal, setShowEnrichmentModal] = useState(false);
+  
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -64,49 +66,50 @@ export default function AddLead() {
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-  
-  // Email enrichment effect
+
+  // Internal enrichment effect
   useEffect(() => {
     const enrichEmailData = async () => {
       if (!formData.email || !formData.email.includes('@')) {
         setEnrichmentData(null);
-        setShowEnrichment(false);
+        setShowEnrichmentModal(false);
         return;
       }
       
       setIsEnriching(true);
-      setEnrichmentError(null);
       
       try {
-        const data = await enrichEmail(formData.email);
+        const data = await enrichFromDatabase(formData.email);
         setEnrichmentData(data);
-        setShowEnrichment(!!data);
+        // Show modal only if we found an existing customer
+        if (data?.found) {
+          setShowEnrichmentModal(true);
+        }
       } catch (error) {
-        setEnrichmentError(error instanceof Error ? error.message : 'Failed to enrich email');
+        console.error('Internal enrichment error:', error);
+        setEnrichmentData(null);
+        setShowEnrichmentModal(false);
       } finally {
         setIsEnriching(false);
       }
     };
     
-    const timeoutId = setTimeout(enrichEmailData, 1000); // Debounce email enrichment
+    const timeoutId = setTimeout(enrichEmailData, 1000); // Debounce enrichment
     return () => clearTimeout(timeoutId);
   }, [formData.email]);
   
   const applyEnrichmentData = () => {
-    if (!enrichmentData) return;
+    if (!enrichmentData?.found) return;
     
     setFormData(prev => ({
       ...prev,
       name: enrichmentData.name || prev.name,
-      phone: enrichmentData.phone || prev.phone,
-      notes: enrichmentData.company 
-        ? `Company: ${enrichmentData.company}${enrichmentData.jobTitle ? `\nJob Title: ${enrichmentData.jobTitle}` : ''}${enrichmentData.location ? `\nLocation: ${enrichmentData.location}` : ''}${prev.notes ? `\n\n${prev.notes}` : ''}`
-        : prev.notes
+      phone: enrichmentData.phone || prev.phone
     }));
     
     toast({ 
-      title: "Enrichment Applied", 
-      description: "Lead information has been updated with enriched data." 
+      title: "Data Applied", 
+      description: "Lead information has been updated with existing data from your database." 
     });
   };
 
@@ -121,13 +124,15 @@ export default function AddLead() {
         lead_origin: formData.lead_origin,
         remarks: formData.remarks,
         assigned_to: formData.assigned_to,
-        project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null,
-        next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date) : null,
+        project_amount: formData.project_amount ? formData.project_amount : "0.00", // Keep as string for decimal
+        next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date).toISOString().split('T')[0] : null,
         notes: formData.notes || null,
-        installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
-        assigned_installer: formData.assigned_installer,
+        installation_date: formData.installation_date ? new Date(formData.installation_date).toISOString().split('T')[0] : null,
+        assigned_installer: formData.assigned_installer.length > 0 ? formData.assigned_installer.join(', ') : null, // Convert array to string
         deposit_paid: formData.deposit_paid,
-        balance_paid: formData.balance_paid
+        balance_paid: formData.balance_paid,
+        date_created: formData.date_created, // Use the form date instead of always generating new
+        additional_notes: null // Add missing field that might be expected
       };
 
       createLeadMutation.mutate(leadData);
@@ -235,12 +240,6 @@ export default function AddLead() {
                         placeholder="customer@example.com"
                         className="h-11"
                       />
-                      {enrichmentError && (
-                        <div className="flex items-center gap-1 text-sm text-red-600">
-                          <AlertCircle className="h-3 w-3" />
-                          {enrichmentError}
-                        </div>
-                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -264,98 +263,27 @@ export default function AddLead() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="date_created" className="flex items-center gap-2 font-medium">
+                        <Calendar className="h-4 w-4" />
+                        Date Created *
+                      </Label>
+                      <Input
+                        id="date_created"
+                        type="date"
+                        value={formData.date_created}
+                        onChange={(e) => handleInputChange('date_created', e.target.value)}
+                        required
+                        data-testid="input-date-created"
+                        className="h-11"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Date when this lead was first created (for historical records)
+                      </p>
+                    </div>
                   </div>
                 </div>
-
-                {/* Email Enrichment Section */}
-                {showEnrichment && enrichmentData && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-blue-500" />
-                        <h3 className="text-lg font-semibold text-gray-900">Email Enrichment Found</h3>
-                        <Badge className={`${getConfidenceColor(enrichmentData.confidence)} bg-white`}>
-                          {getConfidenceLabel(enrichmentData.confidence)}
-                        </Badge>
-                      </div>
-                      <Button onClick={applyEnrichmentData} size="sm" className="bg-blue-600 hover:bg-blue-700">
-                        Apply Data
-                      </Button>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-4 text-sm">
-                      {enrichmentData.name && (
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">Name:</span>
-                          <span>{enrichmentData.name}</span>
-                        </div>
-                      )}
-                      
-                      {enrichmentData.company && (
-                        <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">Company:</span>
-                          <span>{enrichmentData.company}</span>
-                        </div>
-                      )}
-                      
-                      {enrichmentData.jobTitle && (
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">Job Title:</span>
-                          <span>{enrichmentData.jobTitle}</span>
-                        </div>
-                      )}
-                      
-                      {enrichmentData.location && (
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">Location:</span>
-                          <span>{enrichmentData.location}</span>
-                        </div>
-                      )}
-                      
-                      {enrichmentData.industry && (
-                        <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">Industry:</span>
-                          <span>{enrichmentData.industry}</span>
-                        </div>
-                      )}
-                      
-                      {enrichmentData.companySize && (
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">Company Size:</span>
-                          <span>{enrichmentData.companySize}</span>
-                        </div>
-                      )}
-                      
-                      {enrichmentData.linkedinUrl && (
-                        <div className="flex items-center gap-2">
-                          <ExternalLink className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">LinkedIn:</span>
-                          <a href={enrichmentData.linkedinUrl} target="_blank" rel="noopener noreferrer" 
-                             className="text-blue-600 hover:underline">
-                            View Profile
-                          </a>
-                        </div>
-                      )}
-                      
-                      {enrichmentData.companyWebsite && (
-                        <div className="flex items-center gap-2">
-                          <ExternalLink className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">Website:</span>
-                          <a href={enrichmentData.companyWebsite} target="_blank" rel="noopener noreferrer" 
-                             className="text-blue-600 hover:underline">
-                            {enrichmentData.companyWebsite.replace(/https?:\/\//, '')}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Lead Management Section */}
                 <div>
@@ -430,7 +358,7 @@ export default function AddLead() {
                 </div>
 
                 {/* Installation & Payment Section (Only for Sold Status) */}
-                {formData.remarks === 'sold' && (
+                {formData.remarks === 'Sold' && (
                   <div>
                     <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
                       <HardHat className="h-5 w-5 text-blue-500" />
@@ -619,6 +547,14 @@ export default function AddLead() {
           </Card>
         </div>
       </div>
+      
+      {/* Enrichment Modal */}
+      <EnrichmentModal
+        isOpen={showEnrichmentModal}
+        onClose={() => setShowEnrichmentModal(false)}
+        enrichmentData={enrichmentData}
+        onApplyData={applyEnrichmentData}
+      />
     </div>
   );
 }

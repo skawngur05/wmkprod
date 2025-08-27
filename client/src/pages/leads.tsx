@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Lead } from '@shared/schema';
 import { formatCurrency, formatDate, getStatusColor, getOriginColor } from '@/lib/auth';
@@ -22,6 +22,7 @@ export default function Leads() {
     origin: 'all',
     assigned_to: 'all'
   });
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -32,6 +33,23 @@ export default function Leads() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(filters.search);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [filters.search]);
+
+  // Memoize the actual filters used for the query
+  const queryFilters = useMemo(() => ({
+    search: debouncedSearch,
+    status: filters.status,
+    origin: filters.origin,
+    assigned_to: filters.assigned_to
+  }), [debouncedSearch, filters.status, filters.origin, filters.assigned_to]);
+
   const { data: leadsResponse, isLoading } = useQuery<{
     leads: Lead[];
     total: number;
@@ -39,14 +57,14 @@ export default function Leads() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ['/api/leads', filters, currentPage],
+    queryKey: ['/api/leads', queryFilters, currentPage],
     queryFn: async () => {
       // Build query parameters from filters and pagination
       const params = new URLSearchParams();
-      if (filters.search) params.append('search', filters.search);
-      if (filters.status && filters.status !== 'all') params.append('status', filters.status);
-      if (filters.origin && filters.origin !== 'all') params.append('origin', filters.origin);
-      if (filters.assigned_to && filters.assigned_to !== 'all') params.append('assigned_to', filters.assigned_to);
+      if (queryFilters.search) params.append('search', queryFilters.search);
+      if (queryFilters.status && queryFilters.status !== 'all') params.append('status', queryFilters.status);
+      if (queryFilters.origin && queryFilters.origin !== 'all') params.append('origin', queryFilters.origin);
+      if (queryFilters.assigned_to && queryFilters.assigned_to !== 'all') params.append('assigned_to', queryFilters.assigned_to);
       
       // Add pagination parameters
       params.append('page', currentPage.toString());
@@ -68,11 +86,21 @@ export default function Leads() {
   const totalPages = leadsResponse?.totalPages || 1;
   const total = leadsResponse?.total || 0;
 
-  // Helper function to update filters and reset pagination
-  const updateFilters = (newFilters: typeof filters) => {
+  // Helper function to update filters and reset pagination only for non-search filters
+  const updateFilters = useCallback((newFilters: typeof filters) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
+    // Only reset page if it's not just a search change
+    if (newFilters.status !== filters.status || 
+        newFilters.origin !== filters.origin || 
+        newFilters.assigned_to !== filters.assigned_to) {
+      setCurrentPage(1);
+    }
+  }, [filters]);
+
+  // Reset page when debounced search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (leadId: string) => {
@@ -229,7 +257,7 @@ export default function Leads() {
                     <SelectItem value="new">New</SelectItem>
                     <SelectItem value="in-progress">In Progress</SelectItem>
                     <SelectItem value="quoted">Quoted</SelectItem>
-                    <SelectItem value="sold">Sold</SelectItem>
+                    <SelectItem value="Sold">Sold</SelectItem>
                     <SelectItem value="not-interested">Not Interested</SelectItem>
                   </SelectContent>
                 </Select>
@@ -293,95 +321,216 @@ export default function Leads() {
               <Table data-testid="leads-table">
                 <TableHeader>
                   <TableRow className="bg-gray-50 hover:bg-gray-50">
-                    <TableHead className="font-semibold text-gray-900">Date</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Name</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Contact Info</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Origin</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Next Follow-up</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Assigned To</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Status</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Project Amount</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Actions</TableHead>
+                    <TableHead className="font-semibold text-gray-900" style={{ width: '100px', minWidth: '100px' }}>Date</TableHead>
+                    <TableHead className="font-semibold text-gray-900" style={{ width: '150px', minWidth: '150px' }}>Name</TableHead>
+                    <TableHead className="font-semibold text-gray-900" style={{ width: '160px', minWidth: '160px' }}>Contact Info</TableHead>
+                    <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Origin</TableHead>
+                    <TableHead className="font-semibold text-gray-900" style={{ width: '130px', minWidth: '130px' }}>Next Follow-up</TableHead>
+                    <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Assigned To</TableHead>
+                    <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Status</TableHead>
+                    <TableHead className="font-semibold text-gray-900" style={{ width: '130px', minWidth: '130px' }}>Project Amount</TableHead>
+                    <TableHead className="font-semibold text-gray-900" style={{ width: '100px', minWidth: '100px' }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {leads && leads.length > 0 ? (
                     leads.map((lead) => (
                       <TableRow key={lead.id} data-testid={`lead-row-${lead.id}`} className="hover:bg-gray-50">
-                        <TableCell className="font-medium text-gray-900">{formatDate(lead.date_created)}</TableCell>
-                        <TableCell>
-                          <div className="font-semibold text-gray-900">{lead.name}</div>
+                        <TableCell className="font-medium text-gray-900" style={{ width: '100px', maxWidth: '100px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                          {new Date(lead.date_created).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: '2-digit'
+                          })}
                         </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center text-sm text-gray-700">
-                              <Phone className="h-3 w-3 mr-2 text-green-600" />
-                              {lead.phone}
-                            </div>
+                        <TableCell style={{ width: '150px', maxWidth: '150px' }}>
+                          <div className="font-semibold text-gray-900" style={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={lead.name}>
+                            {lead.name}
+                          </div>
+                        </TableCell>
+                        <TableCell style={{ width: '160px', maxWidth: '160px' }}>
+                          <div className="text-sm" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ fontSize: '0.75rem', lineHeight: '1.2' }}>{lead.phone}</div>
                             {lead.email && (
-                              <div className="flex items-center text-sm text-gray-700">
-                                <Mail className="h-3 w-3 mr-2 text-blue-600" />
-                                {lead.email}
+                              <div style={{ fontSize: '0.7rem', color: '#6b7280', lineHeight: '1.2' }} title={lead.email}>
+                                {lead.email.length > 15 ? lead.email.substring(0, 15) + '...' : lead.email}
                               </div>
                             )}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border capitalize ${getOriginColor(lead.lead_origin)}`}>
-                            {lead.lead_origin.replace('-', ' ')}
+                          {(() => {
+                            const origin = lead.lead_origin;
+                            let className = '';
+                            
+                            switch (origin) {
+                              case 'Facebook':
+                                className = 'badge-facebook';
+                                break;
+                              case 'Google Text':
+                                className = 'badge-google';
+                                break;
+                              case 'Instagram':
+                                className = 'badge-instagram';
+                                break;
+                              case 'Trade Show':
+                                className = 'badge-trade-show';
+                                break;
+                              case 'WhatsApp':
+                                className = 'badge-whatsapp';
+                                break;
+                              case 'Website':
+                                className = 'badge-website';
+                                break;
+                              case 'Commercial':
+                                className = 'badge-commercial';
+                                break;
+                              case 'Referral':
+                                className = 'badge-referral';
+                                break;
+                              default:
+                                className = 'badge-default';
+                            }
+                            
+                            return (
+                              <>
+                                <style dangerouslySetInnerHTML={{
+                                  __html: `
+                                    .badge-facebook { background-color: #2563eb !important; color: #ffffff !important; border: 1px solid #2563eb !important; }
+                                    .badge-google { background-color: #fef3c7 !important; color: #92400e !important; border: 1px solid #fcd34d !important; }
+                                    .badge-instagram { background-color: #ec4899 !important; color: #ffffff !important; border: 1px solid #f472b6 !important; }
+                                    .badge-trade-show { background-color: #ede9fe !important; color: #7c3aed !important; border: 1px solid #c4b5fd !important; }
+                                    .badge-whatsapp { background-color: #22c55e !important; color: #ffffff !important; border: 1px solid #22c55e !important; }
+                                    .badge-website { background-color: #e0f2fe !important; color: #0c4a6e !important; border: 1px solid #7dd3fc !important; }
+                                    .badge-commercial { background-color: #f3f4f6 !important; color: #374151 !important; border: 1px solid #d1d5db !important; }
+                                    .badge-referral { background-color: #fee2e2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; }
+                                    .badge-default { background-color: #f3f4f6 !important; color: #374151 !important; border: 1px solid #d1d5db !important; }
+                                    .origin-badge {
+                                      display: inline-flex !important;
+                                      padding: 0.25rem 0.5rem !important;
+                                      font-size: 0.75rem !important;
+                                      font-weight: 500 !important;
+                                      border-radius: 9999px !important;
+                                      text-transform: capitalize !important;
+                                      white-space: nowrap !important;
+                                    }
+                                  `
+                                }} />
+                                <span className={`origin-badge ${className}`}>
+                                  {lead.lead_origin.replace('-', ' ')}
+                                </span>
+                              </>
+                            );
+                          })()}
+                        </TableCell>
+                        <TableCell style={{ width: '130px', maxWidth: '130px' }}>
+                          {lead.next_followup_date ? (
+                            <div style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }} className={
+                              isOverdue(lead.next_followup_date) ? 'text-red-600 font-medium' :
+                              isDueToday(lead.next_followup_date) ? 'text-yellow-600 font-medium' : 'text-green-600'
+                            }>
+                              {isOverdue(lead.next_followup_date) ? 'Overdue' :
+                               isDueToday(lead.next_followup_date) ? 'Today' :
+                               new Date(lead.next_followup_date).toLocaleDateString('en-US', { 
+                                 month: 'short', 
+                                 day: 'numeric'
+                               })}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500" style={{ fontSize: '0.75rem' }}>-</span>
+                          )}
+                        </TableCell>
+                        <TableCell style={{ width: '120px', maxWidth: '120px' }}>
+                          <span className="text-gray-900 capitalize" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={lead.assigned_to || 'Unassigned'}>
+                            {lead.assigned_to || 'Unassigned'}
                           </span>
                         </TableCell>
                         <TableCell>
-                          {lead.next_followup_date ? (
-                            <div className="flex items-center space-x-2">
-                              <div className={
-                                isOverdue(lead.next_followup_date) ? 'text-red-600' :
-                                isDueToday(lead.next_followup_date) ? 'text-yellow-600' : 'text-green-600'
-                              }>
-                                {isOverdue(lead.next_followup_date) ? (
-                                  <AlertTriangle className="h-4 w-4" />
-                                ) : isDueToday(lead.next_followup_date) ? (
-                                  <Clock className="h-4 w-4" />
-                                ) : (
-                                  <Check className="h-4 w-4" />
-                                )}
-                              </div>
-                              <span className={
-                                isOverdue(lead.next_followup_date) ? 'text-red-600 font-medium' :
-                                isDueToday(lead.next_followup_date) ? 'text-yellow-600 font-medium' : 'text-green-600'
-                              }>
-                                {isOverdue(lead.next_followup_date) ? 'Overdue' :
-                                 isDueToday(lead.next_followup_date) ? 'Today' :
-                                 formatDate(lead.next_followup_date)}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">-</span>
-                          )}
+                          {(() => {
+                            const status = lead.remarks;
+                            console.log('LEADS DEBUG - Status:', status, 'Type:', typeof status);
+                            let bgColor = '';
+                            let textColor = '';
+                            
+                            switch (status) {
+                              case 'Sold':
+                                bgColor = '#22c55e';  // Green
+                                textColor = '#ffffff';
+                                console.log('LEADS DEBUG - Applied GREEN for Sold');
+                                break;
+                              case 'In Progress':
+                                bgColor = '#f59e0b';  // Yellow/orange
+                                textColor = '#ffffff';
+                                console.log('LEADS DEBUG - Applied YELLOW for In Progress');
+                                break;
+                              case 'New':
+                                bgColor = '#3b82f6';  // Blue
+                                textColor = '#ffffff';
+                                console.log('LEADS DEBUG - Applied BLUE for New');
+                                break;
+                              case 'Not Interested':
+                                bgColor = '#6b7280';  // Gray
+                                textColor = '#ffffff';
+                                console.log('LEADS DEBUG - Applied GRAY for Not Interested');
+                                break;
+                              case 'Not Service Area':
+                                bgColor = '#ea580c';  // Orange
+                                textColor = '#ffffff';
+                                console.log('LEADS DEBUG - Applied ORANGE for Not Service Area');
+                                break;
+                              case 'Not Compatible':
+                                bgColor = '#dc2626';  // Red
+                                textColor = '#ffffff';
+                                console.log('LEADS DEBUG - Applied RED for Not Compatible');
+                                break;
+                              default:
+                                bgColor = '#6b7280';  // Gray
+                                textColor = '#ffffff';
+                                console.log('LEADS DEBUG - Applied DEFAULT GRAY for:', status);
+                            }
+                            
+                            console.log('LEADS DEBUG - Final colors:', { bgColor, textColor });
+                            
+                            const uniqueId = `status-badge-${lead.id}`;
+                            
+                            return (
+                              <>
+                                <style dangerouslySetInnerHTML={{
+                                  __html: `
+                                    #${uniqueId} {
+                                      background-color: ${bgColor} !important;
+                                      color: ${textColor} !important;
+                                    }
+                                  `
+                                }} />
+                                <div
+                                  id={uniqueId}
+                                  style={{
+                                    borderRadius: '9999px',
+                                    padding: '0.125rem 0.625rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    textTransform: 'capitalize',
+                                    whiteSpace: 'nowrap',
+                                    border: 'none',
+                                    outline: 'none'
+                                  }}
+                                >
+                                  {status}
+                                </div>
+                              </>
+                            );
+                          })()}
                         </TableCell>
-                        <TableCell>
-                          <span className="text-gray-900 capitalize">{lead.assigned_to || 'Unassigned'}</span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            className={`capitalize ${
-                              lead.remarks === 'sold' ? 'bg-green-100 text-green-800' :
-                              lead.remarks === 'quoted' ? 'bg-purple-100 text-purple-800' :
-                              lead.remarks === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
-                              lead.remarks === 'new' ? 'bg-blue-100 text-blue-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {lead.remarks.replace('-', ' ')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold text-green-700">
+                        <TableCell style={{ width: '100px', maxWidth: '100px' }}>
+                          <span className="font-semibold text-green-700" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                             {lead.project_amount ? formatCurrency(lead.project_amount) : '-'}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
+                        <TableCell style={{ width: '120px', maxWidth: '120px' }}>
+                          <div className="flex items-center space-x-1">
                             <Button
                               size="sm"
                               variant="outline"
@@ -405,7 +554,7 @@ export default function Leads() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleDelete(lead.id)}
+                              onClick={() => handleDelete(lead.id.toString())}
                               disabled={deleteLeadMutation.isPending}
                               title="Delete Lead"
                               data-testid={`button-delete-lead-${lead.id}`}

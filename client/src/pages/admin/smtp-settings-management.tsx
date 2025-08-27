@@ -12,13 +12,14 @@ import { Settings, Mail, TestTube, Save, Eye, EyeOff } from 'lucide-react';
 
 interface SMTPSettings {
   id?: string;
+  name?: string;
   host: string;
   port: number;
   username: string;
   password: string;
   from_email: string;
   from_name: string;
-  use_tls: boolean;
+  secure: boolean;
   is_active: boolean;
   test_email?: string;
   created_at?: string;
@@ -27,13 +28,14 @@ interface SMTPSettings {
 
 export default function SMTPSettingsManagement() {
   const [formData, setFormData] = useState<SMTPSettings>({
+    name: 'Default SMTP',
     host: '',
     port: 587,
     username: '',
     password: '',
     from_email: '',
     from_name: 'WMK Kitchen Solutions',
-    use_tls: true,
+    secure: true,
     is_active: false,
     test_email: ''
   });
@@ -49,15 +51,19 @@ export default function SMTPSettingsManagement() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: SMTPSettings) => {
-      const method = settings && settings.length > 0 ? 'PUT' : 'POST';
-      const url = settings && settings.length > 0 
+      const hasExistingSettings = settings && settings.length > 0 && settings[0].id;
+      const method = hasExistingSettings ? 'PUT' : 'POST';
+      const url = hasExistingSettings 
         ? `/api/admin/smtp-settings/${settings[0].id}` 
         : '/api/admin/smtp-settings';
       
-      return apiRequest(url, {
-        method,
-        body: JSON.stringify(data)
-      });
+      // Remove test_email field and ensure name field exists
+      const { test_email, ...dataToSave } = {
+        ...data,
+        name: data.name || 'Default SMTP Configuration'
+      };
+      
+      return apiRequest(method, url, dataToSave);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/smtp-settings'] });
@@ -71,12 +77,9 @@ export default function SMTPSettingsManagement() {
 
   const testMutation = useMutation({
     mutationFn: async (testEmail: string) => {
-      return apiRequest('/api/admin/smtp-settings/test', {
-        method: 'POST',
-        body: JSON.stringify({ 
-          ...formData,
-          test_email: testEmail 
-        })
+      return apiRequest('POST', '/api/admin/smtp-settings/test', { 
+        ...formData,
+        test_email: testEmail 
       });
     },
     onSuccess: () => {
@@ -97,6 +100,8 @@ export default function SMTPSettingsManagement() {
       const currentSettings = settings[0];
       setFormData({
         ...currentSettings,
+        secure: currentSettings.secure ?? true,
+        is_active: currentSettings.is_active ?? false,
         test_email: currentSettings.test_email || ''
       });
     }
@@ -299,12 +304,12 @@ export default function SMTPSettingsManagement() {
 
                   <div className="flex items-center space-x-2">
                     <Switch
-                      id="use_tls"
-                      checked={formData.use_tls}
-                      onCheckedChange={(checked) => handleInputChange('use_tls', checked)}
+                      id="secure"
+                      checked={formData.secure}
+                      onCheckedChange={(checked) => handleInputChange('secure', checked)}
                       data-testid="switch-smtp-tls"
                     />
-                    <Label htmlFor="use_tls">Use TLS/STARTTLS</Label>
+                    <Label htmlFor="secure">Use TLS/STARTTLS</Label>
                   </div>
 
                   <div className="flex items-center space-x-2">

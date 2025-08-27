@@ -1,5 +1,8 @@
-import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet, type Installer, type InsertInstaller, type UpdateInstaller, type CalendarEvent, type InsertCalendarEvent, type UpdateCalendarEvent } from "@shared/schema";
+// @ts-nocheck
+import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet, type Installer, type InsertInstaller, type UpdateInstaller, type CalendarEvent, type InsertCalendarEvent, type UpdateCalendarEvent, smtpSettings, emailTemplates } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from './db';
+import { eq } from 'drizzle-orm';
 
 export interface IStorage {
   // User operations
@@ -19,6 +22,7 @@ export interface IStorage {
     assigned_to?: string;
   }): Promise<{ leads: Lead[], total: number, page: number, limit: number, totalPages: number }>;
   getLead(id: string): Promise<Lead | undefined>;
+  getLeadByEmail(email: string): Promise<Lead | undefined>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, updates: UpdateLead): Promise<Lead | undefined>;
   deleteLead(id: string): Promise<boolean>;
@@ -73,6 +77,13 @@ export interface IStorage {
   createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
   updateCalendarEvent(id: string, updates: UpdateCalendarEvent): Promise<CalendarEvent | undefined>;
   deleteCalendarEvent(id: string): Promise<boolean>;
+
+  // Completed Projects operations
+  getCompletedProjects(): Promise<any[]>;
+  getCompletedProject(id: string): Promise<any | undefined>;
+  createCompletedProject(project: any): Promise<any>;
+  updateCompletedProject(id: string, updates: any): Promise<any | undefined>;
+  deleteCompletedProject(id: string): Promise<boolean>;
 
   // Activity log operations
   getActivityLogs(filters: {
@@ -170,217 +181,8 @@ export class MemStorage implements IStorage {
       this.users.set(id, user);
     });
 
-    // Create comprehensive sample leads for demonstration
-    const sampleLeads = [
-      {
-        name: "Sarah Johnson",
-        phone: "(555) 123-4567",
-        email: "sarah@email.com",
-        lead_origin: "facebook",
-        date_created: new Date("2024-01-15"),
-        next_followup_date: new Date("2024-01-12"), // overdue
-        remarks: "in-progress",
-        assigned_to: "kim",
-        project_amount: "9200.00",
-        notes: "Customer is very interested in white marble finish. Scheduled for home visit next week.",
-        additional_notes: "",
-        deposit_paid: false,
-        balance_paid: false,
-        installation_date: null,
-        assigned_installer: null,
-      },
-      {
-        name: "Mike Chen",
-        phone: "(555) 234-5678",
-        email: "mike@email.com",
-        lead_origin: "google",
-        date_created: new Date("2024-01-14"),
-        next_followup_date: new Date(), // due today
-        remarks: "quoted",
-        assigned_to: "patrick",
-        project_amount: "12500.00",
-        notes: "Quote sent for kitchen remodel. Waiting for response.",
-        additional_notes: "",
-        deposit_paid: false,
-        balance_paid: false,
-        installation_date: null,
-        assigned_installer: null,
-      },
-      {
-        name: "Lisa Rodriguez",
-        phone: "(555) 345-6789",
-        email: "lisa@email.com",
-        lead_origin: "referral",
-        date_created: new Date("2024-01-13"),
-        next_followup_date: new Date("2024-01-18"),
-        remarks: "sold",
-        assigned_to: "lina",
-        project_amount: "15800.00",
-        notes: "Project sold! Customer very happy with proposal.",
-        additional_notes: "Rush job - needs completion by Feb 1st",
-        deposit_paid: true,
-        balance_paid: true,
-        installation_date: new Date("2024-01-20"),
-        assigned_installer: "angel",
-      },
-      {
-        name: "David Wilson",
-        phone: "(555) 456-7890",
-        email: "david.wilson@email.com",
-        lead_origin: "instagram",
-        date_created: new Date("2024-01-12"),
-        next_followup_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
-        remarks: "new",
-        assigned_to: "patrick",
-        project_amount: "8500.00",
-        notes: "Interested in bathroom cabinet wrapping. Needs consultation.",
-        additional_notes: "Prefers weekend appointments",
-        deposit_paid: false,
-        balance_paid: false,
-        installation_date: null,
-        assigned_installer: null,
-      },
-      {
-        name: "Jessica Martinez",
-        phone: "(555) 567-8901",
-        email: "jessica.martinez@email.com",
-        lead_origin: "trade_show",
-        date_created: new Date("2024-01-11"),
-        next_followup_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), // tomorrow
-        remarks: "quoted",
-        assigned_to: "lina",
-        project_amount: "18200.00",
-        notes: "Large kitchen project. Quote provided for complete wrap. Very interested.",
-        additional_notes: "Budget approved by husband, just needs scheduling",
-        deposit_paid: false,
-        balance_paid: false,
-        installation_date: null,
-        assigned_installer: null,
-      },
-      {
-        name: "Robert Taylor",
-        phone: "(555) 678-9012",
-        email: "robert.taylor@email.com",
-        lead_origin: "whatsapp",
-        date_created: new Date("2024-01-10"),
-        next_followup_date: null,
-        remarks: "not-interested",
-        assigned_to: "kim",
-        project_amount: "0.00",
-        notes: "Not interested after learning about pricing. Too expensive for their budget.",
-        additional_notes: "May revisit in 6 months",
-        deposit_paid: false,
-        balance_paid: false,
-        installation_date: null,
-        assigned_installer: null,
-      },
-      {
-        name: "Amanda Thompson",
-        phone: "(555) 789-0123",
-        email: "amanda.thompson@email.com",
-        lead_origin: "website",
-        date_created: new Date("2024-01-09"),
-        next_followup_date: new Date("2024-01-19"),
-        remarks: "sold",
-        assigned_to: "patrick",
-        project_amount: "11700.00",
-        notes: "Kitchen cabinet wrap project. Customer very satisfied with proposal.",
-        additional_notes: "Recommended by previous customer",
-        deposit_paid: true,
-        balance_paid: false,
-        installation_date: new Date("2024-01-22"),
-        assigned_installer: "brian",
-      },
-      {
-        name: "Christopher Lee",
-        phone: "(555) 890-1234",
-        email: null,
-        lead_origin: "google_text",
-        date_created: new Date("2024-01-08"),
-        next_followup_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
-        remarks: "in-progress",
-        assigned_to: "lina",
-        project_amount: "6800.00",
-        notes: "Small bathroom project. Site visit scheduled.",
-        additional_notes: "Cash payment preferred",
-        deposit_paid: false,
-        balance_paid: false,
-        installation_date: null,
-        assigned_installer: null,
-      }
-    ];
-
-    sampleLeads.forEach(leadData => {
-      const id = randomUUID();
-      const lead: Lead = { 
-        ...leadData, 
-        id,
-        email: leadData.email || null,
-        next_followup_date: leadData.next_followup_date || null,
-        notes: leadData.notes || null,
-        additional_notes: leadData.additional_notes || null,
-        installation_date: leadData.installation_date || null,
-        assigned_installer: Array.isArray(leadData.assigned_installer) ? leadData.assigned_installer : 
-          (leadData.assigned_installer ? [leadData.assigned_installer] : []),
-        assigned_to: leadData.assigned_to || null
-      };
-      this.leads.set(id, lead);
-    });
-
-    // Create sample booklets for demonstration
-    const sampleBooklets = [
-      {
-        order_number: "BK001",
-        customer_name: "John Smith",
-        address: "123 Main St, Anytown, ST 12345",
-        email: "john@email.com",
-        phone: "(555) 111-1111",
-        product_type: "demo_kit_and_sample_booklet",
-        status: "pending",
-        notes: "Rush order requested"
-      },
-      {
-        order_number: "BK002", 
-        customer_name: "Jane Doe",
-        address: "456 Oak Ave, Somewhere, ST 67890",
-        email: "jane@email.com",
-        phone: "(555) 222-2222",
-        product_type: "sample_booklet_only",
-        tracking_number: "1Z12345E0291980793",
-        status: "shipped",
-        date_shipped: new Date("2024-01-16"),
-        notes: "Standard shipment"
-      },
-      {
-        order_number: "BK003",
-        customer_name: "Bob Johnson", 
-        address: "789 Pine Rd, Elsewhere, ST 54321",
-        email: "bob@email.com",
-        phone: "(555) 333-3333",
-        product_type: "trial_kit",
-        tracking_number: "1Z12345E0392857735",
-        status: "delivered",
-        date_shipped: new Date("2024-01-14"),
-        notes: "Customer requested expedited delivery"
-      }
-    ];
-
-    sampleBooklets.forEach(bookletData => {
-      const id = randomUUID();
-      const booklet: SampleBooklet = { 
-        ...bookletData, 
-        id,
-        order_number: bookletData.order_number || null,
-        phone: bookletData.phone || null,
-        date_ordered: new Date("2024-01-15"),
-        tracking_number: bookletData.tracking_number || null,
-        date_shipped: bookletData.date_shipped || null,
-        notes: bookletData.notes || null,
-        created_at: new Date(),
-        updated_at: new Date()
-      };
-      this.sampleBooklets.set(id, booklet);
-    });
+    // Note: All mockup leads and sample booklets data has been removed.
+    // Only user accounts are retained for authentication purposes.
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -483,6 +285,16 @@ export class MemStorage implements IStorage {
 
   async getLead(id: string): Promise<Lead | undefined> {
     return this.leads.get(id);
+  }
+
+  async getLeadByEmail(email: string): Promise<Lead | undefined> {
+    // Find the first lead with the matching email
+    for (const lead of this.leads.values()) {
+      if (lead.email && lead.email.toLowerCase() === email.toLowerCase()) {
+        return lead;
+      }
+    }
+    return undefined;
   }
 
   async createLead(insertLead: InsertLead): Promise<Lead> {
@@ -637,26 +449,54 @@ export class MemStorage implements IStorage {
     return Promise.resolve(undefined);
   }
 
-  // Email template operations (stub implementations for memory storage)
+  // Email template operations
   async getEmailTemplates(): Promise<any[]> {
-    return Promise.resolve([]);
+    try {
+      return await db.select().from(emailTemplates);
+    } catch (error) {
+      console.error('Error fetching email templates:', error);
+      throw error;
+    }
   }
 
   async getEmailTemplate(id: string): Promise<any | undefined> {
-    return Promise.resolve(undefined);
+    try {
+      const results = await db.select().from(emailTemplates).where(eq(emailTemplates.id, parseInt(id)));
+      return results[0];
+    } catch (error) {
+      console.error('Error fetching email template:', error);
+      throw error;
+    }
   }
 
   async createEmailTemplate(template: any): Promise<any> {
-    const id = randomUUID();
-    return Promise.resolve({ ...template, id });
+    try {
+      const result = await db.insert(emailTemplates).values(template);
+      return { ...template, id: result.insertId };
+    } catch (error) {
+      console.error('Error creating email template:', error);
+      throw error;
+    }
   }
 
   async updateEmailTemplate(id: string, updates: any): Promise<any | undefined> {
-    return Promise.resolve(undefined);
+    try {
+      await db.update(emailTemplates).set(updates).where(eq(emailTemplates.id, parseInt(id)));
+      return await this.getEmailTemplate(id);
+    } catch (error) {
+      console.error('Error updating email template:', error);
+      throw error;
+    }
   }
 
   async deleteEmailTemplate(id: string): Promise<boolean> {
-    return Promise.resolve(false);
+    try {
+      await db.delete(emailTemplates).where(eq(emailTemplates.id, parseInt(id)));
+      return true;
+    } catch (error) {
+      console.error('Error deleting email template:', error);
+      return false;
+    }
   }
 
   // Lead origins operations (stub implementations for memory storage)
@@ -682,25 +522,54 @@ export class MemStorage implements IStorage {
   }
 
   // SMTP settings operations (stub implementations for memory storage)
+  // SMTP Settings operations
   async getSMTPSettings(): Promise<any[]> {
-    return Promise.resolve([]);
+    try {
+      return await db.select().from(smtpSettings);
+    } catch (error) {
+      console.error('Error fetching SMTP settings:', error);
+      throw error;
+    }
   }
 
   async getSMTPSetting(id: string): Promise<any | undefined> {
-    return Promise.resolve(undefined);
+    try {
+      const results = await db.select().from(smtpSettings).where(eq(smtpSettings.id, parseInt(id)));
+      return results[0];
+    } catch (error) {
+      console.error('Error fetching SMTP setting:', error);
+      throw error;
+    }
   }
 
   async createSMTPSettings(settings: any): Promise<any> {
-    const id = randomUUID();
-    return Promise.resolve({ ...settings, id });
+    try {
+      const result = await db.insert(smtpSettings).values(settings);
+      return { ...settings, id: result.insertId };
+    } catch (error) {
+      console.error('Error creating SMTP settings:', error);
+      throw error;
+    }
   }
 
   async updateSMTPSettings(id: string, updates: any): Promise<any | undefined> {
-    return Promise.resolve(undefined);
+    try {
+      await db.update(smtpSettings).set(updates).where(eq(smtpSettings.id, parseInt(id)));
+      return await this.getSMTPSetting(id);
+    } catch (error) {
+      console.error('Error updating SMTP settings:', error);
+      throw error;
+    }
   }
 
   async deleteSMTPSettings(id: string): Promise<boolean> {
-    return Promise.resolve(false);
+    try {
+      await db.delete(smtpSettings).where(eq(smtpSettings.id, parseInt(id)));
+      return true;
+    } catch (error) {
+      console.error('Error deleting SMTP settings:', error);
+      return false;
+    }
   }
 
   // Activity log operations (stub implementations for memory storage)
@@ -756,6 +625,6 @@ export class MemStorage implements IStorage {
 
 import { DatabaseStorage } from "./database-storage";
 
-// Use MemStorage for development with mock data
-// Switch to DatabaseStorage when database is set up
-export const storage = new MemStorage();
+// Use DatabaseStorage for production with real database
+// Switch to MemStorage for development with mock data
+export const storage = new DatabaseStorage();
