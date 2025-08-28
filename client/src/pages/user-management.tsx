@@ -1,5 +1,18 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { User as UserType } from '@shared/schema';
+
+// Interface for editing user state (UI representation)
+interface EditingUser {
+  id: string;
+  username: string;
+  name: string; // UI field name for full_name
+  email: string | null;
+  role: string;
+  permissions: string[];
+  is_active: boolean;
+}
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { hasPermission } from '@/lib/permissions';
 import { 
   Users, 
   Plus, 
@@ -49,20 +63,23 @@ const AVAILABLE_PERMISSIONS = [
   { id: 'reports', label: 'Reports & Analytics', description: 'View reports and business analytics', minRole: 3 },
   { id: 'admin', label: 'Admin Panel', description: 'Access administrative functions', minRole: 4 },
   { id: 'user-management', label: 'User Management', description: 'Create and manage user accounts', minRole: 4 },
+  { id: 'email-templates', label: 'Email Templates', description: 'Manage email templates', minRole: 4 },
   { id: 'system-settings', label: 'System Settings', description: 'Configure system-wide settings', minRole: 5 },
 ] as const;
 
-interface User {
-  id: string;
-  username: string;
-  name?: string;
-  email?: string;
-  role: string;
-  permissions?: string[];
-  is_active?: boolean;
-  created_at?: string;
-  last_login?: string;
-}
+// Helper function to parse permissions consistently
+const parsePermissions = (permissions: any): string[] => {
+  if (Array.isArray(permissions)) return permissions;
+  if (typeof permissions === 'string') {
+    try {
+      const parsed = JSON.parse(permissions);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return permissions.split(',').filter((p: string) => p.trim());
+    }
+  }
+  return [];
+};
 
 export default function UserManagement() {
   const { user } = useAuth();
@@ -70,7 +87,7 @@ export default function UserManagement() {
   const queryClient = useQueryClient();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<EditingUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -84,12 +101,12 @@ export default function UserManagement() {
     is_active: true
   });
 
-  // Redirect non-admin users
-  if (!user || (user.role !== 'admin' && user.role !== 'administrator')) {
+  // Redirect users without user management permission
+  if (!user || !hasPermission(user, '/admin/users')) {
     return <Redirect to="/dashboard" />;
   }
 
-  const { data: users = [], isLoading } = useQuery<User[]>({
+  const { data: users = [], isLoading } = useQuery<UserType[]>({
     queryKey: ['/api/admin/users'],
   });
 
@@ -115,7 +132,7 @@ export default function UserManagement() {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<User> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<UserType> }) => {
       const response = await apiRequest('PUT', `/api/admin/users/${id}`, data);
       return response.json();
     },
@@ -304,8 +321,14 @@ export default function UserManagement() {
                       <SelectItem value="installer">Installer</SelectItem>
                       <SelectItem value="sales_rep">Sales Representative</SelectItem>
                       <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="owner">Owner</SelectItem>
-                      <SelectItem value="admin">Administrator</SelectItem>
+                      {/* Owners and administrators can create owner accounts */}
+                      {(user?.role === 'owner' || user?.role === 'admin' || user?.role === 'administrator') && (
+                        <SelectItem value="owner">Owner</SelectItem>
+                      )}
+                      {/* Only administrators can create other administrators */}
+                      {(user?.role === 'admin' || user?.role === 'administrator') && (
+                        <SelectItem value="admin">Administrator</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -330,7 +353,7 @@ export default function UserManagement() {
                         id={permission.id}
                         checked={newUser.permissions.includes(permission.id)}
                         onCheckedChange={() => handlePermissionToggle(permission.id)}
-                        disabled={newUser.role === 'admin' || newUser.role === 'owner'} // Admins and Owners get all permissions
+                        disabled={false} // Allow admins to set permissions for all user types
                         data-testid={`checkbox-${permission.id}`}
                       />
                       <div className="flex-1">
@@ -345,7 +368,7 @@ export default function UserManagement() {
                 {(newUser.role === 'admin' || newUser.role === 'owner') && (
                   <p className="text-sm text-blue-600 mt-2">
                     <Shield className="h-4 w-4 inline mr-1" />
-                    {newUser.role === 'admin' ? 'Administrators' : 'Owners'} have access to all pages by default
+                    Note: {newUser.role === 'admin' ? 'Administrators' : 'Owners'} typically have access to all pages by default, but you can customize their permissions if needed.
                   </p>
                 )}
                 {newUser.role && newUser.role !== 'admin' && newUser.role !== 'owner' && (
@@ -390,74 +413,109 @@ export default function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user: User) => (
-                <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+              {users.map((tableUser: UserType) => (
+                <TableRow key={tableUser.id} data-testid={`row-user-${tableUser.id}`}>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-500" />
                       <div>
-                        <div className="font-medium">{user.name || user.username}</div>
-                        <div className="text-xs text-gray-500">@{user.username}</div>
-                        {user.email && <div className="text-xs text-blue-600">{user.email}</div>}
+                        <div className="font-medium">{(tableUser as any).full_name || tableUser.username}</div>
+                        <div className="text-xs text-gray-500">@{tableUser.username}</div>
+                        {tableUser.email && <div className="text-xs text-blue-600">{tableUser.email}</div>}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={
-                      user.role === 'admin' ? 'destructive' : 
-                      user.role === 'owner' ? 'destructive' :
-                      user.role === 'manager' ? 'default' :
+                      tableUser.role === 'admin' ? 'destructive' : 
+                      tableUser.role === 'owner' ? 'destructive' :
+                      tableUser.role === 'manager' ? 'default' :
                       'secondary'
                     }>
-                      {user.role === 'admin' && <><Shield className="h-3 w-3 mr-1" />Administrator</>}
-                      {user.role === 'owner' && <><Key className="h-3 w-3 mr-1" />Owner</>}
-                      {user.role === 'manager' && <><Settings className="h-3 w-3 mr-1" />Manager</>}
-                      {user.role === 'sales_rep' && <><User className="h-3 w-3 mr-1" />Sales Rep</>}
-                      {user.role === 'installer' && <><User className="h-3 w-3 mr-1" />Installer</>}
+                      {tableUser.role === 'admin' && <><Shield className="h-3 w-3 mr-1" />Administrator</>}
+                      {tableUser.role === 'owner' && <><Key className="h-3 w-3 mr-1" />Owner</>}
+                      {tableUser.role === 'manager' && <><Settings className="h-3 w-3 mr-1" />Manager</>}
+                      {tableUser.role === 'sales_rep' && <><User className="h-3 w-3 mr-1" />Sales Rep</>}
+                      {tableUser.role === 'installer' && <><User className="h-3 w-3 mr-1" />Installer</>}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {(user.role === 'admin' || user.role === 'owner') ? (
+                      {(tableUser.role === 'admin' || tableUser.role === 'owner') ? (
                         <Badge variant="outline" className="text-xs">All Permissions</Badge>
                       ) : (
-                        (user.permissions || []).slice(0, 2).map(perm => (
+                        parsePermissions(tableUser.permissions).slice(0, 2).map((perm: string) => (
                           <Badge key={perm} variant="outline" className="text-xs">
                             {AVAILABLE_PERMISSIONS.find(p => p.id === perm)?.label || perm}
                           </Badge>
                         ))
                       )}
-                      {user.permissions && user.permissions.length > 2 && user.role !== 'admin' && user.role !== 'owner' && (
+                      {parsePermissions(tableUser.permissions).length > 2 && tableUser.role !== 'admin' && tableUser.role !== 'owner' && (
                         <Badge variant="outline" className="text-xs">
-                          +{user.permissions.length - 2} more
+                          +{parsePermissions(tableUser.permissions).length - 2} more
                         </Badge>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                      {user.is_active ? 'Active' : 'Inactive'}
+                    <Badge variant={tableUser.is_active ? 'default' : 'secondary'}>
+                      {tableUser.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-gray-500">
-                    {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                    {tableUser.last_login ? new Date(tableUser.last_login).toLocaleDateString() : 'Never'}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setEditingUser(user)}
-                        data-testid={`button-edit-${user.id}`}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {user.username !== 'admin' && ( // Don't allow deleting admin user
+                      {/* Only allow editing if current user has equal or higher authority */}
+                      {(ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) >= (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0) ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const userPermissions = (tableUser as any).permissions;
+                            setEditingUser({
+                              id: tableUser.id.toString(),
+                              username: tableUser.username,
+                              name: (tableUser as any).full_name || (tableUser as any).name || '',
+                              email: tableUser.email || null,
+                              role: tableUser.role,
+                              permissions: parsePermissions(userPermissions),
+                              is_active: tableUser.is_active ?? true
+                            });
+                          }}
+                          data-testid={`button-edit-${tableUser.id}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          disabled
+                          title="Insufficient permissions to edit this user"
+                          data-testid={`button-edit-disabled-${tableUser.id}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {/* Only allow deleting if current user has equal or higher authority and it's not the admin user */}
+                      {tableUser.username !== 'admin' && (ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) >= (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0) ? (
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => deleteUserMutation.mutate(user.id)}
-                          data-testid={`button-delete-${user.id}`}
+                          onClick={() => deleteUserMutation.mutate(tableUser.id.toString())}
+                          data-testid={`button-delete-${tableUser.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          disabled
+                          title={tableUser.username === 'admin' ? "Cannot delete admin user" : "Insufficient permissions to delete this user"}
+                          data-testid={`button-delete-disabled-${tableUser.id}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -561,8 +619,14 @@ export default function UserManagement() {
                       <SelectItem value="installer">Installer</SelectItem>
                       <SelectItem value="sales_rep">Sales Representative</SelectItem>
                       <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="owner">Owner</SelectItem>
-                      <SelectItem value="admin">Administrator</SelectItem>
+                      {/* Owners and administrators can edit roles to owner */}
+                      {(user?.role === 'owner' || user?.role === 'admin' || user?.role === 'administrator') && (
+                        <SelectItem value="owner">Owner</SelectItem>
+                      )}
+                      {/* Only administrators can edit roles to administrator */}
+                      {(user?.role === 'admin' || user?.role === 'administrator') && (
+                        <SelectItem value="admin">Administrator</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -576,7 +640,7 @@ export default function UserManagement() {
                         <Checkbox
                           checked={(editingUser.permissions || []).includes(permission.id)}
                           onCheckedChange={() => handlePermissionToggle(permission.id, true)}
-                          disabled={editingUser.role === 'admin' || editingUser.role === 'owner'}
+                          disabled={false} // Allow admins to modify permissions for all users
                           data-testid={`checkbox-edit-${permission.id}`}
                         />
                         <div className="flex-1">
@@ -592,7 +656,7 @@ export default function UserManagement() {
                     <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-md">
                       <p className="text-sm text-blue-800 flex items-center">
                         <Shield className="h-4 w-4 mr-2" />
-                        {editingUser.role === 'admin' ? 'Administrators' : 'Owners'} have access to all pages by default
+                        Note: {editingUser.role === 'admin' ? 'Administrators' : 'Owners'} typically have access to all pages by default, but you can still customize their permissions if needed.
                       </p>
                     </div>
                   )}
@@ -633,8 +697,8 @@ export default function UserManagement() {
                       username: editingUser.username,
                       full_name: editingUser.name,
                       email: editingUser.email,
-                      role: editingUser.role, 
-                      permissions: editingUser.permissions,
+                      role: editingUser.role as UserType['role'], 
+                      permissions: JSON.stringify(editingUser.permissions), // Convert array to JSON string
                       is_active: editingUser.is_active 
                     } 
                   })}

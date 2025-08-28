@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES } from '@shared/schema';
+import { LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES, type Installer } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +31,8 @@ export default function AddLead() {
     assigned_installer: [] as string[], // Keep as array for UI, will convert for submission
     deposit_paid: false,
     balance_paid: false,
-    date_created: new Date().toISOString().split('T')[0] // Default to today, but allow editing
+    date_created: new Date().toISOString().split('T')[0], // Default to today, but allow editing
+    selected_colors: [] as string[]
   });
   
   // Internal enrichment state
@@ -43,6 +44,26 @@ export default function AddLead() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch WMK colors
+  const { data: wmkColors = [] } = useQuery({
+    queryKey: ['/api/wmk-colors'],
+    queryFn: async () => {
+      const response = await fetch('/api/wmk-colors');
+      if (!response.ok) throw new Error('Failed to fetch WMK colors');
+      return response.json();
+    }
+  });
+
+  // Fetch installers
+  const { data: installersData = [] } = useQuery<Installer[]>({
+    queryKey: ['/api/admin/installers'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/installers');
+      if (!response.ok) throw new Error('Failed to fetch installers');
+      return response.json();
+    }
+  });
+
   const createLeadMutation = useMutation({
     mutationFn: async (leadData: any) => {
       const response = await apiRequest('POST', '/api/leads', leadData);
@@ -52,6 +73,7 @@ export default function AddLead() {
       toast({ title: "Success", description: "Lead created successfully!" });
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
       setLocation('/leads');
     },
     onError: (error: any) => {
@@ -132,7 +154,8 @@ export default function AddLead() {
         deposit_paid: formData.deposit_paid,
         balance_paid: formData.balance_paid,
         date_created: formData.date_created, // Use the form date instead of always generating new
-        additional_notes: null // Add missing field that might be expected
+        additional_notes: null, // Add missing field that might be expected
+        selected_colors: formData.selected_colors
       };
 
       createLeadMutation.mutate(leadData);
@@ -381,32 +404,56 @@ export default function AddLead() {
                         />
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <Label className="flex items-center gap-2 font-medium">
                           <Users className="h-4 w-4" />
                           Assigned Installers
                         </Label>
-                        <div className="grid grid-cols-1 gap-3 p-3 border rounded-lg bg-gray-50">
-                          {['angel', 'brian', 'luis'].map((installer) => (
-                            <div key={installer} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`installer-${installer}`}
-                                checked={formData.assigned_installer.includes(installer)}
-                                onCheckedChange={(checked) => {
-                                  const currentInstallers = formData.assigned_installer;
-                                  const newInstallers = checked
-                                    ? [...currentInstallers, installer]
-                                    : currentInstallers.filter(i => i !== installer);
-                                  setFormData(prev => ({ ...prev, assigned_installer: newInstallers }));
-                                }}
-                                data-testid={`checkbox-installer-${installer}`}
-                              />
-                              <Label htmlFor={`installer-${installer}`} className="text-sm font-medium capitalize cursor-pointer">
-                                {installer}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
+                        <Select
+                          value=""
+                          onValueChange={(installer) => {
+                            if (installer && !formData.assigned_installer.includes(installer)) {
+                              setFormData({
+                                ...formData,
+                                assigned_installer: [...formData.assigned_installer, installer]
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger data-testid="select-installer" className="h-11 text-base">
+                            <SelectValue placeholder="Select installer to add..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {installersData.filter((installerObj: Installer) => !formData.assigned_installer.includes(installerObj.name)).map((installerObj: Installer) => (
+                              <SelectItem key={installerObj.name} value={installerObj.name}>
+                                {installerObj.name.charAt(0).toUpperCase() + installerObj.name.slice(1)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {formData.assigned_installer.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {formData.assigned_installer.map((installer) => (
+                              <Badge 
+                                key={installer} 
+                                variant="secondary" 
+                                className="flex items-center gap-1 px-2 py-1"
+                              >
+                                {installer.charAt(0).toUpperCase() + installer.slice(1)}
+                                <X 
+                                  className="h-3 w-3 cursor-pointer hover:text-red-500" 
+                                  onClick={() => {
+                                    setFormData({
+                                      ...formData,
+                                      assigned_installer: formData.assigned_installer.filter(i => i !== installer)
+                                    });
+                                  }}
+                                  data-testid={`remove-installer-${installer}`}
+                                />
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* Payment Status */}
@@ -465,6 +512,58 @@ export default function AddLead() {
                             </div>
                           </div>
                         </div>
+                      </div>
+
+                      {/* Color Selection Section */}
+                      <div className="md:col-span-2 space-y-3 pt-4 border-t border-gray-200">
+                        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                          COLOR SELECTION (Typically 2 colors)
+                        </Label>
+                        <Select
+                          value=""
+                          onValueChange={(color) => {
+                            if (color && !formData.selected_colors.includes(color)) {
+                              setFormData({
+                                ...formData,
+                                selected_colors: [...formData.selected_colors, color]
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger data-testid="select-color" className="h-11 text-base">
+                            <SelectValue placeholder="Select color to add..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {wmkColors.filter((colorObj: any) => !formData.selected_colors.includes(colorObj.code)).map((colorObj: any) => (
+                              <SelectItem key={colorObj.code} value={colorObj.code}>
+                                {colorObj.code}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {formData.selected_colors.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {formData.selected_colors.map((color) => (
+                              <Badge 
+                                key={color} 
+                                variant="outline" 
+                                className="flex items-center gap-1 px-2 py-1 border-purple-200 text-purple-700"
+                              >
+                                {color}
+                                <X 
+                                  className="h-3 w-3 cursor-pointer hover:text-red-500" 
+                                  onClick={() => {
+                                    setFormData({
+                                      ...formData,
+                                      selected_colors: formData.selected_colors.filter(c => c !== color)
+                                    });
+                                  }}
+                                  data-testid={`remove-color-${color}`}
+                                />
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

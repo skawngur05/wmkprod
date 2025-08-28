@@ -643,7 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {} as Record<string, { total: number; sold: number; revenue: number }>);
       
-      const leadOriginPerformance = Object.entries(originStats).map(([origin, stats]: [string, { total: number; sold: number; revenue: number }]) => ({
+      const leadOriginPerformance = Object.entries(originStats).map(([origin, stats]) => ({
         origin,
         totalLeads: stats.total,
         soldLeads: stats.sold,
@@ -666,7 +666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {} as Record<string, { total: number; sold: number; revenue: number }>);
       
-      const teamPerformance = Object.entries(teamStats).map(([member, stats]: [string, { total: number; sold: number; revenue: number }]) => ({
+      const teamPerformance = Object.entries(teamStats).map(([member, stats]) => ({
         member,
         totalLeads: stats.total,
         soldLeads: stats.sold,
@@ -792,14 +792,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         recipient = installation.email;
-        subject = `Wrap My Kitchen Installation Confirmation - ${formattedDate}`;
+        subject = `WMK Kitchen Installation Confirmation - ${formattedDate}`;
         emailContent = `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wrap My Kitchen - Installation Confirmation</title>
+    <title>WMK Kitchen Solutions - Installation Confirmation</title>
 </head>
 <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
     
@@ -810,7 +810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <tr>
             <td style="padding: 30px 20px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #e9ecef;">
                 <h1 style="margin: 0; font-size: 36px; font-weight: bold; color: #2c3e50;">
-                    WrapMy<span style="color: #007bff; font-weight: bold;">Kitchen</span>
+                    WMK<span style="color: #007bff; font-weight: bold;">Kitchen</span>
                 </h1>
                 <div style="margin: 10px 0 0; font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;">
                     Kitchen Transformation Specialists
@@ -832,7 +832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <!-- Greeting -->
                 <p style="font-size: 16px; color: #495057; margin-bottom: 25px; line-height: 1.7;">
                     Dear <strong>${installation.name}</strong>,<br><br>
-                    We are pleased to confirm your kitchen installation appointment with <strong>Wrap My Kitchen</strong>. Our professional team is ready to transform your kitchen!
+                    We are pleased to confirm your kitchen installation appointment with <strong>WMK Kitchen Solutions</strong>. Our professional team is ready to transform your kitchen!
                 </p>
                 
                 <!-- Installation Header -->
@@ -882,50 +882,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         </tr>
                         <tr>
                             <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>� Email</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.email || 'Not provided'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>📍 Address</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.address || 'Not provided'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>�💰 Project Value</strong>
+                                <strong>💰 Project Value</strong>
                             </td>
                             <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
                                 ${installation.project_amount ? `$${parseInt(installation.project_amount).toLocaleString()}` : 'Contact office for details'}
                             </td>
                         </tr>
-                        ${installation.selected_colors ? (() => {
-                          try {
-                            const colors = typeof installation.selected_colors === 'string' 
-                              ? JSON.parse(installation.selected_colors) 
-                              : installation.selected_colors;
-                            
-                            if (Array.isArray(colors) && colors.length > 0) {
-                              return `
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>🎨 Selected Colors</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                <strong style="color: #2c3e50; font-size: 14px;">${colors.join(', ')}</strong>
-                            </td>
-                        </tr>`;
-                            }
-                          } catch (e) {
-                            console.error('Error parsing selected_colors:', e);
-                          }
-                          return '';
-                        })() : ''}
                         <tr style="background-color: #f8f9fa;">
                             <td style="padding: 15px; color: #2c3e50; font-weight: 600; font-size: 16px;">
                                 <strong>🔧 Lead Installer</strong>
@@ -1027,24 +989,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <tr>
             <td style="background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 30px 20px;">
                 <h4 style="margin: 0 0 15px; color: white; font-size: 18px; font-weight: 600;">
-                    Wrap My Kitchen
+                    WMK Kitchen Solutions
                 </h4>
                 <p style="margin: 8px 0;">Questions about your installation? We're here to help!</p>
-                <p style="margin: 8px 0;"><strong>📞 Phone:</strong> (954) 799-6844</p>
+                <p style="margin: 8px 0;"><strong>📞 Phone:</strong> (XXX) XXX-XXXX</p>
                 <p style="margin: 8px 0;">
                     <strong>📧 Email:</strong> 
-                    <a href="mailto:info@wrapmykitchen.com" style="color: #007bff; text-decoration: none;">
-                        info@wrapmykitchen.com
+                    <a href="mailto:installations@wmk-kitchen.com" style="color: #007bff; text-decoration: none;">
+                        installations@wmk-kitchen.com
                     </a>
                 </p>
                 <p style="margin: 8px 0;">
                     <strong>🌐 Website:</strong> 
-                    <a href="https://wrapmykitchen.com" style="color: #007bff; text-decoration: none;">
-                        www.wrapmykitchen.com
+                    <a href="https://wmk-kitchen.com" style="color: #007bff; text-decoration: none;">
+                        www.wmk-kitchen.com
                     </a>
                 </p>
                 <p style="margin-top: 20px; font-size: 13px; color: #bdc3c7;">
-                    © 2025 Wrap My Kitchen. All rights reserved.<br>
+                    © 2025 WMK Kitchen Solutions. All rights reserved.<br>
                     Quality • Craftsmanship • Excellence
                 </p>
             </td>
@@ -1070,14 +1032,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         
         recipient = installerEmails[installation.assigned_installer] || 'installer@company.com';
-        subject = `Wrap My Kitchen Installation Assignment - ${formattedDate} - ${installation.name}`;
+        subject = `WMK Installation Assignment - ${formattedDate} - ${installation.name}`;
         emailContent = `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wrap My Kitchen - Installation Assignment</title>
+    <title>WMK Kitchen Solutions - Installation Assignment</title>
 </head>
 <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
     
@@ -1088,7 +1050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <tr>
             <td style="padding: 30px 20px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #e9ecef;">
                 <h1 style="margin: 0; font-size: 36px; font-weight: bold; color: #2c3e50;">
-                    WrapMy<span style="color: #fd7e14; font-weight: bold;">Kitchen</span>
+                    WMK<span style="color: #fd7e14; font-weight: bold;">Kitchen</span>
                 </h1>
                 <div style="margin: 10px 0 0; font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;">
                     Professional Installation Team
@@ -1110,7 +1072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <!-- Greeting -->
                 <p style="font-size: 16px; color: #495057; margin-bottom: 25px; line-height: 1.7;">
                     Hi <strong>${installation.assigned_installer?.charAt(0).toUpperCase()}${installation.assigned_installer?.slice(1)}</strong>,<br><br>
-                    You have been assigned a new kitchen installation for <strong>Wrap My Kitchen </strong>. Please review the details below and prepare accordingly.
+                    You have been assigned a new kitchen installation for <strong>WMK Kitchen Solutions</strong>. Please review the details below and prepare accordingly.
                 </p>
                 
                 <!-- Assignment Header -->
@@ -1168,42 +1130,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         </tr>
                         <tr>
                             <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>� Address</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.address || 'Not provided'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>�💰 Project Value</strong>
+                                <strong>💰 Project Value</strong>
                             </td>
                             <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
                                 ${installation.project_amount ? `$${parseInt(installation.project_amount).toLocaleString()}` : 'Contact office'}
                             </td>
                         </tr>
-                        ${installation.selected_colors ? (() => {
-                          try {
-                            const colors = typeof installation.selected_colors === 'string' 
-                              ? JSON.parse(installation.selected_colors) 
-                              : installation.selected_colors;
-                            
-                            if (Array.isArray(colors) && colors.length > 0) {
-                              return `
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>🎨 Selected Colors</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${colors.join(', ')}
-                            </td>
-                        </tr>`;
-                            }
-                          } catch (e) {
-                            console.error('Error parsing selected_colors:', e);
-                          }
-                          return '';
-                        })() : ''}
                     </tbody>
                 </table>
                 
@@ -1244,19 +1176,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                             </h3>
                             <table width="100%" border="0" cellspacing="0" cellpadding="8" style="background-color: rgba(255, 255, 255, 0.1); margin: 15px 0;">
                                 <tr>
-                                    <td style="text-align: left; color: white;">- Review project specifications and materials list</td>
+                                    <td style="text-align: left; color: white;">□ Review project specifications and materials list</td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; color: white;">- Confirm all materials are loaded and ready</td>
+                                    <td style="text-align: left; color: white;">□ Confirm all materials are loaded and ready</td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; color: white;">- Contact customer 24 hours prior to confirm</td>
+                                    <td style="text-align: left; color: white;">□ Contact customer 24 hours prior to confirm</td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; color: white;">- Verify access and parking availability</td>
+                                    <td style="text-align: left; color: white;">□ Verify access and parking availability</td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; color: white;">- Ensure all tools and equipment are prepared</td>
+                                    <td style="text-align: left; color: white;">□ Ensure all tools and equipment are prepared</td>
                                 </tr>
                             </table>
                         </td>
@@ -1330,24 +1262,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <tr>
             <td style="background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 30px 20px;">
                 <h4 style="margin: 0 0 15px; color: white; font-size: 18px; font-weight: 600;">
-                    Wrap My Kitchen Solutions - Installation Team
+                    WMK Kitchen Solutions - Installation Team
                 </h4>
                 <p style="margin: 8px 0;">Questions or support needed? Contact the office immediately.</p>
-                <p style="margin: 8px 0;"><strong>📞 Office:</strong> (954) 799-6844</p>
+                <p style="margin: 8px 0;"><strong>📞 Office:</strong> (XXX) XXX-XXXX</p>
                 <p style="margin: 8px 0;">
                     <strong>📧 Email:</strong> 
-                    <a href="mailto:info@wrapmykitchen.com" style="color: #fd7e14; text-decoration: none;">
-                        info@wrapmykitchen.com
+                    <a href="mailto:management@wmk-kitchen.com" style="color: #fd7e14; text-decoration: none;">
+                        management@wmk-kitchen.com
                     </a>
                 </p>
                 <p style="margin: 8px 0;">
                     <strong>🌐 Website:</strong> 
-                    <a href="https://www.wrapmykitchen.com" style="color: #fd7e14; text-decoration: none;">
-                        www.wrapmykitchen.com
+                    <a href="https://wmk-kitchen.com" style="color: #fd7e14; text-decoration: none;">
+                        www.wmk-kitchen.com
                     </a>
                 </p>
                 <p style="margin-top: 20px; font-size: 13px; color: #bdc3c7;">
-                    © 2025 Wrap My Kitchen. All rights reserved.<br>
+                    © 2025 WMK Kitchen Solutions. All rights reserved.<br>
                     Excellence in Every Installation
                 </p>
             </td>
@@ -1827,25 +1759,6 @@ WMK CRM System`
       res.json(users.map(user => ({ ...user, password: undefined }))); // Don't send passwords
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch users" });
-    }
-  });
-
-  // Get specific user by ID
-  app.get("/api/admin/users/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const user = await storage.getUser(id);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Don't send password in response
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      console.error('Get user error:', error);
-      res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 

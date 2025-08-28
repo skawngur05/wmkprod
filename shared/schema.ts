@@ -48,6 +48,7 @@ export const leads = mysqlTable("leads", {
   installation_date: date("installation_date"),
   assigned_installer: varchar("assigned_installer", { length: 100 }), // Single installer name
   address: text("address"),
+  selected_colors: text("selected_colors"), // JSON string of selected WMK colors
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -69,6 +70,7 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
     z.array(z.string()).transform(arr => arr.join(', ')),
     z.null()
   ]).optional(),
+  selected_colors: z.array(z.string()).optional(),
 });
 
 export const updateLeadSchema = insertLeadSchema.partial().extend({
@@ -80,6 +82,7 @@ export const updateLeadSchema = insertLeadSchema.partial().extend({
     z.array(z.string()).transform(arr => arr.join(', ')),
     z.null()
   ]).optional(),
+  selected_colors: z.array(z.string()).optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -124,6 +127,7 @@ export const calendarEvents = mysqlTable("calendar_events", {
   location: varchar("location", { length: 255 }),
   assigned_to: varchar("assigned_to", { length: 255 }), // for leave events
   related_lead_id: int("related_lead_id"), // for installation events
+  google_event_id: varchar("google_event_id", { length: 255 }), // Google Calendar event ID for sync
   created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
 });
 
@@ -322,6 +326,19 @@ export const emailTemplates = mysqlTable("email_templates", {
   updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
 });
 
+// Activity Logs table
+export const activityLogs = mysqlTable("activity_logs", {
+  id: int("id").primaryKey().autoincrement(),
+  user_id: int("user_id"),
+  action: varchar("action", { length: 255 }).notNull(),
+  entity_type: varchar("entity_type", { length: 100 }),
+  entity_id: varchar("entity_id", { length: 100 }),
+  details: text("details"),
+  ip_address: varchar("ip_address", { length: 45 }),
+  user_agent: text("user_agent"),
+  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
+});
+
 // WMK Colors table
 export const wmkColors = mysqlTable("wmk_colors", {
   id: int("id").primaryKey().autoincrement(),
@@ -342,6 +359,13 @@ export const updateEmailTemplateSchema = insertEmailTemplateSchema.partial();
 
 export const insertWmkColorSchema = createInsertSchema(wmkColors);
 export const updateWmkColorSchema = insertWmkColorSchema.partial();
+
+export const insertActivityLogSchema = createInsertSchema(activityLogs);
+export const updateActivityLogSchema = insertActivityLogSchema.partial();
+
+// Activity Log types
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = typeof activityLogs.$inferInsert;
 
 // WMK Color types
 export type WmkColor = typeof wmkColors.$inferSelect;

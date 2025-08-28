@@ -448,7 +448,6 @@ export default function Leads() {
                         <TableCell>
                           {(() => {
                             const status = lead.remarks;
-                            console.log('LEADS DEBUG - Status:', status, 'Type:', typeof status);
                             let bgColor = '';
                             let textColor = '';
                             
@@ -456,40 +455,31 @@ export default function Leads() {
                               case 'Sold':
                                 bgColor = '#22c55e';  // Green
                                 textColor = '#ffffff';
-                                console.log('LEADS DEBUG - Applied GREEN for Sold');
                                 break;
                               case 'In Progress':
                                 bgColor = '#f59e0b';  // Yellow/orange
                                 textColor = '#ffffff';
-                                console.log('LEADS DEBUG - Applied YELLOW for In Progress');
                                 break;
                               case 'New':
                                 bgColor = '#3b82f6';  // Blue
                                 textColor = '#ffffff';
-                                console.log('LEADS DEBUG - Applied BLUE for New');
                                 break;
                               case 'Not Interested':
                                 bgColor = '#6b7280';  // Gray
                                 textColor = '#ffffff';
-                                console.log('LEADS DEBUG - Applied GRAY for Not Interested');
                                 break;
                               case 'Not Service Area':
                                 bgColor = '#ea580c';  // Orange
                                 textColor = '#ffffff';
-                                console.log('LEADS DEBUG - Applied ORANGE for Not Service Area');
                                 break;
                               case 'Not Compatible':
                                 bgColor = '#dc2626';  // Red
                                 textColor = '#ffffff';
-                                console.log('LEADS DEBUG - Applied RED for Not Compatible');
                                 break;
                               default:
                                 bgColor = '#6b7280';  // Gray
                                 textColor = '#ffffff';
-                                console.log('LEADS DEBUG - Applied DEFAULT GRAY for:', status);
                             }
-                            
-                            console.log('LEADS DEBUG - Final colors:', { bgColor, textColor });
                             
                             const uniqueId = `status-badge-${lead.id}`;
                             

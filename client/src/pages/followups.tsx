@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Lead, INSTALLERS } from '@shared/schema';
+import { Lead, LEAD_STATUSES, ASSIGNEES } from '@shared/schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ interface FollowupsData {
 }
 
 // Quick Edit Form Component
-function QuickEditForm({ lead, onClose, wmkColors }: { lead: Lead; onClose: () => void; wmkColors: any[] }) {
+function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lead; onClose: () => void; wmkColors: any[]; installersData: any[] }) {
   const [formData, setFormData] = useState({
     next_followup_date: lead.next_followup_date ? new Date(lead.next_followup_date).toISOString().split('T')[0] : '',
     remarks: lead.remarks,
@@ -105,7 +105,9 @@ function QuickEditForm({ lead, onClose, wmkColors }: { lead: Lead; onClose: () =
       project_amount: formData.project_amount || null,
       assigned_to: formData.assigned_to,
       installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
-      assigned_installer: formData.assigned_installer,
+      assigned_installer: Array.isArray(formData.assigned_installer) 
+        ? (formData.assigned_installer.length > 0 ? formData.assigned_installer.join(', ') : null)
+        : (formData.assigned_installer as string | null),
       deposit_paid: formData.deposit_paid,
       balance_paid: formData.balance_paid,
       selected_colors: formData.selected_colors,
@@ -174,8 +176,8 @@ function QuickEditForm({ lead, onClose, wmkColors }: { lead: Lead; onClose: () =
               STATUS
             </Label>
             <Select
-              value={formData.remarks}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, remarks: value }))}
+              value={formData.remarks || undefined}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, remarks: value as typeof formData.remarks }))}
             >
               <SelectTrigger data-testid="select-status" className="h-11 text-base">
                 <SelectValue />
@@ -197,7 +199,7 @@ function QuickEditForm({ lead, onClose, wmkColors }: { lead: Lead; onClose: () =
             </Label>
             <Select
               value={formData.assigned_to || ''}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: value }))}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: value as typeof formData.assigned_to }))}
             >
               <SelectTrigger data-testid="select-assigned-to" className="h-11 text-base">
                 <SelectValue />
@@ -230,9 +232,9 @@ function QuickEditForm({ lead, onClose, wmkColors }: { lead: Lead; onClose: () =
                   <SelectValue placeholder="Select installer to add..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {INSTALLERS.filter(installer => !formData.assigned_installer.includes(installer)).map(installer => (
-                    <SelectItem key={installer} value={installer}>
-                      {installer.charAt(0).toUpperCase() + installer.slice(1)}
+                  {installersData.filter(installerObj => !formData.assigned_installer.includes(installerObj.name)).map(installerObj => (
+                    <SelectItem key={installerObj.name} value={installerObj.name}>
+                      {installerObj.name.charAt(0).toUpperCase() + installerObj.name.slice(1)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -293,7 +295,7 @@ function QuickEditForm({ lead, onClose, wmkColors }: { lead: Lead; onClose: () =
               </Select>
               {formData.selected_colors.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.selected_colors.map((color) => (
+                  {formData.selected_colors.map((color: string) => (
                     <Badge 
                       key={color} 
                       variant="outline" 
@@ -305,7 +307,7 @@ function QuickEditForm({ lead, onClose, wmkColors }: { lead: Lead; onClose: () =
                         onClick={() => {
                           setFormData(prev => ({
                             ...prev,
-                            selected_colors: formData.selected_colors.filter(c => c !== color)
+                            selected_colors: formData.selected_colors.filter((c: string) => c !== color)
                           }));
                         }}
                         data-testid={`remove-color-followups-${color}`}
@@ -603,7 +605,9 @@ function FollowupsTable({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigator.clipboard.writeText(lead.phone);
+                        if (lead.phone) {
+                          navigator.clipboard.writeText(lead.phone);
+                        }
                         // Toast notification would go here if needed
                       }}
                       className="ml-2 p-1 hover:bg-gray-100 rounded transition-all duration-200 opacity-50 hover:opacity-100"
@@ -635,7 +639,7 @@ function FollowupsTable({
               {/* Status & Payment - 2 columns */}
               <div className="md:col-span-2">
                 <div className="flex flex-col gap-2">
-                  {getStatusBadge(lead.remarks)}
+                  {lead.remarks && getStatusBadge(lead.remarks)}
                   {getPaymentStatusBadge(lead)}
                 </div>
               </div>
@@ -740,6 +744,16 @@ export default function Followups() {
     }
   });
   
+  // Fetch installers
+  const { data: installersData = [] } = useQuery({
+    queryKey: ['/api/admin/installers'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/installers');
+      if (!response.ok) throw new Error('Failed to fetch installers');
+      return response.json();
+    }
+  });
+  
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedFollowupLead, setSelectedFollowupLead] = useState<Lead | null>(null);
@@ -792,9 +806,9 @@ export default function Followups() {
   const { overdue = [], dueToday = [], upcoming = [] } = followupsData || {};
   
   // Filter out inactive leads (not interested, not compatible, not in service area)
-  const activeOverdue = overdue.filter(lead => !['not-interested', 'not-compatible', 'not-service-area'].includes(lead.remarks));
-  const activeDueToday = dueToday.filter(lead => !['not-interested', 'not-compatible', 'not-service-area'].includes(lead.remarks));
-  const activeUpcoming = upcoming.filter(lead => !['not-interested', 'not-compatible', 'not-service-area'].includes(lead.remarks));
+  const activeOverdue = overdue.filter(lead => lead.remarks && !['not-interested', 'not-compatible', 'not-service-area'].includes(lead.remarks));
+  const activeDueToday = dueToday.filter(lead => lead.remarks && !['not-interested', 'not-compatible', 'not-service-area'].includes(lead.remarks));
+  const activeUpcoming = upcoming.filter(lead => lead.remarks && !['not-interested', 'not-compatible', 'not-service-area'].includes(lead.remarks));
   
   // Get next 7 days of upcoming follow-ups
   const today = new Date();
@@ -973,6 +987,7 @@ export default function Followups() {
                 lead={selectedLead} 
                 onClose={() => setIsEditModalOpen(false)} 
                 wmkColors={wmkColors}
+                installersData={installersData}
               />
             )}
           </DialogContent>

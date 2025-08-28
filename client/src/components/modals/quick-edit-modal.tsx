@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Lead, LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES, INSTALLERS } from '@shared/schema';
+import { Lead, Installer, LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -49,6 +49,16 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     queryFn: async () => {
       const response = await fetch('/api/wmk-colors');
       if (!response.ok) throw new Error('Failed to fetch WMK colors');
+      return response.json();
+    }
+  });
+
+  // Fetch installers
+  const { data: installersData = [] } = useQuery<Installer[]>({
+    queryKey: ['/api/admin/installers'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/installers');
+      if (!response.ok) throw new Error('Failed to fetch installers');
       return response.json();
     }
   });
@@ -382,9 +392,9 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                     <SelectValue placeholder="Select installer to add..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {INSTALLERS.filter(installer => !formData.assigned_installer.includes(installer)).map(installer => (
-                      <SelectItem key={installer} value={installer}>
-                        {installer.charAt(0).toUpperCase() + installer.slice(1)}
+                    {installersData.filter((installerObj: Installer) => !formData.assigned_installer.includes(installerObj.name)).map((installerObj: Installer) => (
+                      <SelectItem key={installerObj.name} value={installerObj.name}>
+                        {installerObj.name.charAt(0).toUpperCase() + installerObj.name.slice(1)}
                       </SelectItem>
                     ))}
                   </SelectContent>

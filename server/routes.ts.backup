@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertLeadSchema, updateLeadSchema, insertSampleBookletSchema, updateSampleBookletSchema, insertCalendarEventSchema, updateCalendarEventSchema, insertRepairRequestSchema, repairRequests, leads as leadsTable, wmkColors } from "@shared/schema";
 import { uspsService } from "./usps-service";
 import { trackingScheduler } from "./tracking-scheduler";
+import { GoogleCalendarService } from "./google-calendar-service";
 import { z } from "zod";
 import { emailService } from "./email-service";
 import { eq, like, or, desc, and } from 'drizzle-orm';
@@ -643,7 +644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {} as Record<string, { total: number; sold: number; revenue: number }>);
       
-      const leadOriginPerformance = Object.entries(originStats).map(([origin, stats]: [string, { total: number; sold: number; revenue: number }]) => ({
+      const leadOriginPerformance = Object.entries(originStats).map(([origin, stats]) => ({
         origin,
         totalLeads: stats.total,
         soldLeads: stats.sold,
@@ -666,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {} as Record<string, { total: number; sold: number; revenue: number }>);
       
-      const teamPerformance = Object.entries(teamStats).map(([member, stats]: [string, { total: number; sold: number; revenue: number }]) => ({
+      const teamPerformance = Object.entries(teamStats).map(([member, stats]) => ({
         member,
         totalLeads: stats.total,
         soldLeads: stats.sold,
@@ -737,6 +738,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch analytics data" });
     }
   });
+
+  // Installer Reports API
+  app.get("/api/reports/installers", async (req, res) => {
+    try {
+      const { year, month } = req.query;
+      const allLeads = await storage.getLeads();
+      
+      // Filter leads for installations (sold with installation date)
+      let installations = allLeads.filter(lead => 
+        lead.remarks === 'Sold' && 
+        lead.installation_date &&
+        lead.assigned_installer
+      );
+      
+      // Filter by year and optionally by month
+      installations = installations.filter(lead => {
+        const installDate = new Date(lead.installation_date!);
+        const installYear = installDate.getFullYear();
+        
+        if (year && installYear !== parseInt(year as string)) {
+          return false;
+        }
+        
+        if (month) {
+          const installMonth = installDate.getMonth() + 1; // JS months are 0-indexed
+          if (installMonth !== parseInt(month as string)) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
+
+      // Group installations by installer
+      const installerStats = installations.reduce((acc, lead) => {
+        const installer = lead.assigned_installer!;
+        if (!acc[installer]) {
+          acc[installer] = {
+            installerName: installer,
+            totalInstallations: 0,
+            totalValue: 0,
+            completedInstallations: 0,
+            pendingInstallations: 0,
+            installations: []
+          };
+        }
+        
+        const projectValue = parseFloat(lead.project_amount || '0');
+        acc[installer].totalInstallations += 1;
+        acc[installer].totalValue += projectValue;
+        
+        // Check if installation is completed (installation date is in the past)
+        const installDate = new Date(lead.installation_date!);
+        const today = new Date();
+        const isCompleted = installDate <= today;
+        
+        if (isCompleted) {
+          acc[installer].completedInstallations += 1;
+        } else {
+          acc[installer].pendingInstallations += 1;
+        }
+        
+        acc[installer].installations.push({
+          projectId: lead.id,
+          customerName: lead.name,
+          projectValue: projectValue,
+          installationDate: lead.installation_date!,
+          status: isCompleted ? 'completed' : 'pending'
+        });
+        
+        return acc;
+      }, {} as Record<string, any>);
+
+      // Calculate average project values
+      Object.values(installerStats).forEach((installer: any) => {
+        installer.averageProjectValue = installer.totalInstallations > 0 ? 
+          installer.totalValue / installer.totalInstallations : 0;
+      });
+
+      const installers = Object.values(installerStats);
+      const totalInstallations = installations.length;
+      const totalValue = installations.reduce((sum, lead) => 
+        sum + parseFloat(lead.project_amount || '0'), 0);
+
+      // Determine period for filtering info
+      const period = (!year && !month) ? 'all-time' :
+                   (year && !month) ? year :
+                   `${year}-${month}`;
+
+      res.json({
+        installers,
+        totalInstallations,
+        totalValue,
+        filterInfo: {
+          year: year ? parseInt(year as string) : null,
+          month: month ? parseInt(month as string) : null,
+          period
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch installer data" });
+    }
+  });
   
   // Available years for filtering
   app.get("/api/reports/years", async (req, res) => {
@@ -800,256 +904,248 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wrap My Kitchen - Installation Confirmation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .color-chip {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin: 0 5px;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+            vertical-align: middle;
+        }
+    </style>
 </head>
-<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
+<body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     
-    <!-- Main Container Table -->
-    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e9ecef;">
-        
-        <!-- Logo Header -->
+    <!-- Main Container -->
+    <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
         <tr>
-            <td style="padding: 30px 20px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #e9ecef;">
-                <h1 style="margin: 0; font-size: 36px; font-weight: bold; color: #2c3e50;">
-                    WrapMy<span style="color: #007bff; font-weight: bold;">Kitchen</span>
-                </h1>
-                <div style="margin: 10px 0 0; font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;">
-                    Kitchen Transformation Specialists
-                </div>
-            </td>
-        </tr>
-        
-        <!-- Blue Banner -->
-        <tr>
-            <td style="padding: 20px; text-align: center; background-color: #007bff; color: white; font-size: 18px; font-weight: bold;">
-                🔧 Installation Confirmed!
-            </td>
-        </tr>
-        
-        <!-- Main Content -->
-        <tr>
-            <td style="padding: 30px 20px;">
-                
-                <!-- Greeting -->
-                <p style="font-size: 16px; color: #495057; margin-bottom: 25px; line-height: 1.7;">
-                    Dear <strong>${installation.name}</strong>,<br><br>
-                    We are pleased to confirm your kitchen installation appointment with <strong>Wrap My Kitchen</strong>. Our professional team is ready to transform your kitchen!
-                </p>
-                
-                <!-- Installation Header -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background-color: #f8f9fa; border-left: 4px solid #007bff; margin: 20px 0;">
+            <td align="center">
+                <!-- Email Card -->
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 650px; background: #ffffff; border-radius: 16px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); overflow: hidden;">
+                    
+                    <!-- Modern Header with Gradient -->
                     <tr>
-                        <td>
-                            <h3 style="margin: 0 0 5px; color: #2c3e50; font-size: 18px; font-weight: 600;">
-                                Installation Appointment
-                            </h3>
-                            <div style="color: #6c757d; font-size: 14px;">Scheduled for ${formattedDate}</div>
+                        <td style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 40px 30px; text-align: center;">
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td align="center">
+                                        <h1 style="margin: 0; font-size: 42px; font-weight: 700; color: #ffffff; letter-spacing: -1px;">
+                                            Wrap<span style="color: #fbbf24;">My</span>Kitchen
+                                        </h1>
+                                        <p style="margin: 12px 0 0; font-size: 16px; color: rgba(255,255,255,0.9); font-weight: 500;">
+                                            Premium Kitchen Transformations
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
-                </table>
-                
-                <!-- Installation Details Table -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 25px 0; border: 1px solid #e9ecef;">
-                    <thead>
-                        <tr style="background-color: #2c3e50; color: white;">
-                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Details</th>
-                            <th style="padding: 15px; text-align: right; font-weight: 600; font-size: 14px;">Information</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>📅 Installation Date</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${formattedDate} at 9:00 AM
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>👤 Customer</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.name}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>📞 Phone</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.phone}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>� Email</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.email || 'Not provided'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>📍 Address</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.address || 'Not provided'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>�💰 Project Value</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.project_amount ? `$${parseInt(installation.project_amount).toLocaleString()}` : 'Contact office for details'}
-                            </td>
-                        </tr>
-                        ${installation.selected_colors ? (() => {
-                          try {
-                            const colors = typeof installation.selected_colors === 'string' 
-                              ? JSON.parse(installation.selected_colors) 
-                              : installation.selected_colors;
+                    
+                    <!-- Success Banner -->
+                    <tr>
+                        <td style="background: linear-gradient(90deg, #10b981 0%, #059669 100%); padding: 20px; text-align: center;">
+                            <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 600;">
+                                ✨ Installation Confirmed! ✨
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
                             
-                            if (Array.isArray(colors) && colors.length > 0) {
-                              return `
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>🎨 Selected Colors</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                <strong style="color: #2c3e50; font-size: 14px;">${colors.join(', ')}</strong>
-                            </td>
-                        </tr>`;
-                            }
-                          } catch (e) {
-                            console.error('Error parsing selected_colors:', e);
-                          }
-                          return '';
-                        })() : ''}
-                        <tr style="background-color: #f8f9fa;">
-                            <td style="padding: 15px; color: #2c3e50; font-weight: 600; font-size: 16px;">
-                                <strong>🔧 Lead Installer</strong>
-                            </td>
-                            <td style="padding: 15px; color: #2c3e50; font-weight: 600; font-size: 16px; text-align: right;">
-                                <strong>${installation.assigned_installer ? installation.assigned_installer.charAt(0).toUpperCase() + installation.assigned_installer.slice(1) : 'To be assigned'}</strong>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                
-                <!-- What to Expect Section -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="30" style="background-color: #007bff; color: white; margin: 30px 0;">
-                    <tr>
-                        <td style="text-align: center;">
-                            <h3 style="margin: 0 0 15px; font-size: 20px; font-weight: 600;">
-                                🏠 What to Expect
-                            </h3>
-                            <table width="100%" border="0" cellspacing="0" cellpadding="10" style="background-color: rgba(255, 255, 255, 0.1); margin: 20px 0;">
+                            <!-- Personalized Greeting -->
+                            <div style="margin-bottom: 32px;">
+                                <h2 style="margin: 0 0 16px; font-size: 28px; font-weight: 700; color: #1f2937; line-height: 1.2;">
+                                    Hello ${installation.name}! 👋
+                                </h2>
+                                <p style="margin: 0; font-size: 18px; color: #4b5563; line-height: 1.6;">
+                                    Great news! Your kitchen transformation is confirmed. Our expert team is excited to bring your vision to life.
+                                </p>
+                            </div>
+                            
+                            <!-- Installation Card -->
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 24px; margin: 32px 0; border-left: 6px solid #3b82f6;">
+                                <h3 style="margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #1f2937;">
+                                    📅 Installation Details
+                                </h3>
+                                <p style="margin: 0; font-size: 16px; color: #6b7280;">
+                                    Scheduled for <strong style="color: #1f2937;">${formattedDate} at 9:00 AM</strong>
+                                </p>
+                            </div>
+                            
+                            <!-- Modern Details Grid -->
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 32px 0;">
                                 <tr>
-                                    <td style="text-align: left; padding: 8px; color: white;">✓ Team arrives promptly at 9:00 AM</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; padding: 8px; color: white;">✓ Installation takes 4-6 hours typically</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; padding: 8px; color: white;">✓ Final walkthrough and quality inspection</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; padding: 8px; color: white;">✓ All materials and tools provided</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-                
-                <!-- Preparation Checklist -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="25" style="background-color: #28a745; color: white; margin: 30px 0;">
-                    <tr>
-                        <td style="text-align: center;">
-                            <h3 style="margin: 0 0 15px; font-size: 20px; font-weight: 600;">
-                                📋 Preparation Checklist
-                            </h3>
-                            <table width="100%" border="0" cellspacing="0" cellpadding="8" style="background-color: rgba(255, 255, 255, 0.1); margin: 15px 0;">
-                                <tr>
-                                    <td style="text-align: left; color: white;">□ Clear work area of personal items</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white;">□ Ensure easy access to installation space</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white;">□ Someone present during installation</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white;">□ Secure pets away from work area</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white;">□ Have final payment ready if balance due</td>
+                                    <td style="width: 50%; padding: 20px; background: #f9fafb; border-radius: 12px; margin-right: 16px; vertical-align: top;">
+                                        <div style="text-align: center;">
+                                            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                                <span style="font-size: 24px;">👤</span>
+                                            </div>
+                                            <h4 style="margin: 0 0 8px; font-size: 16px; font-weight: 600; color: #1f2937;">Customer</h4>
+                                            <p style="margin: 0; font-size: 18px; font-weight: 700; color: #3b82f6;">${installation.name}</p>
+                                            <p style="margin: 8px 0 0; font-size: 14px; color: #6b7280;">${installation.phone}</p>
+                                        </div>
+                                    </td>
+                                    <td style="width: 16px;"></td>
+                                    <td style="width: 50%; padding: 20px; background: #f0fdf4; border-radius: 12px; vertical-align: top;">
+                                        <div style="text-align: center;">
+                                            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                                <span style="font-size: 24px;">🔧</span>
+                                            </div>
+                                            <h4 style="margin: 0 0 8px; font-size: 16px; font-weight: 600; color: #1f2937;">Lead Installer</h4>
+                                            <p style="margin: 0; font-size: 18px; font-weight: 700; color: #10b981;">
+                                                ${installation.assigned_installer ? installation.assigned_installer.charAt(0).toUpperCase() + installation.assigned_installer.slice(1) : 'To be assigned'}
+                                            </p>
+                                        </div>
+                                    </td>
                                 </tr>
                             </table>
+                            
+                            <!-- Project Value Card -->
+                            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%); border-radius: 12px; padding: 24px; margin: 32px 0; text-align: center;">
+                                <h4 style="margin: 0 0 8px; font-size: 16px; font-weight: 600; color: #92400e;">💰 Project Investment</h4>
+                                <p style="margin: 0; font-size: 28px; font-weight: 700; color: #92400e;">
+                                    ${installation.project_amount ? `$${parseInt(installation.project_amount).toLocaleString()}` : 'Contact office for details'}
+                                </p>
+                            </div>
+                            
+                            ${installation.selected_colors && Array.isArray(installation.selected_colors) && installation.selected_colors.length > 0 ? `
+                            <!-- Selected Colors Section -->
+                            <div style="background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); border-radius: 12px; padding: 24px; margin: 32px 0;">
+                                <h4 style="margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #6b21a8; text-align: center;">
+                                    🎨 Your Selected Colors
+                                </h4>
+                                <div style="text-align: center;">
+                                    ${installation.selected_colors.map(color => `
+                                        <div style="display: inline-block; margin: 8px 12px; text-align: center;">
+                                            <div style="width: 40px; height: 40px; border-radius: 8px; background: #${color.replace('WMK-', '')}; border: 3px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin: 0 auto 8px;"></div>
+                                            <p style="margin: 0; font-size: 12px; font-weight: 600; color: #6b21a8;">${color}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            <!-- Installation Process -->
+                            <div style="background: #ffffff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
+                                <h4 style="margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #1f2937; text-align: center;">
+                                    🏗️ Installation Process
+                                </h4>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="12">
+                                    <tr>
+                                        <td style="background: #dbeafe; border-radius: 8px; padding: 16px; width: 25%; text-align: center; vertical-align: top;">
+                                            <div style="font-size: 24px; margin-bottom: 8px;">🚚</div>
+                                            <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1e40af;">Team Arrival</p>
+                                            <p style="margin: 4px 0 0; font-size: 12px; color: #374151;">9:00 AM Sharp</p>
+                                        </td>
+                                        <td style="width: 8px;"></td>
+                                        <td style="background: #dcfce7; border-radius: 8px; padding: 16px; width: 25%; text-align: center; vertical-align: top;">
+                                            <div style="font-size: 24px; margin-bottom: 8px;">⚙️</div>
+                                            <p style="margin: 0; font-size: 14px; font-weight: 600; color: #166534;">Installation</p>
+                                            <p style="margin: 4px 0 0; font-size: 12px; color: #374151;">4-6 Hours</p>
+                                        </td>
+                                        <td style="width: 8px;"></td>
+                                        <td style="background: #fef3c7; border-radius: 8px; padding: 16px; width: 25%; text-align: center; vertical-align: top;">
+                                            <div style="font-size: 24px; margin-bottom: 8px;">✅</div>
+                                            <p style="margin: 0; font-size: 14px; font-weight: 600; color: #92400e;">Quality Check</p>
+                                            <p style="margin: 4px 0 0; font-size: 12px; color: #374151;">Final Inspection</p>
+                                        </td>
+                                        <td style="width: 8px;"></td>
+                                        <td style="background: #fce7f3; border-radius: 8px; padding: 16px; width: 25%; text-align: center; vertical-align: top;">
+                                            <div style="font-size: 24px; margin-bottom: 8px;">🎉</div>
+                                            <p style="margin: 0; font-size: 14px; font-weight: 600; color: #be185d;">Completion</p>
+                                            <p style="margin: 4px 0 0; font-size: 12px; color: #374151;">Ready to Enjoy!</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            ${customMessage ? `
+                            <!-- Custom Message -->
+                            <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 12px; padding: 24px; margin: 32px 0; border-left: 6px solid #ef4444;">
+                                <h4 style="margin: 0 0 12px; font-size: 18px; font-weight: 600; color: #dc2626;">
+                                    📝 Special Instructions
+                                </h4>
+                                <p style="margin: 0; font-size: 16px; color: #374151; line-height: 1.6;">
+                                    ${customMessage}
+                                </p>
+                            </div>
+                            ` : ''}
+                            
+                            <!-- Preparation Checklist -->
+                            <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; padding: 24px; margin: 32px 0;">
+                                <h4 style="margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #065f46; text-align: center;">
+                                    📋 Pre-Installation Checklist
+                                </h4>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="8">
+                                    <tr>
+                                        <td style="font-size: 16px; color: #047857; padding: 8px 0;">
+                                            <span style="margin-right: 12px;">✅</span>Clear work area of personal items
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size: 16px; color: #047857; padding: 8px 0;">
+                                            <span style="margin-right: 12px;">✅</span>Ensure easy access to installation space
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size: 16px; color: #047857; padding: 8px 0;">
+                                            <span style="margin-right: 12px;">✅</span>Have someone present during installation
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size: 16px; color: #047857; padding: 8px 0;">
+                                            <span style="margin-right: 12px;">✅</span>Secure pets away from work area
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size: 16px; color: #047857; padding: 8px 0;">
+                                            <span style="margin-right: 12px;">✅</span>Have final payment ready if balance due
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
                         </td>
                     </tr>
-                </table>
-
-                ${customMessage ? `
-                <!-- Additional Notes -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background-color: #f8f9fa; border-left: 4px solid #ffc107; margin: 20px 0;">
+                    
+                    <!-- Modern Footer -->
                     <tr>
-                        <td>
-                            <h3 style="margin: 0 0 15px; color: #2c3e50; font-size: 16px; font-weight: 600;">
-                                📝 Additional Notes
+                        <td style="background: linear-gradient(135deg, #1f2937 0%, #111827 100%); padding: 40px 30px; text-align: center;">
+                            <h3 style="margin: 0 0 20px; color: #ffffff; font-size: 24px; font-weight: 700;">
+                                Questions? We're Here to Help! 🤝
                             </h3>
-                            <p style="margin: 0; color: #495057; line-height: 1.6;">
-                                ${customMessage}
+                            <table width="100%" border="0" cellspacing="0" cellpadding="12">
+                                <tr>
+                                    <td style="text-align: center; width: 33.33%;">
+                                        <div style="color: #3b82f6; font-size: 24px; margin-bottom: 8px;">📞</div>
+                                        <p style="margin: 0; color: #d1d5db; font-size: 14px; font-weight: 500;">(XXX) XXX-XXXX</p>
+                                    </td>
+                                    <td style="text-align: center; width: 33.33%;">
+                                        <div style="color: #10b981; font-size: 24px; margin-bottom: 8px;">📧</div>
+                                        <p style="margin: 0; color: #d1d5db; font-size: 14px; font-weight: 500;">info@wrapmykitchen.com</p>
+                                    </td>
+                                    <td style="text-align: center; width: 33.33%;">
+                                        <div style="color: #fbbf24; font-size: 24px; margin-bottom: 8px;">🌐</div>
+                                        <p style="margin: 0; color: #d1d5db; font-size: 14px; font-weight: 500;">wrapmykitchen.com</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 24px 0 0; font-size: 13px; color: #9ca3af; line-height: 1.5;">
+                                © 2025 Wrap My Kitchen Solutions. All rights reserved.<br>
+                                <span style="color: #fbbf24;">Quality • Craftsmanship • Excellence</span>
                             </p>
                         </td>
                     </tr>
+                    
                 </table>
-                ` : ''}
-                
-                <!-- Contact Section -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="25" style="background-color: #343a40; color: white; margin: 30px 0;">
-                    <tr>
-                        <td style="text-align: center;">
-                            <p style="margin: 0 0 15px; font-weight: bold; font-size: 16px;">
-                                💡 Questions or need to reschedule?
-                            </p>
-                            <p style="margin: 0; font-size: 14px;">
-                                Contact us at least 48 hours in advance for any changes.
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-                
             </td>
         </tr>
-        
-        <!-- Footer -->
-        <tr>
-            <td style="background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 30px 20px;">
-                <h4 style="margin: 0 0 15px; color: white; font-size: 18px; font-weight: 600;">
-                    Wrap My Kitchen
-                </h4>
-                <p style="margin: 8px 0;">Questions about your installation? We're here to help!</p>
-                <p style="margin: 8px 0;"><strong>📞 Phone:</strong> (954) 799-6844</p>
-                <p style="margin: 8px 0;">
-                    <strong>📧 Email:</strong> 
-                    <a href="mailto:info@wrapmykitchen.com" style="color: #007bff; text-decoration: none;">
-                        info@wrapmykitchen.com
-                    </a>
-                </p>
-                <p style="margin: 8px 0;">
-                    <strong>🌐 Website:</strong> 
-                    <a href="https://wrapmykitchen.com" style="color: #007bff; text-decoration: none;">
-                        www.wrapmykitchen.com
-                    </a>
-                </p>
-                <p style="margin-top: 20px; font-size: 13px; color: #bdc3c7;">
-                    © 2025 Wrap My Kitchen. All rights reserved.<br>
-                    Quality • Craftsmanship • Excellence
-                </p>
-            </td>
-        </tr>
-        
     </table>
     
 </body>
@@ -1061,16 +1157,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No installer assigned" });
         }
         
-        // For demo purposes, using a generic installer email
-        // In production, you'd have installer email addresses in your system
-        const installerEmails: Record<string, string> = {
-          'angel': 'angel@company.com',
-          'brian': 'brian@company.com', 
-          'luis': 'luis@company.com'
-        };
+        // Fetch installers dynamically from database
+        const installers = await storage.getInstallers();
+        const assignedInstaller = installers.find(installer => 
+          installer.name.toLowerCase() === installation.assigned_installer!.toLowerCase()
+        );
         
-        recipient = installerEmails[installation.assigned_installer] || 'installer@company.com';
-        subject = `Wrap My Kitchen Installation Assignment - ${formattedDate} - ${installation.name}`;
+        // Check if installer exists and has email
+        if (!assignedInstaller) {
+          return res.status(400).json({ 
+            message: `Installer "${installation.assigned_installer}" not found in database` 
+          });
+        }
+        
+        if (!assignedInstaller.email) {
+          return res.status(400).json({ 
+            message: `Installer "${assignedInstaller.name}" does not have an email address configured. Please update their profile in Installer Management.` 
+          });
+        }
+        
+        recipient = assignedInstaller.email;
+        subject = `WMK Installation Assignment - ${formattedDate} - ${installation.name}`;
         emailContent = `
 <!DOCTYPE html>
 <html>
@@ -1078,282 +1185,272 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wrap My Kitchen - Installation Assignment</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
+<body style="margin: 0; padding: 20px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
     
-    <!-- Main Container Table -->
-    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e9ecef;">
+    <!-- Main Container -->
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden;">
         
-        <!-- Logo Header -->
-        <tr>
-            <td style="padding: 30px 20px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #e9ecef;">
-                <h1 style="margin: 0; font-size: 36px; font-weight: bold; color: #2c3e50;">
-                    WrapMy<span style="color: #fd7e14; font-weight: bold;">Kitchen</span>
+        <!-- Header with Gradient -->
+        <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%); padding: 40px 32px; text-align: center; position: relative;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1000 300\"><defs><pattern id=\"grain\" width=\"100\" height=\"100\" patternUnits=\"userSpaceOnUse\"><circle cx=\"50\" cy=\"50\" r=\"1\" fill=\"%23ffffff\" opacity=\"0.1\"/></pattern></defs><rect width=\"100%\" height=\"100%\" fill=\"url(%23grain)\"/></svg>'); opacity: 0.3;"></div>
+            <div style="position: relative; z-index: 1;">
+                <h1 style="margin: 0; font-size: 40px; font-weight: 700; color: #ffffff; letter-spacing: -0.025em;">
+                    WMK<span style="color: #fbbf24; font-weight: 800;">Kitchen</span>
                 </h1>
-                <div style="margin: 10px 0 0; font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;">
+                <div style="margin: 12px 0 0; font-size: 14px; color: rgba(255, 255, 255, 0.9); text-transform: uppercase; letter-spacing: 2px; font-weight: 500;">
                     Professional Installation Team
                 </div>
-            </td>
-        </tr>
+            </div>
+        </div>
         
-        <!-- Orange Banner -->
-        <tr>
-            <td style="padding: 20px; text-align: center; background-color: #fd7e14; color: white; font-size: 18px; font-weight: bold;">
-                🔧 New Installation Assignment
-            </td>
-        </tr>
+        <!-- Installation Assignment Banner -->
+        <div style="background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%); padding: 24px 32px; text-align: center; border-top: 1px solid rgba(0, 0, 0, 0.1);">
+            <div style="font-size: 20px; font-weight: 600; color: #ffffff; margin: 0; display: flex; align-items: center; justify-content: center; gap: 12px;">
+                <span style="font-size: 24px;">🔧</span>
+                New Installation Assignment
+            </div>
+        </div>
         
         <!-- Main Content -->
-        <tr>
-            <td style="padding: 30px 20px;">
+        <div style="padding: 40px 32px;">
                 
                 <!-- Greeting -->
-                <p style="font-size: 16px; color: #495057; margin-bottom: 25px; line-height: 1.7;">
-                    Hi <strong>${installation.assigned_installer?.charAt(0).toUpperCase()}${installation.assigned_installer?.slice(1)}</strong>,<br><br>
-                    You have been assigned a new kitchen installation for <strong>Wrap My Kitchen </strong>. Please review the details below and prepare accordingly.
-                </p>
+                <div style="font-size: 16px; color: #374151; margin-bottom: 32px; line-height: 1.7;">
+                    Hi <strong style="color: #1f2937; font-weight: 600;">${installation.assigned_installer?.charAt(0).toUpperCase()}${installation.assigned_installer?.slice(1)}</strong>,<br><br>
+                    You have been assigned a new kitchen installation for <strong style="color: #2563eb;">Wrap My Kitchen</strong>. Please review the details below and prepare accordingly.
+                </div>
                 
-                <!-- Assignment Header -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background-color: #f8f9fa; border-left: 4px solid #fd7e14; margin: 20px 0;">
-                    <tr>
-                        <td>
-                            <h3 style="margin: 0 0 5px; color: #2c3e50; font-size: 18px; font-weight: 600;">
-                                Installation Assignment
-                            </h3>
-                            <div style="color: #6c757d; font-size: 14px;">Scheduled for ${formattedDate}</div>
-                        </td>
-                    </tr>
-                </table>
+                <!-- Assignment Header Card -->
+                <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 24px; margin: 32px 0; border-left: 4px solid #f59e0b; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <h3 style="margin: 0 0 8px; color: #1f2937; font-size: 20px; font-weight: 600;">
+                        Installation Assignment
+                    </h3>
+                    <div style="color: #6b7280; font-size: 14px; font-weight: 500;">Scheduled for ${formattedDate}</div>
+                </div>
                 
-                <!-- Job Details Table -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 25px 0; border: 1px solid #e9ecef;">
-                    <thead>
-                        <tr style="background-color: #2c3e50; color: white;">
-                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Job Details</th>
-                            <th style="padding: 15px; text-align: right; font-weight: 600; font-size: 14px;">Information</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>📅 Installation Date</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${formattedDate} at 9:00 AM
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>👤 Customer</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.name}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>📞 Phone</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.phone}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>📧 Email</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.email || 'Not provided'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>� Address</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.address || 'Not provided'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>�💰 Project Value</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.project_amount ? `$${parseInt(installation.project_amount).toLocaleString()}` : 'Contact office'}
-                            </td>
-                        </tr>
-                        ${installation.selected_colors ? (() => {
-                          try {
-                            const colors = typeof installation.selected_colors === 'string' 
-                              ? JSON.parse(installation.selected_colors) 
-                              : installation.selected_colors;
-                            
-                            if (Array.isArray(colors) && colors.length > 0) {
-                              return `
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>🎨 Selected Colors</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${colors.join(', ')}
-                            </td>
-                        </tr>`;
-                            }
-                          } catch (e) {
-                            console.error('Error parsing selected_colors:', e);
-                          }
-                          return '';
-                        })() : ''}
-                    </tbody>
-                </table>
+                <!-- Job Details Card -->
+                <div style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 32px 0;">
+                    <div style="background: linear-gradient(90deg, #1f2937 0%, #374151 100%); color: #ffffff; padding: 20px; text-align: center;">
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 600; letter-spacing: 0.5px;">
+                            📋 Job Details
+                        </h3>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div style="display: grid; gap: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+                                <span style="color: #374151; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 16px;">📅</span>
+                                    Installation Date
+                                </span>
+                                <span style="color: #1f2937; font-weight: 600;">
+                                    ${formattedDate} at 9:00 AM
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+                                <span style="color: #374151; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 16px;">👤</span>
+                                    Customer
+                                </span>
+                                <span style="color: #1f2937; font-weight: 600;">
+                                    ${installation.name}
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+                                <span style="color: #374151; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 16px;">📞</span>
+                                    Phone
+                                </span>
+                                <span style="color: #1f2937; font-weight: 600;">
+                                    ${installation.phone}
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+                                <span style="color: #374151; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 16px;">📧</span>
+                                    Email
+                                </span>
+                                <span style="color: #1f2937; font-weight: 600;">
+                                    ${installation.email || 'Not provided'}
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0;">
+                                <span style="color: #374151; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 16px;">💰</span>
+                                    Project Value
+                                </span>
+                                <span style="color: #1f2937; font-weight: 600;">
+                                    ${installation.project_amount ? `$${parseInt(installation.project_amount).toLocaleString()}` : 'Contact office'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Color Selection -->
+                ${installation.selected_colors ? (() => {
+                  try {
+                    const colors = typeof installation.selected_colors === 'string' 
+                      ? JSON.parse(installation.selected_colors) 
+                      : installation.selected_colors;
+                    
+                    if (Array.isArray(colors) && colors.length > 0) {
+                      return `
+                <div style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 32px 0;">
+                    <div style="background: linear-gradient(90deg, #7c3aed 0%, #6d28d9 100%); color: #ffffff; padding: 20px; text-align: center;">
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 600; letter-spacing: 0.5px;">
+                            🎨 Selected Colors
+                        </h3>
+                    </div>
+                    <div style="padding: 24px; text-align: center;">
+                        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 16px 0;">
+                            ${colors.map((color: string) => `
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                    <div style="width: 48px; height: 48px; background-color: ${color}; border-radius: 12px; border: 3px solid #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); position: relative;">
+                                        <div style="position: absolute; inset: 0; border-radius: 9px; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);"></div>
+                                    </div>
+                                    <span style="font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">${color}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div style="margin-top: 16px; padding: 16px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 8px;">
+                            <p style="margin: 0; font-size: 14px; color: #374151; font-weight: 500;">
+                                <span style="color: #7c3aed;">💡 Note:</span> These are the colors selected by the customer for their kitchen installation.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                `;
+                    }
+                  } catch (e) {
+                    console.error('Error parsing selected_colors:', e);
+                  }
+                  return '';
+                })() : ''}
                 
                 <!-- Payment Status -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 25px 0; border: 1px solid #e9ecef;">
-                    <thead>
-                        <tr style="background-color: #28a745; color: white;">
-                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Payment Item</th>
-                            <th style="padding: 15px; text-align: center; font-weight: 600; font-size: 14px;">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>Deposit Payment</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; text-align: center;">
-                                ${installation.deposit_paid ? '<span style="color: #28a745; font-weight: bold;">✅ PAID</span>' : '<span style="color: #dc3545; font-weight: bold;">⚠️ PENDING</span>'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>Final Balance</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; text-align: center;">
-                                ${installation.balance_paid ? '<span style="color: #28a745; font-weight: bold;">✅ PAID</span>' : '<span style="color: #ffc107; font-weight: bold;">💳 DUE ON COMPLETION</span>'}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 32px 0;">
+                    <div style="background: linear-gradient(90deg, #059669 0%, #047857 100%); color: #ffffff; padding: 20px; text-align: center;">
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 600; letter-spacing: 0.5px;">
+                            💳 Payment Status
+                        </h3>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div style="display: grid; gap: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+                                <span style="color: #374151; font-weight: 500;">
+                                    Deposit Payment
+                                </span>
+                                <span style="padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; ${installation.deposit_paid ? 'background: linear-gradient(90deg, #10b981 0%, #059669 100%); color: #ffffff;' : 'background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); color: #ffffff;'}">
+                                    ${installation.deposit_paid ? '✅ PAID' : '⚠️ PENDING'}
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0;">
+                                <span style="color: #374151; font-weight: 500;">
+                                    Final Balance
+                                </span>
+                                <span style="padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; ${installation.balance_paid ? 'background: linear-gradient(90deg, #10b981 0%, #059669 100%); color: #ffffff;' : 'background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%); color: #ffffff;'}">
+                                    ${installation.balance_paid ? '✅ PAID' : '💳 DUE ON COMPLETION'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Pre-Installation Checklist -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="30" style="background-color: #fd7e14; color: white; margin: 30px 0;">
-                    <tr>
-                        <td style="text-align: center;">
-                            <h3 style="margin: 0 0 15px; font-size: 20px; font-weight: 600;">
-                                📋 Pre-Installation Checklist
-                            </h3>
-                            <table width="100%" border="0" cellspacing="0" cellpadding="8" style="background-color: rgba(255, 255, 255, 0.1); margin: 15px 0;">
-                                <tr>
-                                    <td style="text-align: left; color: white;">- Review project specifications and materials list</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white;">- Confirm all materials are loaded and ready</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white;">- Contact customer 24 hours prior to confirm</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white;">- Verify access and parking availability</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white;">- Ensure all tools and equipment are prepared</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
+                <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; padding: 32px; margin: 32px 0; text-align: center; color: #ffffff; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+                    <h3 style="margin: 0 0 24px; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">
+                        📋 Pre-Installation Checklist
+                    </h3>
+                    <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 24px; margin: 20px 0; text-align: left; backdrop-filter: blur(10px);">
+                        <div style="display: grid; gap: 12px;">
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 500; padding: 8px 0;">□ Review project specifications and materials list</div>
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 500; padding: 8px 0;">□ Confirm all materials are loaded and ready</div>
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 500; padding: 8px 0;">□ Contact customer 24 hours prior to confirm</div>
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 500; padding: 8px 0;">□ Verify access and parking availability</div>
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 500; padding: 8px 0;">□ Ensure all tools and equipment are prepared</div>
+                        </div>
+                    </div>
+                </div>
 
                 ${installation.additional_notes ? `
                 <!-- Installation Notes -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background-color: #f8f9fa; border-left: 4px solid #17a2b8; margin: 20px 0;">
-                    <tr>
-                        <td>
-                            <h3 style="margin: 0 0 15px; color: #2c3e50; font-size: 16px; font-weight: 600;">
-                                📝 Installation Notes
-                            </h3>
-                            <p style="margin: 0; color: #495057; line-height: 1.6;">
-                                ${installation.additional_notes}
-                            </p>
-                        </td>
-                    </tr>
-                </table>
+                <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 24px; margin: 32px 0; border-left: 4px solid #06b6d4; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <h3 style="margin: 0 0 16px; color: #1f2937; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 20px;">📝</span>
+                        Installation Notes
+                    </h3>
+                    <div style="color: #374151; line-height: 1.7; font-size: 15px; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                        ${installation.additional_notes}
+                    </div>
+                </div>
                 ` : ''}
 
                 ${customMessage ? `
                 <!-- Special Instructions -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="20" style="background-color: #f8f9fa; border-left: 4px solid #ffc107; margin: 20px 0;">
-                    <tr>
-                        <td>
-                            <h3 style="margin: 0 0 15px; color: #2c3e50; font-size: 16px; font-weight: 600;">
-                                ⚡ Special Instructions
-                            </h3>
-                            <p style="margin: 0; color: #495057; line-height: 1.6;">
-                                ${customMessage}
-                            </p>
-                        </td>
-                    </tr>
-                </table>
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 24px; margin: 32px 0; border-left: 4px solid #f59e0b; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <h3 style="margin: 0 0 16px; color: #92400e; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 20px;">⚡</span>
+                        Special Instructions
+                    </h3>
+                    <div style="color: #92400e; line-height: 1.7; font-size: 15px; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #f3e8ff;">
+                        ${customMessage}
+                    </div>
+                </div>
                 ` : ''}
                 
                 <!-- Important Reminders -->
-                <table width="100%" border="0" cellspacing="0" cellpadding="25" style="background-color: #343a40; color: white; margin: 30px 0;">
-                    <tr>
-                        <td style="text-align: center;">
-                            <h3 style="margin: 0 0 15px; font-size: 18px; font-weight: 600;">
-                                ⚠️ Important Reminders
-                            </h3>
-                            <table width="100%" border="0" cellspacing="0" cellpadding="8" style="background-color: rgba(255, 255, 255, 0.1); margin: 15px 0;">
-                                <tr>
-                                    <td style="text-align: left; color: white; font-size: 14px;">• Call customer 24 hours before installation</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white; font-size: 14px;">• Arrive promptly at 9:00 AM with all materials</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white; font-size: 14px;">• Conduct quality inspection before walkthrough</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white; font-size: 14px;">• Collect final payment if balance is due</td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; color: white; font-size: 14px;">• Report any issues to office immediately</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
+                <div style="background: linear-gradient(135deg, #374151 0%, #1f2937 100%); border-radius: 12px; padding: 32px; margin: 32px 0; text-align: center; color: #ffffff; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+                    <h3 style="margin: 0 0 24px; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">
+                        ⚠️ Important Reminders
+                    </h3>
+                    <div style="background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 24px; margin: 20px 0; text-align: left; backdrop-filter: blur(10px);">
+                        <div style="display: grid; gap: 12px;">
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 500; padding: 8px 0;">• Call customer 24 hours before installation</div>
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 500; padding: 8px 0;">• Arrive promptly at 9:00 AM with all materials</div>
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 500; padding: 8px 0;">• Conduct quality inspection before walkthrough</div>
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 500; padding: 8px 0;">• Collect final payment if balance is due</div>
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 500; padding: 8px 0;">• Report any issues to office immediately</div>
+                        </div>
+                    </div>
+                </div>
                 
-            </td>
-        </tr>
+        </div>
         
         <!-- Footer -->
-        <tr>
-            <td style="background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 30px 20px;">
-                <h4 style="margin: 0 0 15px; color: white; font-size: 18px; font-weight: 600;">
-                    Wrap My Kitchen Solutions - Installation Team
-                </h4>
-                <p style="margin: 8px 0;">Questions or support needed? Contact the office immediately.</p>
-                <p style="margin: 8px 0;"><strong>📞 Office:</strong> (954) 799-6844</p>
-                <p style="margin: 8px 0;">
-                    <strong>📧 Email:</strong> 
-                    <a href="mailto:info@wrapmykitchen.com" style="color: #fd7e14; text-decoration: none;">
+        <div style="background: linear-gradient(135deg, #1f2937 0%, #111827 100%); color: #f9fafb; text-align: center; padding: 40px 32px;">
+            <h4 style="margin: 0 0 20px; color: #ffffff; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">
+                Wrap My Kitchen Solutions - Installation Team
+            </h4>
+            <div style="margin: 12px 0; font-size: 15px; color: #d1d5db; line-height: 1.6;">Questions or support needed? Contact the office immediately.</div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin: 24px 0;">
+                <div style="display: flex; align-items: center; gap: 8px; color: #e5e7eb; font-size: 14px;">
+                    <span style="font-size: 16px;">📞</span>
+                    <strong>Office:</strong> (XXX) XXX-XXXX
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; color: #e5e7eb; font-size: 14px;">
+                    <span style="font-size: 16px;">📧</span>
+                    <strong>Email:</strong> 
+                    <a href="mailto:info@wrapmykitchen.com" style="color: #fbbf24; text-decoration: none; font-weight: 500;">
                         info@wrapmykitchen.com
                     </a>
-                </p>
-                <p style="margin: 8px 0;">
-                    <strong>🌐 Website:</strong> 
-                    <a href="https://www.wrapmykitchen.com" style="color: #fd7e14; text-decoration: none;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; color: #e5e7eb; font-size: 14px;">
+                    <span style="font-size: 16px;">🌐</span>
+                    <strong>Website:</strong> 
+                    <a href="https://wrapmykitchen.com" style="color: #fbbf24; text-decoration: none; font-weight: 500;">
                         www.wrapmykitchen.com
                     </a>
-                </p>
-                <p style="margin-top: 20px; font-size: 13px; color: #bdc3c7;">
-                    © 2025 Wrap My Kitchen. All rights reserved.<br>
-                    Excellence in Every Installation
-                </p>
-            </td>
-        </tr>
+                </div>
+            </div>
+            <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #374151; font-size: 13px; color: #9ca3af; line-height: 1.6;">
+                © 2025 Wrap My Kitchen Solutions. All rights reserved.<br>
+                <strong style="color: #fbbf24;">Excellence in Every Installation</strong>
+            </div>
+        </div>
         
-    </table>
+    </div>
     
 </body>
 </html>
@@ -1701,6 +1798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Reinitialize email service to use new config
       const { emailService } = await import('./email-service');
+      await emailService.initializeTransporter();
 
       // Send test email
       await emailService.sendEmail({
@@ -1770,10 +1868,53 @@ WMK CRM System`
     }
   });
 
+  // Test Google Calendar connection
+  app.get("/api/calendar/test-google", async (req, res) => {
+    try {
+      const isConnected = await GoogleCalendarService.testConnection();
+      res.json({ 
+        connected: isConnected,
+        message: isConnected ? "Google Calendar connection successful" : "Google Calendar connection failed"
+      });
+    } catch (error) {
+      console.error("Google Calendar test failed:", error);
+      res.status(500).json({ 
+        connected: false, 
+        message: "Google Calendar test failed",
+        error: error.message 
+      });
+    }
+  });
+
   app.post("/api/calendar/events", async (req, res) => {
     try {
       const eventData = insertCalendarEventSchema.parse(req.body);
       const event = await storage.createCalendarEvent(eventData);
+      
+      // Sync to Google Calendar if event was created successfully
+      if (event) {
+        try {
+          const googleEventData = {
+            title: event.title,
+            description: event.description || undefined,
+            start: event.start_date.toISOString(),
+            end: event.end_date ? event.end_date.toISOString() : new Date(event.start_date.getTime() + 60*60*1000).toISOString(), // Default 1 hour if no end
+            location: event.location || undefined,
+          };
+          
+          const googleEventId = await GoogleCalendarService.createEvent(googleEventData);
+          
+          if (googleEventId) {
+            // Update the local event with Google Calendar ID
+            await storage.updateCalendarEvent(event.id.toString(), { google_event_id: googleEventId });
+            console.log(`✅ Event synced to Google Calendar: ${googleEventId}`);
+          }
+        } catch (syncError) {
+          console.error('⚠️ Failed to sync event to Google Calendar:', syncError);
+          // Don't fail the main request if Google sync fails
+        }
+      }
+      
       res.json(event);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1788,10 +1929,35 @@ WMK CRM System`
     try {
       const { id } = req.params;
       const updates = updateCalendarEventSchema.parse(req.body);
+      
+      // Get the existing event to check for Google Calendar ID
+      const existingEvent = await storage.getCalendarEvent(id);
       const event = await storage.updateCalendarEvent(id, updates);
       
       if (!event) {
         return res.status(404).json({ message: "Calendar event not found" });
+      }
+      
+      // Sync update to Google Calendar if event has Google Calendar ID
+      if (existingEvent?.google_event_id) {
+        try {
+          const googleEventData = {
+            title: event.title,
+            description: event.description || undefined,
+            start: event.start_date.toISOString(),
+            end: event.end_date ? event.end_date.toISOString() : new Date(event.start_date.getTime() + 60*60*1000).toISOString(),
+            location: event.location || undefined,
+          };
+          
+          const success = await GoogleCalendarService.updateEvent(existingEvent.google_event_id, googleEventData);
+          
+          if (success) {
+            console.log(`✅ Event updated in Google Calendar: ${existingEvent.google_event_id}`);
+          }
+        } catch (syncError) {
+          console.error('⚠️ Failed to sync event update to Google Calendar:', syncError);
+          // Don't fail the main request if Google sync fails
+        }
       }
       
       res.json(event);
@@ -1807,10 +1973,27 @@ WMK CRM System`
   app.delete("/api/calendar/events/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Get the existing event to check for Google Calendar ID before deleting
+      const existingEvent = await storage.getCalendarEvent(id);
       const success = await storage.deleteCalendarEvent(id);
       
       if (!success) {
         return res.status(404).json({ message: "Calendar event not found" });
+      }
+      
+      // Delete from Google Calendar if event has Google Calendar ID
+      if (existingEvent?.google_event_id) {
+        try {
+          const deleted = await GoogleCalendarService.deleteEvent(existingEvent.google_event_id);
+          
+          if (deleted) {
+            console.log(`✅ Event deleted from Google Calendar: ${existingEvent.google_event_id}`);
+          }
+        } catch (syncError) {
+          console.error('⚠️ Failed to delete event from Google Calendar:', syncError);
+          // Don't fail the main request if Google sync fails
+        }
       }
       
       res.json({ message: "Calendar event deleted successfully" });
@@ -1827,25 +2010,6 @@ WMK CRM System`
       res.json(users.map(user => ({ ...user, password: undefined }))); // Don't send passwords
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch users" });
-    }
-  });
-
-  // Get specific user by ID
-  app.get("/api/admin/users/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const user = await storage.getUser(id);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Don't send password in response
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      console.error('Get user error:', error);
-      res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 

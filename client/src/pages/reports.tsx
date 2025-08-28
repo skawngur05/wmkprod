@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { HardHat, TrendingUp, DollarSign, CheckCircle } from 'lucide-react';
+import { InstallerPerformanceTable } from '@/components/reports/installer-performance-table';
 
 interface AnalyticsData {
   executiveDashboard: {
@@ -46,6 +48,33 @@ interface AnalyticsData {
   };
 }
 
+interface InstallerData {
+  installerName: string;
+  totalInstallations: number;
+  totalValue: number;
+  averageProjectValue: number;
+  completedInstallations: number;
+  pendingInstallations: number;
+  installations: Array<{
+    projectId: number;
+    customerName: string;
+    projectValue: number;
+    installationDate: string;
+    status: 'completed' | 'pending';
+  }>;
+}
+
+interface InstallerReportsData {
+  installers: InstallerData[];
+  totalInstallations: number;
+  totalValue: number;
+  filterInfo: {
+    year: number | null;
+    month: number | null;
+    period: string;
+  };
+}
+
 interface YearsData {
   availableYears: number[];
 }
@@ -54,6 +83,7 @@ export default function Reports() {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [reportType, setReportType] = useState<string>('analytics');
   
   const { data: yearsData } = useQuery<YearsData>({
     queryKey: ['/api/reports/years'],
@@ -64,7 +94,7 @@ export default function Reports() {
     }
   });
   
-  const { data: analyticsData, isLoading } = useQuery<AnalyticsData>({
+  const { data: analyticsData, isLoading: isLoadingAnalytics } = useQuery<AnalyticsData>({
     queryKey: ['analytics', selectedYear, selectedMonth],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -74,7 +104,22 @@ export default function Reports() {
       const response = await fetch(`/api/reports/analytics?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch analytics data');
       return response.json();
-    }
+    },
+    enabled: reportType === 'analytics'
+  });
+
+  const { data: installerData, isLoading: isLoadingInstallers } = useQuery<InstallerReportsData>({
+    queryKey: ['installer-reports', selectedYear, selectedMonth],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedYear) params.append('year', selectedYear);
+      if (selectedMonth && selectedMonth !== 'all') params.append('month', selectedMonth);
+      
+      const response = await fetch(`/api/reports/installers?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch installer data');
+      return response.json();
+    },
+    enabled: reportType === 'installers'
   });
 
   const formatCurrency = (amount: number) => {
@@ -120,20 +165,22 @@ export default function Reports() {
     { value: '12', label: 'December' }
   ];
 
+  const isLoading = reportType === 'analytics' ? isLoadingAnalytics : isLoadingInstallers;
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center items-center min-h-[50vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading analytics data...</p>
+            <p className="text-gray-600">Loading {reportType === 'analytics' ? 'analytics' : 'installer'} data...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!analyticsData) {
+  if (reportType === 'analytics' && !analyticsData) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
@@ -142,12 +189,23 @@ export default function Reports() {
       </div>
     );
   }
+
+  if (reportType === 'installers' && !installerData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-gray-600">No installer data available</p>
+        </div>
+      </div>
+    );
+  }
   
-  const { executiveDashboard, leadOriginPerformance = [], teamPerformance, monthlyBreakdown } = analyticsData;
+  const analyticsDataExists = reportType === 'analytics' && analyticsData;
+  const { executiveDashboard, leadOriginPerformance = [], teamPerformance, monthlyBreakdown } = analyticsDataExists ? analyticsData : { executiveDashboard: null, leadOriginPerformance: [], teamPerformance: null, monthlyBreakdown: null };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header with Time-Based Filtering */}
+      {/* Header with Report Type and Time-Based Filtering */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -159,8 +217,22 @@ export default function Reports() {
             </p>
           </div>
           
-          {/* Time-Based Filtering Controls */}
+          {/* Report Type and Time-Based Filtering Controls */}
           <div className="flex gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Report Type
+              </label>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Select report type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="analytics">Lead Analytics</SelectItem>
+                  <SelectItem value="installers">Installer Reports</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Year</label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -210,23 +282,34 @@ export default function Reports() {
         
         <div className="mt-4">
           <Badge variant="outline" className="text-sm">
-            Showing data for: {analyticsData.filterInfo.period === 'all-time' ? 'All Time' : 
-              (selectedMonth && selectedMonth !== 'all') ? `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : selectedYear
+            Showing data for: {
+              reportType === 'analytics' && analyticsData ? 
+                (analyticsData.filterInfo.period === 'all-time' ? 'All Time' : 
+                  (selectedMonth && selectedMonth !== 'all') ? `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : selectedYear
+                ) :
+              reportType === 'installers' && installerData ?
+                (installerData.filterInfo.period === 'all-time' ? 'All Time' : 
+                  (selectedMonth && selectedMonth !== 'all') ? `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : selectedYear
+                ) :
+                'No Data'
             }
           </Badge>
         </div>
       </div>
       
-      {/* Executive Dashboard - Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card data-testid="metric-total-leads">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Leads</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{executiveDashboard.totalLeads.toLocaleString()}</div>
-            <p className="text-gray-500 text-sm mt-1">Complete lead count</p>
-          </CardContent>
+      {/* Analytics Reports */}
+      {reportType === 'analytics' && analyticsDataExists && (
+        <>
+          {/* Executive Dashboard - Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card data-testid="metric-total-leads">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Total Leads</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-600">{executiveDashboard!.totalLeads.toLocaleString()}</div>
+                <p className="text-gray-500 text-sm mt-1">Complete lead count</p>
+              </CardContent>
         </Card>
         
         <Card data-testid="metric-conversion-rate">
@@ -235,10 +318,10 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">
-              {formatPercentage(executiveDashboard.conversionRate)}
+              {formatPercentage(executiveDashboard!.conversionRate)}
             </div>
             <p className="text-gray-500 text-sm mt-1">
-              {executiveDashboard.soldLeads} of {executiveDashboard.totalLeads} leads
+              {executiveDashboard!.soldLeads} of {executiveDashboard!.totalLeads} leads
             </p>
           </CardContent>
         </Card>
@@ -249,7 +332,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-purple-600">
-              {formatCurrency(executiveDashboard.totalRevenue)}
+              {formatCurrency(executiveDashboard!.totalRevenue)}
             </div>
             <p className="text-gray-500 text-sm mt-1">Total revenue generated</p>
           </CardContent>
@@ -261,7 +344,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-orange-600">
-              {formatCurrency(executiveDashboard.averageDealSize)}
+              {formatCurrency(executiveDashboard!.averageDealSize)}
             </div>
             <p className="text-gray-500 text-sm mt-1">Revenue per sold lead</p>
           </CardContent>
@@ -312,7 +395,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {teamPerformance.map((member, index) => (
+              {teamPerformance!.map((member, index) => (
                 <div key={member.member} className="border-b pb-4 last:border-b-0 last:pb-0">
                   <div className="flex justify-between items-start mb-3">
                     <div>
@@ -357,7 +440,7 @@ export default function Reports() {
       </div>
       
       {/* Monthly Breakdown - Annual View */}
-      {!selectedMonth && monthlyBreakdown.length > 0 && (
+      {!selectedMonth && monthlyBreakdown && monthlyBreakdown.length > 0 && (
         <Card className="mb-8" data-testid="monthly-breakdown">
           <CardHeader>
             <CardTitle className="text-xl font-semibold">
@@ -380,8 +463,8 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {monthlyBreakdown.map((month, index) => {
-                    const prevMonth = index > 0 ? monthlyBreakdown[index - 1] : null;
+                  {monthlyBreakdown!.map((month, index) => {
+                    const prevMonth = index > 0 ? monthlyBreakdown![index - 1] : null;
                     const revenueTrend = prevMonth ? 
                       ((month.totalRevenue - prevMonth.totalRevenue) / Math.max(prevMonth.totalRevenue, 1)) * 100 : 0;
                     
@@ -431,67 +514,162 @@ export default function Reports() {
               <h4 className="font-semibold text-blue-900 mb-2">Business Intelligence Insights</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
                 <div>
-                  <strong>Peak Month:</strong> {monthlyBreakdown.reduce((max, month) => 
+                  <strong>Peak Month:</strong> {monthlyBreakdown!.reduce((max, month) => 
                     month.totalRevenue > max.totalRevenue ? month : max
-                  ).monthName} ({formatCurrency(Math.max(...monthlyBreakdown.map(m => m.totalRevenue)))})
+                  ).monthName} ({formatCurrency(Math.max(...monthlyBreakdown!.map(m => m.totalRevenue)))})
                 </div>
                 <div>
-                  <strong>Best Conversion:</strong> {monthlyBreakdown.reduce((max, month) => 
+                  <strong>Best Conversion:</strong> {monthlyBreakdown!.reduce((max, month) => 
                     month.conversionRate > max.conversionRate ? month : max
-                  ).monthName} ({formatPercentage(Math.max(...monthlyBreakdown.map(m => m.conversionRate)))})
+                  ).monthName} ({formatPercentage(Math.max(...monthlyBreakdown!.map(m => m.conversionRate)))})
                 </div>
                 <div>
-                  <strong>Total Year Revenue:</strong> {formatCurrency(monthlyBreakdown.reduce((sum, month) => sum + month.totalRevenue, 0))}
+                  <strong>Total Year Revenue:</strong> {formatCurrency(monthlyBreakdown!.reduce((sum, month) => sum + month.totalRevenue, 0))}
                 </div>
                 <div>
-                  <strong>Average Monthly:</strong> {formatCurrency(monthlyBreakdown.reduce((sum, month) => sum + month.totalRevenue, 0) / Math.max(monthlyBreakdown.filter(m => m.totalLeads > 0).length, 1))}
+                  <strong>Average Monthly:</strong> {formatCurrency(monthlyBreakdown!.reduce((sum, month) => sum + month.totalRevenue, 0) / Math.max(monthlyBreakdown!.filter(m => m.totalLeads > 0).length, 1))}
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
+        </>
+      )}
       
-      {/* Strategic Benefits Footer */}
-      <Card className="bg-gradient-to-r from-blue-50 to-purple-50">
-        <CardContent className="p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Strategic Business Value</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
-            <div>
-              <h4 className="font-semibold text-blue-900 mb-2">🎯 Marketing Optimization</h4>
-              <ul className="text-gray-700 space-y-1">
-                <li>• ROI tracking by source</li>
-                <li>• Budget allocation insights</li>
-                <li>• Channel effectiveness</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-green-900 mb-2">📈 Sales Management</h4>
-              <ul className="text-gray-700 space-y-1">
-                <li>• Team performance metrics</li>
-                <li>• Conversion optimization</li>
-                <li>• Goal tracking</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-purple-900 mb-2">💰 Financial Planning</h4>
-              <ul className="text-gray-700 space-y-1">
-                <li>• Revenue forecasting</li>
-                <li>• Deal size optimization</li>
-                <li>• Seasonal insights</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-orange-900 mb-2">🚀 Competitive Edge</h4>
-              <ul className="text-gray-700 space-y-1">
-                <li>• Data-driven decisions</li>
-                <li>• Performance accountability</li>
-                <li>• Market positioning</li>
-              </ul>
-            </div>
+      {/* Installer Reports */}
+      {reportType === 'installers' && installerData && (
+        <>
+          {/* Installer Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                  <HardHat className="h-4 w-4" />
+                  Total Installers
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-600">{installerData.installers.length}</div>
+                <p className="text-gray-500 text-sm mt-1">Active installers</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Total Installations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-600">{installerData.totalInstallations}</div>
+                <p className="text-gray-500 text-sm mt-1">Completed projects</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Total Value
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-600">{formatCurrency(installerData.totalValue)}</div>
+                <p className="text-gray-500 text-sm mt-1">Combined project value</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Average Project Value
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-purple-600">
+                  {formatCurrency(installerData.totalValue / Math.max(installerData.totalInstallations, 1))}
+                </div>
+                <p className="text-gray-500 text-sm mt-1">Per installation</p>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+          
+          {/* Installer Performance Table */}
+          <InstallerPerformanceTable 
+            installers={installerData.installers}
+            totalInstallations={installerData.totalInstallations}
+            totalValue={installerData.totalValue}
+          />
+          
+          {/* Top Performers */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>🏆 Top Performer by Volume</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {installerData.installers.length > 0 && (
+                  <div className="space-y-3">
+                    {installerData.installers
+                      .sort((a, b) => b.totalInstallations - a.totalInstallations)
+                      .slice(0, 3)
+                      .map((installer, index) => (
+                        <div key={installer.installerName} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                              index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <span className="font-medium">{installer.installerName}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-semibold">{installer.totalInstallations} installations</div>
+                            <div className="text-sm text-gray-600">{formatCurrency(installer.totalValue)}</div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>💰 Top Performer by Value</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {installerData.installers.length > 0 && (
+                  <div className="space-y-3">
+                    {installerData.installers
+                      .sort((a, b) => b.totalValue - a.totalValue)
+                      .slice(0, 3)
+                      .map((installer, index) => (
+                        <div key={installer.installerName} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                              index === 0 ? 'bg-green-500' : index === 1 ? 'bg-gray-400' : 'bg-green-600'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <span className="font-medium">{installer.installerName}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-semibold text-green-600">{formatCurrency(installer.totalValue)}</div>
+                            <div className="text-sm text-gray-600">{installer.totalInstallations} installations</div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }

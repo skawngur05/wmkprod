@@ -26,9 +26,10 @@ export function BusinessCalendar() {
     queryKey: ['/api/installations'],
   });
 
-  // Fetch calendar events - temporarily disabled to fix issues
-  const events: CalendarEvent[] = [];
-  const eventsLoading = false;
+  // Fetch calendar events from the API
+  const { data: events = [], isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
+    queryKey: ['/api/calendar/events'],
+  });
 
   if (installationsLoading || eventsLoading) {
     return (
@@ -80,10 +81,10 @@ export function BusinessCalendar() {
     }
 
     return {
-      id: event.id,
+      id: event.id.toString(), // Convert number to string
       title: event.title,
-      start: event.start_date.toISOString(),
-      end: event.end_date?.toISOString(),
+      start: new Date(event.start_date).toISOString(),
+      end: event.end_date ? new Date(event.end_date).toISOString() : undefined,
       allDay: event.all_day,
       color,
       extendedProps: {

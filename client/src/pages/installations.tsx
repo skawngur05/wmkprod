@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Lead } from '@shared/schema';
+import { Lead, Installer } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
@@ -62,6 +62,19 @@ function InstallationCard({
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  // Helper function to get the most recent note
+  const getMostRecentNote = (notes: string | null) => {
+    if (!notes) return null;
+    
+    // Split notes by line breaks and filter out empty lines
+    const noteLines = notes.split('\n').filter(line => line.trim());
+    
+    if (noteLines.length === 0) return null;
+    
+    // Return the last (most recent) note
+    return noteLines[noteLines.length - 1].trim();
   };
 
   const getPaymentStatusBadge = (installation: Lead) => {
@@ -192,7 +205,6 @@ function InstallationCard({
                 </div>
               )}
 
-              {/* Color display temporarily disabled until database column is added
               {(installation as any).selected_colors && (installation as any).selected_colors.length > 0 && (
                 <div className="flex items-start space-x-2">
                   <Palette className="h-4 w-4 text-purple-600 mt-0.5" />
@@ -211,7 +223,6 @@ function InstallationCard({
                   </div>
                 </div>
               )}
-              */}
             </div>
           </div>
 
@@ -260,7 +271,7 @@ function InstallationCard({
         </div>
 
         {/* Notes Section - Full Width */}
-        {installation.notes && (
+        {getMostRecentNote(installation.notes) && (
           <div className="mt-4 pt-4 border-t border-gray-100">
             <div className="flex items-start space-x-2">
               <div className="p-1 bg-gray-50 rounded">
@@ -268,9 +279,9 @@ function InstallationCard({
               </div>
               <div>
                 <p className="text-xs font-medium text-gray-700 mb-1">
-                  {type === 'repair' ? 'Issue Details:' : 'Notes:'}
+                  {type === 'repair' ? 'Latest Update:' : 'Latest Note:'}
                 </p>
-                <p className="text-sm text-gray-600">{installation.notes}</p>
+                <p className="text-sm text-gray-600">{getMostRecentNote(installation.notes)}</p>
               </div>
             </div>
           </div>
@@ -297,6 +308,16 @@ export default function Installations() {
     queryFn: async () => {
       const response = await fetch('/api/repair-requests');
       if (!response.ok) throw new Error('Failed to fetch repair requests');
+      return response.json();
+    }
+  });
+
+  // Fetch installers
+  const { data: installersData, isLoading: isLoadingInstallers } = useQuery<Installer[]>({
+    queryKey: ['/api/admin/installers'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/installers');
+      if (!response.ok) throw new Error('Failed to fetch installers');
       return response.json();
     }
   });
@@ -382,7 +403,6 @@ export default function Installations() {
       return response.json();
     },
     onSuccess: (data) => {
-      console.log('Mark as done success response:', data);
       queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
       toast({ 
         title: 'Installation completed successfully', 
@@ -414,7 +434,7 @@ export default function Installations() {
     if (!selectedInstallation) return;
     
     sendEmailMutation.mutate({
-      installationId: selectedInstallation.id,
+      installationId: selectedInstallation.id.toString(),
       type: emailType,
       customMessage: customMessage.trim() || undefined
     });
@@ -443,7 +463,7 @@ export default function Installations() {
     handleEditRepairRequest(repairRequest);
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingInstallers) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -465,10 +485,6 @@ export default function Installations() {
   const isCompleted = (install: Lead) => {
     const additionalNotesText = (install.additional_notes || '');
     const isCompletedResult = additionalNotesText.includes('Installation completed and moved to completed projects');
-    console.log(`Checking if installation ${install.id} (${install.name}) is completed:`, {
-      additionalNotes: additionalNotesText,
-      isCompleted: isCompletedResult
-    });
     return isCompletedResult;
   };
 
@@ -501,27 +517,11 @@ export default function Installations() {
       !isRepair(install) &&
       !isCompleted(install);
     
-    if (install.installation_date) {
-      console.log(`Installation ${install.id} (${install.name}) categorization:`, {
-        date: install.installation_date,
-        isToday: isDateToday(install.installation_date),
-        isFuture: isDateInFuture(install.installation_date),
-        isRepair: isRepair(install),
-        isCompleted: isCompleted(install),
-        isUpcoming: isUpcoming
-      });
-    }
-    
     return isUpcoming;
   }) || [];
 
   const repairJobs = installations?.filter(install => {
     const isRepairJob = isRepair(install) && !isCompleted(install);
-    console.log(`Installation ${install.id} (${install.name}) repair check:`, {
-      isRepair: isRepair(install),
-      isCompleted: isCompleted(install),
-      isRepairJob: isRepairJob
-    });
     return isRepairJob;
   }) || [];
 
@@ -541,15 +541,6 @@ export default function Installations() {
       !isCompleted(install)
     );
     
-    if (isCompleted(install) || install.installation_date) {
-      console.log(`Installation ${install.id} (${install.name}) completed check:`, {
-        isCompleted: isCompleted(install),
-        isInPast: install.installation_date ? isDateInPast(install.installation_date) : false,
-        isRepair: isRepair(install),
-        isCompletedProject: isCompletedProject
-      });
-    }
-    
     return isCompletedProject;
   }) || [];
 
@@ -562,7 +553,8 @@ export default function Installations() {
     return installDate >= startOfWeek && installDate <= endOfWeek;
   }) || [];
 
-  const installers = ['angel', 'brian', 'luis'];
+  // Filter active installers
+  const activeInstallers = installersData?.filter(installer => installer.status === 'active') || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -632,7 +624,7 @@ export default function Installations() {
               <div className="flex items-center">
                 <Users className="h-8 w-8 text-gray-500 mr-3" />
                 <div>
-                  <p className="text-2xl font-bold text-gray-600">{installers.length}</p>
+                  <p className="text-2xl font-bold text-gray-600">{activeInstallers.length}</p>
                   <p className="text-sm text-gray-600">Active Installers</p>
                 </div>
               </div>
@@ -980,7 +972,7 @@ export default function Installations() {
                     )}
                     <Badge className={`capitalize ${
                       selectedInstallation.remarks === 'Sold' ? 'bg-green-100 text-green-700' :
-                      selectedInstallation.remarks === 'quoted' ? 'bg-purple-100 text-purple-700' :
+                      selectedInstallation.remarks === 'In Progress' ? 'bg-yellow-100 text-yellow-700' :
                       'bg-blue-100 text-blue-700'
                     }`}>
                       {selectedInstallation.remarks?.replace('-', ' ')}

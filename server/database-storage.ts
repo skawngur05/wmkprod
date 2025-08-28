@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet, type Installer, type InsertInstaller, type UpdateInstaller, type CompletedProject, type InsertCompletedProject, type UpdateCompletedProject } from "@shared/schema";
+import { type User, type InsertUser, type Lead, type InsertLead, type UpdateLead, type SampleBooklet, type InsertSampleBooklet, type UpdateSampleBooklet, type Installer, type InsertInstaller, type UpdateInstaller, type CompletedProject, type InsertCompletedProject, type UpdateCompletedProject, type CalendarEvent, type InsertCalendarEvent, type UpdateCalendarEvent, type ActivityLog, type InsertActivityLog } from "@shared/schema";
 import { db } from "./db";
-import { users, leads, sampleBooklets, installers, completedProjects } from "@shared/schema";
+import { users, leads, sampleBooklets, installers, completedProjects, calendarEvents, activityLogs } from "@shared/schema";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { IStorage } from "./storage";
@@ -10,6 +10,34 @@ export class DatabaseStorage implements IStorage {
   // Expose the db connection for direct queries
   get db() {
     return db;
+  }
+
+  // Helper functions to handle selected_colors JSON parsing
+  private parseSelectedColors(selectedColors: string | null): string[] {
+    if (!selectedColors) return [];
+    try {
+      return JSON.parse(selectedColors);
+    } catch (error) {
+      console.error('Error parsing selected_colors:', error);
+      return [];
+    }
+  }
+
+  private stringifySelectedColors(selectedColors: string[]): string | null {
+    if (!selectedColors || selectedColors.length === 0) return null;
+    try {
+      return JSON.stringify(selectedColors);
+    } catch (error) {
+      console.error('Error stringifying selected_colors:', error);
+      return null;
+    }
+  }
+
+  private processLeadForResponse(lead: Lead): Lead {
+    if (lead && (lead as any).selected_colors) {
+      (lead as any).selected_colors = this.parseSelectedColors((lead as any).selected_colors);
+    }
+    return lead;
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -79,7 +107,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLeads(): Promise<Lead[]> {
-    return await db.select().from(leads).orderBy(desc(leads.date_created));
+    const leadsData = await db.select().from(leads).orderBy(desc(leads.date_created));
+    return leadsData.map(lead => this.processLeadForResponse(lead));
   }
 
   async getLeadsPaginated(page: number = 1, limit: number = 20, filters?: {
@@ -136,7 +165,7 @@ export class DatabaseStorage implements IStorage {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      leads: paginatedLeads,
+      leads: paginatedLeads.map(lead => this.processLeadForResponse(lead)),
       total,
       page,
       limit,
@@ -146,26 +175,31 @@ export class DatabaseStorage implements IStorage {
 
   async getLead(id: string): Promise<Lead | undefined> {
     const result = await db.select().from(leads).where(eq(leads.id, parseInt(id))).limit(1);
-    return result[0];
+    return result[0] ? this.processLeadForResponse(result[0]) : undefined;
   }
 
   async getLeadByEmail(email: string): Promise<Lead | undefined> {
     const result = await db.select().from(leads).where(eq(leads.email, email)).limit(1);
-    return result[0];
+    return result[0] ? this.processLeadForResponse(result[0]) : undefined;
   }
 
   async createLead(insertLead: InsertLead): Promise<Lead> {
     // Ensure date_created is set if not provided
-    const leadData = {
+    const leadData: any = {
       ...insertLead,
       date_created: insertLead.date_created || new Date()
     };
+    
+    // Handle selected_colors array to JSON string conversion
+    if (leadData.selected_colors) {
+      leadData.selected_colors = this.stringifySelectedColors(leadData.selected_colors);
+    }
     
     const [result] = await db.insert(leads).values(leadData);
     const insertId = result.insertId;
     
     const newLead = await db.select().from(leads).where(eq(leads.id, insertId)).limit(1);
-    return newLead[0];
+    return this.processLeadForResponse(newLead[0]);
   }
 
   async updateLead(id: string, updates: UpdateLead): Promise<Lead | undefined> {
@@ -178,10 +212,15 @@ export class DatabaseStorage implements IStorage {
       processedUpdates.installation_date = new Date(processedUpdates.installation_date);
     }
     
+    // Handle selected_colors array to JSON string conversion
+    if (processedUpdates.selected_colors) {
+      processedUpdates.selected_colors = this.stringifySelectedColors(processedUpdates.selected_colors);
+    }
+    
     await db.update(leads).set(processedUpdates).where(eq(leads.id, parseInt(id)));
     
     const result = await db.select().from(leads).where(eq(leads.id, parseInt(id))).limit(1);
-    return result[0];
+    return result[0] ? this.processLeadForResponse(result[0]) : undefined;
   }
 
   async deleteLead(id: string): Promise<boolean> {
@@ -195,7 +234,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLeadsByAssignee(assignee: string): Promise<Lead[]> {
-    return await db.select().from(leads).where(eq(leads.assigned_to, assignee as any));
+    const leadsData = await db.select().from(leads).where(eq(leads.assigned_to, assignee as any));
+    return leadsData.map(lead => this.processLeadForResponse(lead));
   }
 
   async getLeadsWithFollowupsDue(date: Date): Promise<Lead[]> {
@@ -272,8 +312,13 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined> {
     // Handle permissions array to JSON string conversion
     const updateData = { ...updates };
-    if (updateData.permissions) {
-      updateData.permissions = JSON.stringify(updateData.permissions) as any;
+    if (updateData.permissions !== undefined) {
+      // If permissions is empty string or empty array, set to null, otherwise stringify
+      if (updateData.permissions === '' || (Array.isArray(updateData.permissions) && updateData.permissions.length === 0)) {
+        updateData.permissions = null as any;
+      } else {
+        updateData.permissions = JSON.stringify(updateData.permissions) as any;
+      }
     }
     
     await db.update(users).set(updateData).where(eq(users.id, parseInt(id)));
@@ -329,20 +374,21 @@ export class DatabaseStorage implements IStorage {
     return (result as any).rowCount > 0;
   }
 
-  // Calendar methods (placeholder implementations)
-  async getCalendarEvents(): Promise<any[]> {
-    // Return empty array for now - calendar functionality not implemented yet
-    return [];
+  // Calendar methods
+  async getCalendarEvents(): Promise<CalendarEvent[]> {
+    return await db.select().from(calendarEvents).orderBy(calendarEvents.start_date);
   }
 
-  async getCalendarEvent(id: string): Promise<any | undefined> {
-    // Return undefined for now - calendar functionality not implemented yet
-    return undefined;
+  async getCalendarEvent(id: string): Promise<CalendarEvent | undefined> {
+    const result = await db.select().from(calendarEvents).where(eq(calendarEvents.id, parseInt(id)));
+    return result[0];
   }
 
-  async createCalendarEvent(event: any): Promise<any> {
-    // Return mock event for now - calendar functionality not implemented yet
-    return { id: randomUUID(), ...event };
+  async createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent> {
+    const [result] = await db.insert(calendarEvents).values(event);
+    const eventId = result.insertId;
+    const createdEvent = await this.getCalendarEvent(eventId.toString());
+    return createdEvent!;
   }
 
   async updateCalendarEvent(id: string, updates: any): Promise<any | undefined> {
@@ -510,7 +556,7 @@ export class DatabaseStorage implements IStorage {
     return (result as any).rowCount > 0;
   }
 
-  // Activity log operations using direct SQL
+  // Activity log operations using Drizzle ORM
   async getActivityLogs(filters: {
     search?: string;
     entity_type?: string;
@@ -518,50 +564,69 @@ export class DatabaseStorage implements IStorage {
     days?: number;
     limit?: number;
     offset?: number;
-  }): Promise<any[]> {
+  }): Promise<ActivityLog[]> {
     const { search, entity_type, action, days, limit = 50, offset = 0 } = filters;
     
-    let whereConditions = [];
+    let whereConditions: any[] = [];
     
     if (search) {
-      whereConditions.push(sql`(action LIKE ${`%${search}%`} OR details LIKE ${`%${search}%`})`);
+      whereConditions.push(
+        sql`(${activityLogs.action} LIKE ${`%${search}%`} OR ${activityLogs.details} LIKE ${`%${search}%`})`
+      );
     }
     
     if (entity_type && entity_type !== 'all') {
-      whereConditions.push(sql`entity_type = ${entity_type}`);
+      whereConditions.push(eq(activityLogs.entity_type, entity_type));
     }
     
     if (action && action !== 'all') {
-      whereConditions.push(sql`action LIKE ${`%${action}%`}`);
+      whereConditions.push(sql`${activityLogs.action} LIKE ${`%${action}%`}`);
     }
     
     if (days && days !== -1) {
-      whereConditions.push(sql`created_at >= NOW() - INTERVAL '${days} days'`);
+      const daysAgo = new Date();
+      daysAgo.setDate(daysAgo.getDate() - days);
+      whereConditions.push(gte(activityLogs.created_at, daysAgo));
     }
     
-    let query = sql`
-      SELECT al.*, u.username as user_name 
-      FROM activity_logs al 
-      LEFT JOIN users u ON al.user_id = u.id
-    `;
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
     
-    if (whereConditions.length > 0) {
-      query = sql`${query} WHERE ${sql.join(whereConditions, sql` AND `)}`;
+    const query = db
+      .select({
+        id: activityLogs.id,
+        user_id: activityLogs.user_id,
+        action: activityLogs.action,
+        entity_type: activityLogs.entity_type,
+        entity_id: activityLogs.entity_id,
+        details: activityLogs.details,
+        ip_address: activityLogs.ip_address,
+        user_agent: activityLogs.user_agent,
+        created_at: activityLogs.created_at,
+        user_name: users.username,
+      })
+      .from(activityLogs)
+      .leftJoin(users, eq(activityLogs.user_id, users.id))
+      .orderBy(desc(activityLogs.created_at))
+      .limit(limit)
+      .offset(offset);
+    
+    if (whereClause) {
+      return await query.where(whereClause);
+    } else {
+      return await query;
     }
-    
-    query = sql`${query} ORDER BY al.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
-    
-    const result = await db.execute(query);
-    return result;
   }
 
-  async logActivity(userId: string, action: string, entityType?: string, entityId?: string, description?: string): Promise<void> {
-    const id = randomUUID();
+  async logActivity(userId: string, action: string, entityType?: string, entityId?: string, details?: string): Promise<void> {
+    const activityLog: InsertActivityLog = {
+      user_id: parseInt(userId),
+      action,
+      entity_type: entityType || null,
+      entity_id: entityId || null,
+      details: details || null,
+    };
     
-    await db.execute(sql`
-      INSERT INTO activity_logs (id, user_id, action, entity_type, entity_id, details)
-      VALUES (${id}, ${userId}, ${action}, ${entityType || null}, ${entityId || null}, ${description || null})
-    `);
+    await db.insert(activityLogs).values(activityLog);
   }
 
   // Completed Projects operations
