@@ -45,7 +45,9 @@ export const leads = mysqlTable("leads", {
   updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
   deposit_paid: boolean("deposit_paid").default(false),
   balance_paid: boolean("balance_paid").default(false),
+  pickup_date: date("pickup_date"), // New field for pickup date
   installation_date: date("installation_date"),
+  installation_end_date: date("installation_end_date"), // For multi-day installations
   assigned_installer: varchar("assigned_installer", { length: 100 }), // Single installer name
   address: text("address"),
   selected_colors: text("selected_colors"), // JSON string of selected WMK colors
@@ -64,7 +66,9 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
 }).extend({
   date_created: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : new Date())]).optional(),
   next_followup_date: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
+  pickup_date: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
   installation_date: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
+  installation_end_date: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
   assigned_installer: z.union([
     z.string(),
     z.array(z.string()).transform(arr => arr.join(', ')),
@@ -75,7 +79,9 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
 
 export const updateLeadSchema = insertLeadSchema.partial().extend({
   next_followup_date: z.union([z.date(), z.string().datetime(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
+  pickup_date: z.union([z.date(), z.string().datetime(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
   installation_date: z.union([z.date(), z.string().datetime(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
+  installation_end_date: z.union([z.date(), z.string().datetime(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
   project_amount: z.union([z.string(), z.number().transform(val => val.toString()), z.null()]).optional(),
   assigned_installer: z.union([
     z.string(),
@@ -186,6 +192,9 @@ export type CompletedProject = typeof completedProjects.$inferSelect;
 export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({
   id: true,
   created_at: true,
+}).extend({
+  start_date: z.string().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val),
+  end_date: z.string().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val).optional(),
 });
 
 export const updateCalendarEventSchema = insertCalendarEventSchema.partial();

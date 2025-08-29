@@ -27,7 +27,9 @@ export default function AddLead() {
     project_amount: '',
     next_followup_date: '',
     notes: '',
+    pickup_date: '',
     installation_date: '',
+    installation_end_date: '',
     assigned_installer: [] as string[], // Keep as array for UI, will convert for submission
     deposit_paid: false,
     balance_paid: false,
@@ -149,7 +151,9 @@ export default function AddLead() {
         project_amount: formData.project_amount ? formData.project_amount : "0.00", // Keep as string for decimal
         next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date).toISOString().split('T')[0] : null,
         notes: formData.notes || null,
+        pickup_date: formData.pickup_date ? new Date(formData.pickup_date).toISOString().split('T')[0] : null,
         installation_date: formData.installation_date ? new Date(formData.installation_date).toISOString().split('T')[0] : null,
+        installation_end_date: formData.installation_end_date ? new Date(formData.installation_end_date).toISOString().split('T')[0] : null,
         assigned_installer: formData.assigned_installer.length > 0 ? formData.assigned_installer.join(', ') : null, // Convert array to string
         deposit_paid: formData.deposit_paid,
         balance_paid: formData.balance_paid,
@@ -388,11 +392,28 @@ export default function AddLead() {
                       <h3 className="text-lg font-semibold text-gray-900">Installation & Payment Details</h3>
                     </div>
                     
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid md:grid-cols-3 gap-6">
+                      {formData.deposit_paid && (
+                        <div className="space-y-2">
+                          <Label htmlFor="pickup_date" className="flex items-center gap-2 font-medium">
+                            <Calendar className="h-4 w-4" />
+                            Pickup Date
+                          </Label>
+                          <Input
+                            id="pickup_date"
+                            type="date"
+                            value={formData.pickup_date}
+                            onChange={(e) => handleInputChange('pickup_date', e.target.value)}
+                            data-testid="input-pickup-date"
+                            className="h-11"
+                          />
+                        </div>
+                      )}
+                      
                       <div className="space-y-2">
                         <Label htmlFor="installation_date" className="flex items-center gap-2 font-medium">
                           <Calendar className="h-4 w-4" />
-                          Installation Date
+                          Installation Start Date
                         </Label>
                         <Input
                           id="installation_date"
@@ -403,7 +424,25 @@ export default function AddLead() {
                           className="h-11"
                         />
                       </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="installation_end_date" className="flex items-center gap-2 font-medium">
+                          <Calendar className="h-4 w-4" />
+                          Installation End Date
+                        </Label>
+                        <Input
+                          id="installation_end_date"
+                          type="date"
+                          value={formData.installation_end_date}
+                          onChange={(e) => handleInputChange('installation_end_date', e.target.value)}
+                          data-testid="input-installation-end-date"
+                          className="h-11"
+                        />
+                        <p className="text-xs text-gray-500">Leave empty for single-day installations</p>
+                      </div>
+                    </div>
 
+                    <div className="grid md:grid-cols-1 gap-6">
                       <div className="space-y-3">
                         <Label className="flex items-center gap-2 font-medium">
                           <Users className="h-4 w-4" />

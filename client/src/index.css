@@ -521,6 +521,21 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
+.clickable-card {
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.clickable-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.clickable-card:active {
+  transform: translateY(-2px) scale(1.01);
+  transition: all 0.1s ease-in-out;
+}
+
 .card {
   border: none;
   border-radius: 16px;

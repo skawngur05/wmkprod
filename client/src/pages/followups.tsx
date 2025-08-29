@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Lead, LEAD_STATUSES, ASSIGNEES } from '@shared/schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,8 @@ function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lea
     project_amount: lead.project_amount || '',
     assigned_to: lead.assigned_to,
     installation_date: lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : '',
+    installation_end_date: (lead as any).installation_end_date ? new Date((lead as any).installation_end_date).toISOString().split('T')[0] : '',
+    pickup_date: (lead as any).pickup_date ? new Date((lead as any).pickup_date).toISOString().split('T')[0] : '',
     assigned_installer: (() => {
       if (!lead.assigned_installer) return [];
       if (Array.isArray(lead.assigned_installer)) return lead.assigned_installer;
@@ -105,6 +108,8 @@ function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lea
       project_amount: formData.project_amount || null,
       assigned_to: formData.assigned_to,
       installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
+      installation_end_date: formData.installation_end_date ? new Date(formData.installation_end_date) : null,
+      pickup_date: formData.pickup_date ? new Date(formData.pickup_date) : null,
       assigned_installer: Array.isArray(formData.assigned_installer) 
         ? (formData.assigned_installer.length > 0 ? formData.assigned_installer.join(', ') : null)
         : (formData.assigned_installer as string | null),
@@ -165,6 +170,39 @@ function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lea
                 data-testid="input-installation-date"
                 className="h-11 text-base"
               />
+            </div>
+          )}
+
+          {formData.remarks === 'Sold' && formData.deposit_paid && (
+            <div className="space-y-1">
+              <Label htmlFor="pickup_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                PICKUP DATE
+              </Label>
+              <Input
+                id="pickup_date"
+                type="date"
+                value={formData.pickup_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, pickup_date: e.target.value }))}
+                data-testid="input-pickup-date"
+                className="h-11 text-base"
+              />
+            </div>
+          )}
+
+          {formData.remarks === 'Sold' && (
+            <div className="space-y-1">
+              <Label htmlFor="installation_end_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                INSTALLATION END DATE
+              </Label>
+              <Input
+                id="installation_end_date"
+                type="date"
+                value={formData.installation_end_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, installation_end_date: e.target.value }))}
+                data-testid="input-installation-end-date"
+                className="h-11 text-base"
+              />
+              <p className="text-xs text-gray-500">Leave empty for single-day installations</p>
             </div>
           )}
         </div>
@@ -542,12 +580,14 @@ function FollowupsTable({
   leads, 
   onQuickEdit, 
   onQuickFollowup,
-  status = 'upcoming'
+  status = 'upcoming',
+  wmkColorsData
 }: { 
   leads: Lead[]; 
   onQuickEdit: (lead: Lead) => void; 
   onQuickFollowup: (lead: Lead) => void;
   status?: 'overdue' | 'due-today' | 'upcoming';
+  wmkColorsData?: any[];
 }) {
   if (leads.length === 0) {
     return (
@@ -656,6 +696,17 @@ function FollowupsTable({
                       </p>
                     </div>
                   </div>
+                  {(lead as any).pickup_date && (
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-purple-600" />
+                      <div>
+                        <p className="text-xs text-gray-500">Pickup Date</p>
+                        <p className="text-sm font-medium text-purple-700">
+                          {formatDate((lead as any).pickup_date?.toString() || null)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   {lead.installation_date && (
                     <div className="flex items-center space-x-2">
                       <Calendar className="h-4 w-4 text-blue-600" />
@@ -685,6 +736,29 @@ function FollowupsTable({
                       {lead.assigned_to || 'Unassigned'}
                     </span>
                   </div>
+                  {/* Selected Colors */}
+                  {(lead as any).selected_colors && Array.isArray((lead as any).selected_colors) && (lead as any).selected_colors.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <div className="h-3 w-3 bg-gradient-to-r from-red-400 to-blue-400 rounded-full"></div>
+                        <span className="text-xs font-medium text-gray-700">Selected Colors:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {(lead as any).selected_colors.map((colorCode: string) => {
+                          const colorData = wmkColorsData?.find((color: any) => color.code === colorCode);
+                          return (
+                            <Badge 
+                              key={colorCode} 
+                              variant="outline" 
+                              className="text-xs px-1.5 py-0.5 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 text-blue-800"
+                            >
+                              {colorData ? colorData.name : colorCode}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -740,6 +814,8 @@ function FollowupsTable({
 }
 
 export default function Followups() {
+  const [, setLocation] = useLocation();
+  
   const { data: followupsData, isLoading } = useQuery<FollowupsData>({
     queryKey: ['/api/followups'],
   });
@@ -836,6 +912,29 @@ export default function Followups() {
   // Scheduled installations (sold leads with installation dates)
   const scheduledInstallations = installations.filter(lead => lead.installation_date);
 
+  const handleStatsCardClick = (cardType: string) => {
+    switch (cardType) {
+      case 'overdue':
+        // Scroll to overdue section
+        document.getElementById('overdue-section')?.scrollIntoView({ behavior: 'smooth' });
+        break;
+      case 'due-today':
+        // Scroll to due today section
+        document.getElementById('due-today-section')?.scrollIntoView({ behavior: 'smooth' });
+        break;
+      case 'upcoming':
+        // Scroll to upcoming section
+        document.getElementById('upcoming-section')?.scrollIntoView({ behavior: 'smooth' });
+        break;
+      case 'installations':
+        // Navigate to installations page
+        setLocation('/installations');
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleQuickEdit = (lead: Lead) => {
     setSelectedLead(lead);
     setIsEditModalOpen(true);
@@ -859,49 +958,81 @@ export default function Followups() {
 
         {/* Overview Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card className="border-red-200 shadow-red-100">
+          <Card 
+            className="border-red-200 shadow-red-100 clickable-card" 
+            onClick={() => handleStatsCardClick('overdue')}
+            style={{ cursor: 'pointer' }}
+            title="Click to scroll to overdue follow-ups"
+          >
             <CardContent className="p-6">
               <div className="flex items-center">
                 <AlertCircle className="h-8 w-8 text-red-500 mr-3" />
                 <div>
                   <p className="text-2xl font-bold text-red-600">{activeOverdue.length}</p>
-                  <p className="text-sm text-gray-600">Overdue</p>
+                  <p className="text-sm text-gray-600">
+                    Overdue
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-yellow-200 shadow-yellow-100">
+          <Card 
+            className="border-yellow-200 shadow-yellow-100 clickable-card" 
+            onClick={() => handleStatsCardClick('due-today')}
+            style={{ cursor: 'pointer' }}
+            title="Click to scroll to today's follow-ups"
+          >
             <CardContent className="p-6">
               <div className="flex items-center">
                 <Clock className="h-8 w-8 text-yellow-500 mr-3" />
                 <div>
                   <p className="text-2xl font-bold text-yellow-600">{activeDueToday.length}</p>
-                  <p className="text-sm text-gray-600">Due Today</p>
+                  <p className="text-sm text-gray-600">
+                    Due Today
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-blue-200 shadow-blue-100">
+          <Card 
+            className="border-blue-200 shadow-blue-100 clickable-card" 
+            onClick={() => handleStatsCardClick('upcoming')}
+            style={{ cursor: 'pointer' }}
+            title="Click to scroll to upcoming follow-ups"
+          >
             <CardContent className="p-6">
               <div className="flex items-center">
                 <Calendar className="h-8 w-8 text-blue-500 mr-3" />
                 <div>
                   <p className="text-2xl font-bold text-blue-600">{upcomingWeek.length}</p>
-                  <p className="text-sm text-gray-600">This Week</p>
+                  <p className="text-sm text-gray-600">
+                    This Week
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-green-200 shadow-green-100">
+          <Card 
+            className="border-green-200 shadow-green-100 clickable-card" 
+            onClick={() => handleStatsCardClick('installations')}
+            style={{ cursor: 'pointer' }}
+            title="Click to go to installations page"
+          >
             <CardContent className="p-6">
               <div className="flex items-center">
                 <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
                 <div>
                   <p className="text-2xl font-bold text-green-600">{scheduledInstallations.length}</p>
-                  <p className="text-sm text-gray-600">Installations</p>
+                  <p className="text-sm text-gray-600">
+                    Installations
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -910,7 +1041,7 @@ export default function Followups() {
 
         {/* Overdue Follow-ups */}
         {activeOverdue.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-8" id="overdue-section">
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="h-6 w-6 text-red-500" />
               <h2 className="text-xl font-semibold text-gray-900">Overdue Follow-ups</h2>
@@ -921,13 +1052,14 @@ export default function Followups() {
               onQuickEdit={handleQuickEdit}
               onQuickFollowup={openQuickFollowup}
               status="overdue"
+              wmkColorsData={wmkColors}
             />
           </div>
         )}
 
         {/* Due Today */}
         {activeDueToday.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-8" id="due-today-section">
             <div className="flex items-center gap-3 mb-4">
               <Clock className="h-6 w-6 text-yellow-500" />
               <h2 className="text-xl font-semibold text-gray-900">Due Today</h2>
@@ -938,13 +1070,14 @@ export default function Followups() {
               onQuickEdit={handleQuickEdit}
               onQuickFollowup={openQuickFollowup}
               status="due-today"
+              wmkColorsData={wmkColors}
             />
           </div>
         )}
 
         {/* Upcoming This Week */}
         {upcomingWeek.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-8" id="upcoming-section">
             <div className="flex items-center gap-3 mb-4">
               <Calendar className="h-6 w-6 text-blue-500" />
               <h2 className="text-xl font-semibold text-gray-900">Upcoming This Week</h2>
@@ -955,6 +1088,7 @@ export default function Followups() {
               onQuickEdit={handleQuickEdit}
               onQuickFollowup={openQuickFollowup}
               status="upcoming"
+              wmkColorsData={wmkColors}
             />
           </div>
         )}
@@ -971,6 +1105,7 @@ export default function Followups() {
               leads={scheduledInstallations}
               onQuickEdit={handleQuickEdit}
               onQuickFollowup={openQuickFollowup}
+              wmkColorsData={wmkColors}
             />
           </div>
         )}

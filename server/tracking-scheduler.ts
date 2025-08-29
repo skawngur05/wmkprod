@@ -73,11 +73,14 @@ export class TrackingScheduler {
               status: mappedStatus as any 
             });
             updatedCount++;
-            console.log(`Updated booklet ${booklet.order_number} status from ${booklet.status} to ${mappedStatus}`);
+            console.log(`✅ Updated booklet ${booklet.order_number} status from ${booklet.status} to ${mappedStatus}`);
+            console.log(`   Status description: ${tracking.statusDescription}`);
+          } else {
+            console.log(`📋 Booklet ${booklet.order_number} status unchanged: ${mappedStatus}`);
           }
         } catch (error) {
           errorCount++;
-          console.error(`Failed to track booklet ${booklet.order_number}:`, error);
+          console.error(`❌ Failed to track booklet ${booklet.order_number}:`, error);
         }
       }
 

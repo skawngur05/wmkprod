@@ -19,8 +19,6 @@ export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProp
     product_type: 'Sample Booklet Only',
     status: 'Pending',
     date_ordered: new Date(),
-    tracking_number: null,
-    date_shipped: null,
     notes: null,
   });
 
@@ -45,8 +43,6 @@ export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProp
         product_type: 'Sample Booklet Only',
         status: 'Pending',
         date_ordered: new Date(),
-        tracking_number: null,
-        date_shipped: null,
         notes: null,
       });
     },
@@ -197,18 +193,6 @@ export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProp
                     rows={3}
                     required
                     data-testid="textarea-address"
-                  />
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label">Tracking Number</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="tracking_number"
-                    value={formData.tracking_number || ''}
-                    onChange={handleInputChange}
-                    data-testid="input-tracking-number"
                   />
                 </div>
 

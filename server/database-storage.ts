@@ -391,14 +391,36 @@ export class DatabaseStorage implements IStorage {
     return createdEvent!;
   }
 
-  async updateCalendarEvent(id: string, updates: any): Promise<any | undefined> {
-    // Return undefined for now - calendar functionality not implemented yet
-    return undefined;
+  async updateCalendarEvent(id: string, updates: UpdateCalendarEvent): Promise<CalendarEvent | undefined> {
+    try {
+      await db.update(calendarEvents)
+        .set(updates)
+        .where(eq(calendarEvents.id, parseInt(id)));
+      
+      return await this.getCalendarEvent(id);
+    } catch (error) {
+      console.error("Error updating calendar event:", error);
+      return undefined;
+    }
   }
 
   async deleteCalendarEvent(id: string): Promise<boolean> {
-    // Return false for now - calendar functionality not implemented yet
-    return false;
+    try {
+      const result = await db.delete(calendarEvents)
+        .where(eq(calendarEvents.id, parseInt(id)));
+      
+      console.log("Delete result:", result);
+      
+      // The result is an array, get the first element which contains the ResultSetHeader
+      const resultHeader = Array.isArray(result) ? result[0] : result;
+      const affectedRows = resultHeader?.affectedRows || 0;
+      console.log("Affected rows:", affectedRows);
+      
+      return affectedRows > 0;
+    } catch (error) {
+      console.error("Error deleting calendar event:", error);
+      return false;
+    }
   }
 
   // Admin settings methods
@@ -458,26 +480,26 @@ export class DatabaseStorage implements IStorage {
 
   // Email template operations using direct SQL
   async getEmailTemplates(): Promise<any[]> {
-    const result = await db.execute(sql`SELECT * FROM email_templates ORDER BY created_at DESC`);
-    return result;
+    const result = await db.execute(sql`SELECT id, name, template_type as type, subject, body, is_active, created_at, updated_at FROM email_templates ORDER BY created_at DESC`);
+    return result.rows || [];
   }
 
   async getEmailTemplate(id: string): Promise<any | undefined> {
-    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id}`);
-    return result[0];
+    const result = await db.execute(sql`SELECT id, name, template_type as type, subject, body, is_active, created_at, updated_at FROM email_templates WHERE id = ${parseInt(id)}`);
+    return result.rows?.[0];
   }
 
   async createEmailTemplate(template: any): Promise<any> {
-    const id = randomUUID();
-    
-    await db.execute(sql`
-      INSERT INTO email_templates (id, name, type, subject, body, variables, is_active)
-      VALUES (${id}, ${template.name}, ${template.type}, ${template.subject}, 
-              ${template.body}, ${template.variables}, ${template.is_active})
+    const result = await db.execute(sql`
+      INSERT INTO email_templates (name, template_type, subject, body, is_active)
+      VALUES (${template.name}, ${template.type}, ${template.subject}, 
+              ${template.body}, ${template.is_active})
     `);
     
-    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id}`);
-    return result[0];
+    // Get the inserted record using the auto-increment ID
+    const insertId = (result as any).insertId;
+    const newTemplate = await db.execute(sql`SELECT id, name, template_type as type, subject, body, is_active, created_at, updated_at FROM email_templates WHERE id = ${insertId}`);
+    return newTemplate.rows?.[0];
   }
 
   async updateEmailTemplate(id: string, updates: any): Promise<any | undefined> {
@@ -486,22 +508,21 @@ export class DatabaseStorage implements IStorage {
     await db.execute(sql`
       UPDATE email_templates 
       SET name = COALESCE(${name}, name),
-          type = COALESCE(${type}, type),
+          template_type = COALESCE(${type}, template_type),
           subject = COALESCE(${subject}, subject),
           body = COALESCE(${body}, body),
-          variables = COALESCE(${variables}, variables),
           is_active = COALESCE(${is_active}, is_active),
           updated_at = NOW()
-      WHERE id = ${id}
+      WHERE id = ${parseInt(id)}
     `);
     
-    const result = await db.execute(sql`SELECT * FROM email_templates WHERE id = ${id}`);
-    return result[0];
+    const result = await db.execute(sql`SELECT id, name, template_type as type, subject, body, is_active, created_at, updated_at FROM email_templates WHERE id = ${parseInt(id)}`);
+    return result.rows?.[0];
   }
 
   async deleteEmailTemplate(id: string): Promise<boolean> {
-    const result = await db.execute(sql`DELETE FROM email_templates WHERE id = ${id}`);
-    return (result as any).rowCount > 0;
+    const result = await db.execute(sql`DELETE FROM email_templates WHERE id = ${parseInt(id)}`);
+    return (result as any).rowsAffected > 0;
   }
 
   // SMTP settings operations using direct SQL

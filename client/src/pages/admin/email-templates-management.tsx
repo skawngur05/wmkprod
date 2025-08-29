@@ -14,7 +14,8 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -22,7 +23,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { Plus, Edit, Trash2, Mail, Eye } from 'lucide-react';
 
 interface EmailTemplate {
-  id: string;
+  id: number;
   name: string;
   type: string;
   subject: string;
@@ -55,6 +56,8 @@ export default function EmailTemplatesManagement() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     type: '',
@@ -103,7 +106,7 @@ export default function EmailTemplatesManagement() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: number) => {
       return apiRequest('DELETE', `/api/admin/email-templates/${id}`);
     },
     onSuccess: () => {
@@ -150,8 +153,15 @@ export default function EmailTemplatesManagement() {
   };
 
   const handleDelete = (template: EmailTemplate) => {
-    if (confirm(`Are you sure you want to delete template "${template.name}"?`)) {
-      deleteMutation.mutate(template.id);
+    setTemplateToDelete(template);
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (templateToDelete) {
+      deleteMutation.mutate(templateToDelete.id);
+      setConfirmDeleteOpen(false);
+      setTemplateToDelete(null);
     }
   };
 
@@ -211,6 +221,9 @@ export default function EmailTemplatesManagement() {
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {title.includes('Edit') ? 'Update the email template details below.' : 'Create a new email template for automated notifications.'}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -321,6 +334,9 @@ export default function EmailTemplatesManagement() {
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Preview: {previewTemplate?.name}</DialogTitle>
+          <DialogDescription>
+            Preview how this email template will appear when sent to recipients.
+          </DialogDescription>
         </DialogHeader>
         {previewTemplate && (
           <div className="space-y-4">
@@ -475,6 +491,24 @@ export default function EmailTemplatesManagement() {
       />
 
       <PreviewModal />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete template "{templateToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-row justify-end space-x-2">
+            <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

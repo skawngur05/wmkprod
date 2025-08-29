@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { User as UserType } from '@shared/schema';
+import { useUserFormChanges } from '@/hooks/use-form-changes';
 
 // Interface for editing user state (UI representation)
 interface EditingUser {
@@ -89,6 +90,7 @@ export default function UserManagement() {
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<EditingUser | null>(null);
+  const [originalEditingUser, setOriginalEditingUser] = useState<EditingUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -110,6 +112,12 @@ export default function UserManagement() {
   const { data: users = [], isLoading } = useQuery<UserType[]>({
     queryKey: ['/api/admin/users'],
   });
+
+  // Track changes for edit form
+  const { shouldDisableSave: shouldDisableEditSave } = useUserFormChanges(editingUser, originalEditingUser);
+  
+  // Track changes for create form - disable save if required fields are empty
+  const canCreateUser = newUser.username.trim() !== '' && newUser.password.trim() !== '';
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: typeof newUser) => {
@@ -141,6 +149,7 @@ export default function UserManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-stats'] });
       setEditingUser(null);
+      setOriginalEditingUser(null);
       toast({ title: "User updated successfully", variant: "default" });
     },
     onError: () => toast({ title: "Failed to update user", variant: "destructive" })
@@ -148,15 +157,33 @@ export default function UserManagement() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest('DELETE', `/api/admin/users/${id}`);
-      return response.json();
+      try {
+        const response = await apiRequest('DELETE', `/api/admin/users/${id}`);
+        return response.json();
+      } catch (error: any) {
+        // If it's a 404, the user is already deleted, so we can consider it a success
+        if (error.status === 404 || error.message?.includes('404')) {
+          console.log(`User ${id} was already deleted`);
+          return;
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-stats'] });
+      queryClient.removeQueries({ queryKey: ['/api/admin/users'] }); // Clear cache completely
+      
+      // Close any open modals and clear selections
+      setEditingUser(null);
+      setResetPasswordUser(null);
+      setNewPassword('');
+      
       toast({ title: "User deleted successfully", variant: "default" });
     },
-    onError: () => toast({ title: "Failed to delete user", variant: "destructive" })
+    onError: (error: any) => {
+      toast({ title: "Failed to delete user", variant: "destructive" });
+    }
   });
 
   const resetPasswordMutation = useMutation({
@@ -396,8 +423,10 @@ export default function UserManagement() {
                 </Button>
                 <Button 
                   onClick={handleCreateUser} 
-                  disabled={createUserMutation.isPending}
+                  disabled={createUserMutation.isPending || !canCreateUser}
+                  className="disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-save-user"
+                  title={!canCreateUser ? "Username and password are required" : ""}
                 >
                   {createUserMutation.isPending ? 'Creating...' : 'Create User'}
                 </Button>
@@ -479,15 +508,16 @@ export default function UserManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {/* Only allow editing if current user has higher authority, except admins can edit equals */}
+                      {/* Allow editing if: 1) higher authority, 2) admin with equal/higher authority, 3) owner editing themselves */}
                       {((ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) > (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0)) || 
-                       (user?.role === 'admin' && (ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) >= (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0)) ? (
+                       (user?.role === 'admin' && (ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) >= (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0)) ||
+                       (user?.role === 'owner' && tableUser.username === user?.username) ? (
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => {
                             const userPermissions = (tableUser as any).permissions;
-                            setEditingUser({
+                            const editUserData = {
                               id: tableUser.id.toString(),
                               username: tableUser.username,
                               name: (tableUser as any).full_name || (tableUser as any).name || '',
@@ -495,7 +525,9 @@ export default function UserManagement() {
                               role: tableUser.role,
                               permissions: parsePermissions(userPermissions),
                               is_active: tableUser.is_active ?? true
-                            });
+                            };
+                            setEditingUser(editUserData);
+                            setOriginalEditingUser(editUserData); // Store original for comparison
                           }}
                           data-testid={`button-edit-${tableUser.id}`}
                         >
@@ -512,8 +544,8 @@ export default function UserManagement() {
                           <Edit className="h-4 w-4" />
                         </Button>
                       )}
-                      {/* Only allow deleting if current user has higher authority, except admins can delete equals, and never delete admin user */}
-                      {tableUser.username !== 'admin' && 
+                      {/* Only allow deleting if current user has higher authority, except admins can delete equals, and never delete admin user or self */}
+                      {tableUser.username !== 'admin' && tableUser.username !== user?.username &&
                        (((ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) > (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0)) || 
                         (user?.role === 'admin' && (ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) >= (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0))) ? (
                         <Button 
@@ -529,7 +561,9 @@ export default function UserManagement() {
                           variant="outline" 
                           size="sm"
                           disabled
-                          title={tableUser.username === 'admin' ? "Cannot delete admin user" : "Insufficient permissions to delete this user"}
+                          title={tableUser.username === 'admin' ? "Cannot delete admin user" : 
+                                 tableUser.username === user?.username ? "Cannot delete your own account" :
+                                 "Insufficient permissions to delete this user"}
                           data-testid={`button-delete-disabled-${tableUser.id}`}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -545,7 +579,10 @@ export default function UserManagement() {
       </Card>
 
       {/* Edit User Dialog */}
-      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+      <Dialog open={!!editingUser} onOpenChange={() => {
+        setEditingUser(null);
+        setOriginalEditingUser(null);
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -626,7 +663,7 @@ export default function UserManagement() {
                   <Select 
                     value={editingUser.role} 
                     onValueChange={(value) => handleRoleChange(value, true)}
-                    disabled={editingUser.role === 'owner' && editingUser.username === user?.username}
+                    disabled={editingUser.role === 'owner' && editingUser.username === user?.username && user?.role !== 'admin'}
                   >
                     <SelectTrigger data-testid="select-edit-role">
                       <SelectValue />
@@ -645,8 +682,8 @@ export default function UserManagement() {
                       )}
                     </SelectContent>
                   </Select>
-                  {editingUser.role === 'owner' && editingUser.username === user?.username && (
-                    <p className="text-xs text-gray-500 mt-1">You cannot change your own role.</p>
+                  {editingUser.role === 'owner' && editingUser.username === user?.username && user?.role !== 'admin' && (
+                    <p className="text-xs text-gray-500 mt-1">You cannot change your own role. Only administrators can modify your role.</p>
                   )}
                 </div>
 
@@ -659,7 +696,7 @@ export default function UserManagement() {
                         <Checkbox
                           checked={(editingUser.permissions || []).includes(permission.id)}
                           onCheckedChange={() => handlePermissionToggle(permission.id, true)}
-                          disabled={editingUser.role === 'owner' && editingUser.username === user?.username}
+                          disabled={editingUser.role === 'owner' && editingUser.username === user?.username && user?.role !== 'admin'}
                           data-testid={`checkbox-edit-${permission.id}`}
                         />
                         <div className="flex-1">
@@ -671,19 +708,19 @@ export default function UserManagement() {
                       </div>
                     ))}
                   </div>
-                  {editingUser.role === 'owner' && editingUser.username === user?.username && (
+                  {editingUser.role === 'owner' && editingUser.username === user?.username && user?.role !== 'admin' && (
                     <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-md">
                       <p className="text-sm text-blue-800 flex items-center">
                         <Shield className="h-4 w-4 mr-2" />
-                        You cannot change your own page permissions. Only admins can modify your permissions.
+                        You cannot change your own page permissions. Only administrators can modify your permissions.
                       </p>
                     </div>
                   )}
-                  {editingUser.role === 'owner' && editingUser.username !== user?.username && (
+                  {editingUser.role === 'owner' && editingUser.username !== user?.username && user?.role === 'owner' && (
                     <div className="mt-4 p-3 bg-yellow-100 border border-yellow-200 rounded-md">
                       <p className="text-sm text-yellow-800 flex items-center">
                         <Shield className="h-4 w-4 mr-2" />
-                        As an owner, you can modify permissions for other owners, but only admins can modify your permissions.
+                        As an owner, you can modify permissions for other owners, but only administrators can modify your own permissions.
                       </p>
                     </div>
                   )}
@@ -722,7 +759,10 @@ export default function UserManagement() {
 
               {/* Action Buttons */}
               <div className="flex justify-end space-x-3 pt-4 border-t">
-                <Button variant="outline" onClick={() => setEditingUser(null)}>
+                <Button variant="outline" onClick={() => {
+                  setEditingUser(null);
+                  setOriginalEditingUser(null);
+                }}>
                   Cancel Changes
                 </Button>
                 <Button 
@@ -737,9 +777,10 @@ export default function UserManagement() {
                       is_active: editingUser.is_active 
                     } 
                   })}
-                  disabled={updateUserMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={updateUserMutation.isPending || shouldDisableEditSave}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-save-edit-user"
+                  title={shouldDisableEditSave ? "No changes to save" : ""}
                 >
                   {updateUserMutation.isPending ? 'Updating...' : 'Save Changes'}
                 </Button>

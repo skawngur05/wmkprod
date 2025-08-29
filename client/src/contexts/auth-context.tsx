@@ -3,7 +3,7 @@ import { User } from '@shared/schema';
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -23,7 +23,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  useEffect(() => {
+    // Validate user status periodically if logged in
+    if (user) {
+      const validateUserStatus = async () => {
+        try {
+          const response = await fetch('/api/auth/validate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username: user.username }),
+          });
+
+          if (!response.ok) {
+            // User is no longer valid (inactive or deleted)
+            logout();
+          }
+        } catch (error) {
+          console.error('User validation error:', error);
+          // On network error, don't logout - just log the error
+        }
+      };
+
+      // Check immediately
+      validateUserStatus();
+
+      // Check every 5 minutes
+      const interval = setInterval(validateUserStatus, 5 * 60 * 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -37,12 +70,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await response.json();
         setUser(data.user);
         localStorage.setItem('crm_user', JSON.stringify(data.user));
-        return true;
+        return { success: true };
+      } else {
+        const errorData = await response.json();
+        return { success: false, error: errorData.message || 'Login failed' };
       }
-      return false;
     } catch (error) {
       console.error('Login error:', error);
-      return false;
+      return { success: false, error: 'Network error. Please try again.' };
     }
   };
 

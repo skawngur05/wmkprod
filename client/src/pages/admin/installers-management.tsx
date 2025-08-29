@@ -13,7 +13,8 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -111,6 +112,9 @@ const InstallerFormModal = memo(({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {title.includes('Edit') ? 'Update the installer information below.' : 'Enter the details for the new installer.'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -246,6 +250,8 @@ export default function InstallersManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingInstaller, setEditingInstaller] = useState<Installer | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [installerToDelete, setInstallerToDelete] = useState<Installer | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -314,8 +320,15 @@ export default function InstallersManagement() {
   };
 
   const handleDelete = (installer: Installer) => {
-    if (confirm(`Are you sure you want to delete installer "${installer.name}"?`)) {
-      deleteMutation.mutate(installer.id);
+    setInstallerToDelete(installer);
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (installerToDelete) {
+      deleteMutation.mutate(installerToDelete.id);
+      setConfirmDeleteOpen(false);
+      setInstallerToDelete(null);
     }
   };
 
@@ -459,6 +472,24 @@ export default function InstallersManagement() {
         initialData={editingInstaller}
         isLoading={updateMutation.isPending}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete installer "{installerToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-row justify-end space-x-2">
+            <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

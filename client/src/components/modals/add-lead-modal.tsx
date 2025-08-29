@@ -17,7 +17,12 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
     lead_origin: '',
     assigned_to: '',
     project_amount: '',
-    notes: ''
+    notes: '',
+    pickup_date: '',
+    installation_date: '',
+    installation_end_date: '',
+    deposit_paid: false,
+    balance_paid: false
   });
 
   const { toast } = useToast();
@@ -54,7 +59,12 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
       lead_origin: '',
       assigned_to: '',
       project_amount: '',
-      notes: ''
+      notes: '',
+      pickup_date: '',
+      installation_date: '',
+      installation_end_date: '',
+      deposit_paid: false,
+      balance_paid: false
     });
   };
 
@@ -81,9 +91,11 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
       date_created: new Date().toISOString().split('T')[0], // Add required date_created field
       next_followup_date: null,
       additional_notes: null,
-      deposit_paid: false,
-      balance_paid: false,
-      installation_date: null,
+      deposit_paid: formData.deposit_paid,
+      balance_paid: formData.balance_paid,
+      pickup_date: formData.pickup_date || null,
+      installation_date: formData.installation_date || null,
+      installation_end_date: formData.installation_end_date || null,
       assigned_installer: null
     };
 
@@ -183,6 +195,77 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
                     onChange={(e) => setFormData({...formData, project_amount: e.target.value})}
                     data-testid="input-add-amount"
                   />
+                </div>
+                
+                {/* Payment Status Checkboxes */}
+                <div className="col-12 mb-3">
+                  <label className="form-label">Payment Status</label>
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id="deposit_paid"
+                          checked={formData.deposit_paid}
+                          onChange={(e) => setFormData({...formData, deposit_paid: e.target.checked})}
+                        />
+                        <label className="form-check-label" htmlFor="deposit_paid">
+                          Deposit Paid
+                        </label>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id="balance_paid"
+                          checked={formData.balance_paid}
+                          onChange={(e) => setFormData({...formData, balance_paid: e.target.checked})}
+                        />
+                        <label className="form-check-label" htmlFor="balance_paid">
+                          Balance Paid
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pickup Date - Only show if deposit is paid */}
+                {formData.deposit_paid && (
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Pickup Date</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={formData.pickup_date}
+                      onChange={(e) => setFormData({...formData, pickup_date: e.target.value})}
+                      data-testid="input-add-pickup-date"
+                    />
+                  </div>
+                )}
+                
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">Installation Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={formData.installation_date}
+                    onChange={(e) => setFormData({...formData, installation_date: e.target.value})}
+                    data-testid="input-add-installation-date"
+                  />
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">Installation End Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={formData.installation_end_date}
+                    onChange={(e) => setFormData({...formData, installation_end_date: e.target.value})}
+                    data-testid="input-add-installation-end-date"
+                  />
+                  <small className="form-text text-muted">Leave empty for single-day installations</small>
                 </div>
                 <div className="col-12 mb-3">
                   <label className="form-label">Notes</label>

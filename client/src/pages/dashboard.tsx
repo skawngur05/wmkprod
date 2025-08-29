@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
+import { useLocation } from 'wouter';
 import { capitalizeFirst, formatCurrency, formatDate, getStatusColor, getOriginColor } from '@/lib/auth';
 import { Lead } from '@shared/schema';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QuickEditModal } from '@/components/modals/quick-edit-modal';
 import { BusinessCalendar } from '@/components/calendar/BusinessCalendar';
 
@@ -15,8 +16,33 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showQuickEdit, setShowQuickEdit] = useState(false);
+  const [animationStep, setAnimationStep] = useState(0);
+
+  // Animation effect - stagger the appearance of different sections
+  useEffect(() => {
+    // Add a small delay if user just logged in (fresh page load)
+    const isNewLogin = !sessionStorage.getItem('dashboard_visited');
+    const initialDelay = isNewLogin ? 300 : 0;
+    
+    if (isNewLogin) {
+      sessionStorage.setItem('dashboard_visited', 'true');
+    }
+
+    const timer1 = setTimeout(() => setAnimationStep(1), initialDelay + 100);
+    const timer2 = setTimeout(() => setAnimationStep(2), initialDelay + 300);
+    const timer3 = setTimeout(() => setAnimationStep(3), initialDelay + 500);
+    const timer4 = setTimeout(() => setAnimationStep(4), initialDelay + 700);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
+    };
+  }, []);
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/dashboard/stats'],
@@ -49,6 +75,25 @@ export default function Dashboard() {
   const openQuickEdit = (lead: Lead) => {
     setSelectedLead(lead);
     setShowQuickEdit(true);
+  };
+
+  const handleStatsCardClick = (cardType: string) => {
+    switch (cardType) {
+      case 'total-leads':
+        setLocation('/leads');
+        break;
+      case 'sold-leads':
+        setLocation('/leads?status=sold');
+        break;
+      case 'today-followups':
+        setLocation('/followups');
+        break;
+      case 'new-today':
+        setLocation('/leads?filter=today');
+        break;
+      default:
+        break;
+    }
   };
 
   const isOverdue = (date: string | Date | null) => {
@@ -87,26 +132,86 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container-fluid py-4">
-      <div className="row mb-4">
-        <div className="col">
-          <h1 className="h3 fw-bold" data-testid="dashboard-welcome">
-            Welcome back, {user ? capitalizeFirst(user.username) : 'User'}!
-          </h1>
-          <p className="text-muted" data-testid="dashboard-subtitle">
-            Here's what's happening with your leads today.
-          </p>
-        </div>
-      </div>
+    <>
+      <style>{`
+        .fade-in-up {
+          opacity: 0;
+          transform: translateY(20px);
+          transition: all 0.6s ease-out;
+        }
 
-      {/* Statistics Cards */}
-      <div className="row mb-4">
+        .fade-in-up.visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        .stats-card {
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stats-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .dashboard-section {
+          opacity: 0;
+          transform: translateY(30px);
+          transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .dashboard-section.animate {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Smooth page entry animation */
+        .container-fluid {
+          animation: pageEnter 0.6s ease-out;
+        }
+
+        @keyframes pageEnter {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      
+      <div className="container-fluid py-4">
+        {/* Welcome Section */}
+        <div className={`row mb-4 dashboard-section ${animationStep >= 1 ? 'animate' : ''}`}>
+          <div className="col">
+            <h1 className="h3 fw-bold" data-testid="dashboard-welcome">
+              Welcome back, {user ? capitalizeFirst(user.username) : 'User'}!
+            </h1>
+            <p className="text-muted" data-testid="dashboard-subtitle">
+              Here's what's happening with your leads today.
+            </p>
+          </div>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className={`row mb-4 dashboard-section ${animationStep >= 2 ? 'animate' : ''}`}>
         <div className="col-md-3 mb-3">
-          <div className="card stats-card" data-testid="stat-total-leads">
+          <div 
+            className="card stats-card clickable-card" 
+            data-testid="stat-total-leads"
+            onClick={() => handleStatsCardClick('total-leads')}
+            style={{ cursor: 'pointer' }}
+            title="Click to view all leads"
+          >
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="card-title text-muted mb-1">Total Leads</h6>
+                  <h6 className="card-title text-muted mb-1">
+                    Total Leads
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
+                  </h6>
                   <h3 className="fw-bold text-primary">{stats?.totalLeads || 0}</h3>
                 </div>
                 <div className="text-primary">
@@ -118,11 +223,20 @@ export default function Dashboard() {
         </div>
         
         <div className="col-md-3 mb-3">
-          <div className="card stats-card" data-testid="stat-sold-leads">
+          <div 
+            className="card stats-card clickable-card" 
+            data-testid="stat-sold-leads"
+            onClick={() => handleStatsCardClick('sold-leads')}
+            style={{ cursor: 'pointer' }}
+            title="Click to view sold leads"
+          >
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="card-title text-muted mb-1">Sold Leads</h6>
+                  <h6 className="card-title text-muted mb-1">
+                    Sold Leads
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
+                  </h6>
                   <h3 className="fw-bold text-success">{stats?.soldLeads || 0}</h3>
                 </div>
                 <div className="text-success">
@@ -134,11 +248,20 @@ export default function Dashboard() {
         </div>
         
         <div className="col-md-3 mb-3">
-          <div className="card stats-card" data-testid="stat-today-followups">
+          <div 
+            className="card stats-card clickable-card" 
+            data-testid="stat-today-followups"
+            onClick={() => handleStatsCardClick('today-followups')}
+            style={{ cursor: 'pointer' }}
+            title="Click to view today's follow-ups"
+          >
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="card-title text-muted mb-1">Today's Follow-ups</h6>
+                  <h6 className="card-title text-muted mb-1">
+                    Today's Follow-ups
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
+                  </h6>
                   <h3 className="fw-bold text-warning">{stats?.todayFollowups || 0}</h3>
                 </div>
                 <div className="text-warning">
@@ -150,11 +273,20 @@ export default function Dashboard() {
         </div>
         
         <div className="col-md-3 mb-3">
-          <div className="card stats-card" data-testid="stat-new-today">
+          <div 
+            className="card stats-card clickable-card" 
+            data-testid="stat-new-today"
+            onClick={() => handleStatsCardClick('new-today')}
+            style={{ cursor: 'pointer' }}
+            title="Click to view today's new leads"
+          >
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="card-title text-muted mb-1">New Today</h6>
+                  <h6 className="card-title text-muted mb-1">
+                    New Today
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
+                  </h6>
                   <h3 className="fw-bold text-info">{stats?.newToday || 0}</h3>
                 </div>
                 <div className="text-info">
@@ -166,7 +298,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="row mb-4">
+      <div className={`row mb-4 dashboard-section ${animationStep >= 4 ? 'animate' : ''}`}>
         {/* Business Calendar - Full Width */}
         <div className="col-12">
           <div className="card" data-testid="business-calendar">
@@ -182,7 +314,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="row">
+      <div className={`row dashboard-section ${animationStep >= 3 ? 'animate' : ''}`}>
         {/* Today's Follow-ups */}
         <div className="col-lg-6 mb-4">
           <div className="card" data-testid="todays-followups">
@@ -404,6 +536,7 @@ export default function Dashboard() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

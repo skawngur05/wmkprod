@@ -3,6 +3,19 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    
+    // Handle specific error cases
+    if (res.status === 401) {
+      // Check if the error message indicates an inactive account
+      if (text.includes('Account is disabled') || text.includes('inactive')) {
+        // Clear user session and redirect to login
+        localStorage.removeItem('crm_user');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
+    }
+    
     throw new Error(`${res.status}: ${text}`);
   }
 }

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SampleBooklet, UpdateSampleBooklet, updateSampleBookletSchema } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useBookletFormChanges } from '@/hooks/use-form-changes';
 
 interface EditBookletModalProps {
   isOpen: boolean;
@@ -16,13 +17,17 @@ interface FormData extends Omit<UpdateSampleBooklet, 'date_shipped'> {
 
 export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookletModalProps) {
   const [formData, setFormData] = useState<FormData>({});
+  const [originalFormData, setOriginalFormData] = useState<FormData | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Track form changes
+  const { shouldDisableSave } = useBookletFormChanges(formData, originalFormData);
+
   useEffect(() => {
     if (booklet) {
-      setFormData({
+      const initialData = {
         order_number: booklet.order_number,
         customer_name: booklet.customer_name,
         address: booklet.address,
@@ -33,7 +38,9 @@ export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookl
         tracking_number: booklet.tracking_number,
         date_shipped: booklet.date_shipped ? new Date(booklet.date_shipped).toISOString().split('T')[0] : '',
         notes: booklet.notes,
-      });
+      };
+      setFormData(initialData);
+      setOriginalFormData(initialData);
     }
   }, [booklet]);
 
@@ -272,8 +279,10 @@ export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookl
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={updateBookletMutation.isPending}
+                disabled={updateBookletMutation.isPending || shouldDisableSave}
                 data-testid="button-submit-edit"
+                title={shouldDisableSave ? "No changes to save" : ""}
+                style={{ opacity: shouldDisableSave ? 0.5 : 1, cursor: shouldDisableSave ? 'not-allowed' : 'pointer' }}
               >
                 {updateBookletMutation.isPending ? (
                   <>

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useRepairRequestFormChanges } from '@/hooks/use-form-changes';
 
 interface EditRepairRequestModalProps {
   show: boolean;
@@ -27,14 +28,18 @@ export function EditRepairRequestModal({ show, onHide, repairRequest }: EditRepa
     completion_date: '',
     notes: '',
   });
+  const [originalFormData, setOriginalFormData] = useState<typeof formData | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Track form changes
+  const { shouldDisableSave } = useRepairRequestFormChanges(formData, originalFormData);
+
   // Update form when repairRequest changes
   useEffect(() => {
     if (repairRequest) {
-      setFormData({
+      const initialData = {
         customer_name: repairRequest.customer_name || '',
         phone: repairRequest.phone || '',
         email: repairRequest.email || '',
@@ -45,7 +50,9 @@ export function EditRepairRequestModal({ show, onHide, repairRequest }: EditRepa
         date_reported: repairRequest.date_reported ? new Date(repairRequest.date_reported).toISOString().split('T')[0] : '',
         completion_date: repairRequest.completion_date ? new Date(repairRequest.completion_date).toISOString().split('T')[0] : '',
         notes: repairRequest.notes || '',
-      });
+      };
+      setFormData(initialData);
+      setOriginalFormData(initialData);
     }
   }, [repairRequest]);
 
@@ -180,6 +187,11 @@ export function EditRepairRequestModal({ show, onHide, repairRequest }: EditRepa
                 value={formData.completion_date}
                 onChange={(e) => setFormData({ ...formData, completion_date: e.target.value })}
               />
+              {formData.status !== 'Completed' && !formData.completion_date && (
+                <p className="text-red-600 text-xs mt-1 font-medium">
+                  ⚠️ Completion date must be selected before marking as done
+                </p>
+              )}
             </div>
           </div>
 
@@ -232,9 +244,10 @@ export function EditRepairRequestModal({ show, onHide, repairRequest }: EditRepa
                 <Button 
                   type="button" 
                   variant="default"
-                  className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 border-0"
+                  className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 border-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   onClick={handleMarkAsDone}
-                  disabled={updateRepairMutation.isPending}
+                  disabled={updateRepairMutation.isPending || !formData.completion_date}
+                  title={!formData.completion_date ? "Please fill in the completion date before marking as done" : ""}
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -247,7 +260,10 @@ export function EditRepairRequestModal({ show, onHide, repairRequest }: EditRepa
               <Button type="button" variant="outline" onClick={onHide}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateRepairMutation.isPending}>
+              <Button type="submit" disabled={updateRepairMutation.isPending || shouldDisableSave} 
+                className="disabled:opacity-50 disabled:cursor-not-allowed"
+                title={shouldDisableSave ? "No changes to save" : ""}
+              >
                 {updateRepairMutation.isPending ? 'Updating...' : 'Update Repair Request'}
               </Button>
             </div>

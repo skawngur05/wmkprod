@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SampleBooklet, PRODUCT_TYPES, BOOKLET_STATUSES } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import AddBookletModal from '@/components/modals/add-booklet-modal';
 import EditBookletModal from '@/components/modals/edit-booklet-modal';
+import TrackingModal from '@/components/modals/tracking-modal';
 
 interface BookletStats {
   totalOrders: number;
@@ -37,6 +39,9 @@ export default function SampleBooklets() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedBooklet, setSelectedBooklet] = useState<SampleBooklet | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [bookletToDelete, setBookletToDelete] = useState<string | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -69,27 +74,55 @@ export default function SampleBooklets() {
 
   const deleteBookletMutation = useMutation({
     mutationFn: async (bookletId: string) => {
-      await apiRequest('DELETE', `/api/sample-booklets/${bookletId}`);
+      try {
+        await apiRequest('DELETE', `/api/sample-booklets/${bookletId}`);
+      } catch (error: any) {
+        // If it's a 404, the booklet is already deleted, so we can consider it a success
+        if (error.status === 404 || error.message?.includes('404')) {
+          console.log(`Booklet ${bookletId} was already deleted`);
+          return;
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, deletedBookletId) => {
       toast({ title: "Success", description: "Sample booklet deleted successfully!" });
       queryClient.invalidateQueries({ queryKey: ['/api/sample-booklets'] });
       queryClient.invalidateQueries({ queryKey: ['/api/sample-booklets/stats/dashboard'] });
+      queryClient.removeQueries({ queryKey: ['/api/sample-booklets'] }); // Clear cache completely
+      
+      // Close any open modals that might be referencing the deleted booklet
+      // Always close modals and clear selection after deletion
+      setShowEditModal(false);
+      setShowTrackingModal(false);
+      setSelectedBooklet(null);
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({ title: "Error", description: "Failed to delete sample booklet", variant: "destructive" });
     }
   });
 
   const handleDelete = (bookletId: string) => {
-    if (window.confirm('Are you sure you want to delete this sample booklet order?')) {
-      deleteBookletMutation.mutate(bookletId);
+    setBookletToDelete(bookletId);
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (bookletToDelete) {
+      deleteBookletMutation.mutate(bookletToDelete);
+      setConfirmDeleteOpen(false);
+      setBookletToDelete(null);
     }
   };
 
   const handleEdit = (booklet: SampleBooklet) => {
     setSelectedBooklet(booklet);
     setShowEditModal(true);
+  };
+
+  const handleAddTracking = (booklet: SampleBooklet) => {
+    setSelectedBooklet(booklet);
+    setShowTrackingModal(true);
   };
 
   const getProductTypeBadge = (productType: string) => {
@@ -463,16 +496,16 @@ export default function SampleBooklets() {
                         >
                           <i className="fas fa-edit"></i>
                         </button>
-                        {booklet.status === 'Pending' && (
+                        {(booklet.status === 'Pending' || booklet.status === 'Shipped') && !booklet.tracking_number && (
                           <button
-                            className="btn btn-circle btn-outline-info btn-sm me-1"
+                            className="btn btn-circle btn-outline-success btn-sm me-1"
                             onClick={() => {
-                              handleEdit(booklet);
+                              handleAddTracking(booklet);
                             }}
-                            title="Mark as shipped and add tracking number"
-                            data-testid={`button-ship-booklet-${booklet.id}`}
+                            title="Add tracking number and notify customer"
+                            data-testid={`button-add-tracking-${booklet.id}`}
                           >
-                            <i className="fas fa-shipping-fast"></i>
+                            <i className="fas fa-truck"></i>
                           </button>
                         )}
                         <button
@@ -516,6 +549,33 @@ export default function SampleBooklets() {
         }}
         booklet={selectedBooklet}
       />
+
+      <TrackingModal 
+        isOpen={showTrackingModal} 
+        onClose={() => {
+          setShowTrackingModal(false);
+          setSelectedBooklet(null);
+        }}
+        booklet={selectedBooklet} 
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this sample booklet order? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-row justify-end space-x-2">
+            <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

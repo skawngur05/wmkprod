@@ -1,9 +1,11 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Lead, Installer } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,6 +64,37 @@ function InstallationCard({
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const formatInstallationDate = (startDate: string | Date | null, endDate: string | Date | null) => {
+    if (!startDate) return 'Not scheduled';
+    
+    if (!endDate || startDate === endDate) {
+      // Single day installation
+      return formatDate(startDate);
+    }
+    
+    // Multi-day installation
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    const startFormatted = start.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric'
+    });
+    const endFormatted = end.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    // If same year, don't repeat it
+    if (start.getFullYear() === end.getFullYear()) {
+      return `${startFormatted} - ${endFormatted}`;
+    }
+    
+    // Different years
+    return `${startFormatted}, ${start.getFullYear()} - ${endFormatted}`;
   };
 
   // Helper function to get the most recent note
@@ -161,6 +194,15 @@ function InstallationCard({
                   </a>
                 </div>
               )}
+              {installation.pickup_date && (
+                <div className="flex items-center text-sm text-gray-700">
+                  <Calendar className="h-4 w-4 mr-2 text-purple-600" />
+                  <div>
+                    <span className="text-xs font-medium text-gray-600 uppercase">Pickup: </span>
+                    <span className="font-medium">{formatDate(installation.pickup_date)}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -174,7 +216,10 @@ function InstallationCard({
                     {type === 'repair' ? 'Service Date' : 'Installation Date'}
                   </p>
                   <p className="text-sm font-medium text-gray-900">
-                    {formatDate(installation.installation_date)}
+                    {type === 'repair' ? 
+                      formatDate(installation.installation_date) : 
+                      formatInstallationDate(installation.installation_date, (installation as any).installation_end_date)
+                    }
                   </p>
                 </div>
               </div>
@@ -299,6 +344,8 @@ function InstallationCard({
 }
 
 export default function Installations() {
+  const [, setLocation] = useLocation();
+  
   const { data: installations, isLoading } = useQuery<Lead[]>({
     queryKey: ['/api/installations'],
     queryFn: async () => {
@@ -343,6 +390,7 @@ export default function Installations() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [repairModalOpen, setRepairModalOpen] = useState(false);
   const [editRepairModalOpen, setEditRepairModalOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedInstallation, setSelectedInstallation] = useState<Lead | null>(null);
   const [selectedRepairRequest, setSelectedRepairRequest] = useState<any>(null);
   const [emailType, setEmailType] = useState<'client' | 'installer'>('client');
@@ -441,8 +489,15 @@ export default function Installations() {
   });
 
   const handleMarkAsDone = (installation: Lead) => {
-    if (window.confirm(`Are you sure you want to mark the installation for ${installation.name} as completed? This action cannot be undone.`)) {
-      markAsDoneMutation.mutate(installation.id);
+    setSelectedInstallation(installation);
+    setConfirmDialogOpen(true);
+  };
+
+  const confirmMarkAsDone = () => {
+    if (selectedInstallation) {
+      markAsDoneMutation.mutate(selectedInstallation.id);
+      setConfirmDialogOpen(false);
+      setSelectedInstallation(null);
     }
   };
   
@@ -533,14 +588,28 @@ export default function Installations() {
     return installDate < today;
   };
 
-  const upcomingInstallations = installations?.filter(install => {
-    const isUpcoming = install.installation_date && 
-      (isDateToday(install.installation_date) || isDateInFuture(install.installation_date)) &&
+  // Separate today's installations from future ones
+  const todaysInstallations = installations?.filter(install => {
+    return install.installation_date && 
+      isDateToday(install.installation_date) &&
       !isRepair(install) &&
       !isCompleted(install);
-    
-    return isUpcoming;
   }) || [];
+
+  const futureInstallations = installations?.filter(install => {
+    return install.installation_date && 
+      isDateInFuture(install.installation_date) &&
+      !isRepair(install) &&
+      !isCompleted(install);
+  }).sort((a, b) => {
+    // Sort by installation date (earliest first)
+    const dateA = new Date(a.installation_date!);
+    const dateB = new Date(b.installation_date!);
+    return dateA.getTime() - dateB.getTime();
+  }) || [];
+
+  // Keep the combined array for backwards compatibility if needed elsewhere
+  const upcomingInstallations = [...todaysInstallations, ...futureInstallations];
 
   const repairJobs = installations?.filter(install => {
     const isRepairJob = isRepair(install) && !isCompleted(install);
@@ -578,6 +647,29 @@ export default function Installations() {
   // Filter active installers
   const activeInstallers = installersData?.filter(installer => installer.status === 'active') || [];
 
+  const handleStatsCardClick = (cardType: string) => {
+    switch (cardType) {
+      case 'today':
+        // Scroll to today's installations section
+        document.getElementById('today-section')?.scrollIntoView({ behavior: 'smooth' });
+        break;
+      case 'upcoming':
+        // Scroll to upcoming installations section
+        document.getElementById('upcoming-section')?.scrollIntoView({ behavior: 'smooth' });
+        break;
+      case 'completed':
+        // Scroll to completed projects section
+        document.getElementById('completed-section')?.scrollIntoView({ behavior: 'smooth' });
+        break;
+      case 'repair-jobs':
+        // Scroll to repair requests section
+        document.getElementById('repair-section')?.scrollIntoView({ behavior: 'smooth' });
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-8">
@@ -605,49 +697,81 @@ export default function Installations() {
 
         {/* Overview Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card className="border-blue-200 shadow-blue-100">
+          <Card 
+            className="border-blue-200 shadow-blue-100 clickable-card" 
+            onClick={() => handleStatsCardClick('today')}
+            style={{ cursor: 'pointer' }}
+            title="Click to scroll to today's installations"
+          >
             <CardContent className="p-6">
               <div className="flex items-center">
                 <CalendarDays className="h-8 w-8 text-blue-500 mr-3" />
                 <div>
-                  <p className="text-2xl font-bold text-blue-600">{thisWeekInstallations.length}</p>
-                  <p className="text-sm text-gray-600">This Week</p>
+                  <p className="text-2xl font-bold text-blue-600">{todaysInstallations.length}</p>
+                  <p className="text-sm text-gray-600">
+                    Today's Installs
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-green-200 shadow-green-100">
+          <Card 
+            className="border-green-200 shadow-green-100 clickable-card" 
+            onClick={() => handleStatsCardClick('completed')}
+            style={{ cursor: 'pointer' }}
+            title="Click to scroll to completed projects"
+          >
             <CardContent className="p-6">
               <div className="flex items-center">
                 <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
                 <div>
                   <p className="text-2xl font-bold text-green-600">{completedProjects.length}</p>
-                  <p className="text-sm text-gray-600">Completed</p>
+                  <p className="text-sm text-gray-600">
+                    Completed
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-yellow-200 shadow-yellow-100">
+          <Card 
+            className="border-yellow-200 shadow-yellow-100 clickable-card" 
+            onClick={() => handleStatsCardClick('repair-jobs')}
+            style={{ cursor: 'pointer' }}
+            title="Click to scroll to repair jobs section"
+          >
             <CardContent className="p-6">
               <div className="flex items-center">
                 <Wrench className="h-8 w-8 text-yellow-500 mr-3" />
                 <div>
                   <p className="text-2xl font-bold text-yellow-600">{totalRepairJobs}</p>
-                  <p className="text-sm text-gray-600">Repair Jobs</p>
+                  <p className="text-sm text-gray-600">
+                    Repair Jobs
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-gray-200 shadow-gray-100">
+          <Card 
+            className="border-indigo-200 shadow-indigo-100 clickable-card" 
+            onClick={() => handleStatsCardClick('upcoming')}
+            style={{ cursor: 'pointer' }}
+            title="Click to scroll to upcoming installations"
+          >
             <CardContent className="p-6">
               <div className="flex items-center">
-                <Users className="h-8 w-8 text-gray-500 mr-3" />
+                <Clock className="h-8 w-8 text-indigo-500 mr-3" />
                 <div>
-                  <p className="text-2xl font-bold text-gray-600">{activeInstallers.length}</p>
-                  <p className="text-sm text-gray-600">Active Installers</p>
+                  <p className="text-2xl font-bold text-indigo-600">{futureInstallations.length}</p>
+                  <p className="text-sm text-gray-600">
+                    Upcoming Installs
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -810,16 +934,40 @@ export default function Installations() {
           </div>
         )}
 
-        {/* Upcoming Installations */}
-        {upcomingInstallations.length > 0 && (
+        {/* Today's Installations */}
+        {todaysInstallations.length > 0 && (
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-4" id="today-section">
               <CalendarDays className="h-6 w-6 text-blue-500" />
-              <h2 className="text-xl font-semibold text-gray-900">Upcoming Installations</h2>
-              <Badge className="bg-blue-100 text-blue-700">{upcomingInstallations.length}</Badge>
+              <h2 className="text-xl font-semibold text-gray-900">Today's Installations</h2>
+              <Badge className="bg-blue-100 text-blue-700">{todaysInstallations.length}</Badge>
             </div>
             <div className="space-y-4">
-              {upcomingInstallations.map((installation) => (
+              {todaysInstallations.map((installation) => (
+                <InstallationCard 
+                  key={installation.id} 
+                  installation={installation}
+                  onEmailClient={handleEmailClient}
+                  onEmailInstaller={handleEmailInstaller}
+                  onViewDetails={handleViewDetails}
+                  colorScheme="blue"
+                  type="upcoming"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Upcoming Installations */}
+        {futureInstallations.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-4" id="upcoming-section">
+              <Clock className="h-6 w-6 text-indigo-500" />
+              <h2 className="text-xl font-semibold text-gray-900">Upcoming Installations</h2>
+              <Badge className="bg-indigo-100 text-indigo-700">{futureInstallations.length}</Badge>
+            </div>
+            <div className="space-y-4">
+              {futureInstallations.map((installation) => (
                 <InstallationCard 
                   key={installation.id} 
                   installation={installation}
@@ -837,7 +985,7 @@ export default function Installations() {
         {/* Repair Jobs */}
         {repairJobs.length > 0 && (
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-4" id="repair-jobs-section">
               <Wrench className="h-6 w-6 text-yellow-500" />
               <h2 className="text-xl font-semibold text-gray-900">Service & Repair Jobs</h2>
               <Badge className="bg-yellow-100 text-yellow-700">{repairJobs.length}</Badge>
@@ -861,7 +1009,7 @@ export default function Installations() {
         {/* Completed Projects */}
         {completedProjects.length > 0 && (
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-4" id="completed-section">
               <CheckCircle className="h-6 w-6 text-green-500" />
               <h2 className="text-xl font-semibold text-gray-900">Completed Projects</h2>
               <Badge className="bg-green-100 text-green-700">{completedProjects.length}</Badge>
@@ -909,6 +1057,9 @@ export default function Installations() {
                 <Eye className="h-5 w-5" />
                 Installation Details
               </DialogTitle>
+              <DialogDescription>
+                View detailed information about this installation project.
+              </DialogDescription>
             </DialogHeader>
             {selectedInstallation && (
               <div className="space-y-6">
@@ -1083,6 +1234,9 @@ export default function Installations() {
               <DialogTitle>
                 Send {emailType === 'client' ? 'Client' : 'Installer'} Notification
               </DialogTitle>
+              <DialogDescription>
+                Send an email notification about this installation to the {emailType === 'client' ? 'customer' : 'assigned installer'}.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -1149,6 +1303,24 @@ export default function Installations() {
           onHide={() => setEditRepairModalOpen(false)}
           repairRequest={selectedRepairRequest}
         />
+
+        {/* Confirmation Dialog */}
+        <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Completion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to mark the installation for {selectedInstallation?.name} as completed? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmMarkAsDone}>
+                Mark as Completed
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Lead } from '@shared/schema';
 import { formatCurrency, formatDate, getStatusColor, getOriginColor } from '@/lib/auth';
 import { AddLeadModal } from '@/components/modals/add-lead-modal';
@@ -13,9 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Download, Upload, Search, X, Phone, Mail, Calendar, Eye, Trash2, AlertTriangle, Clock, Check } from 'lucide-react';
 
 export default function Leads() {
+  const [location] = useLocation();
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -29,9 +32,26 @@ export default function Leads() {
   const [showQuickEdit, setShowQuickEdit] = useState(false);
   const [selectedFollowupLead, setSelectedFollowupLead] = useState<Lead | null>(null);
   const [showQuickFollowup, setShowQuickFollowup] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Read URL parameters on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status');
+    const filter = urlParams.get('filter');
+    
+    if (status === 'sold') {
+      setFilters(prev => ({ ...prev, status: 'sold' }));
+    } else if (filter === 'today') {
+      // For "new today" filter, we'll need to handle this in the backend query
+      // For now, we can set a special search or status value
+      setFilters(prev => ({ ...prev, status: 'all' })); // Adjust as needed based on your backend
+    }
+  }, [location]);
 
   // Debounce search input
   useEffect(() => {
@@ -149,11 +169,15 @@ export default function Leads() {
   });
 
   const handleDelete = (leadId: string) => {
-    if (window.confirm('Are you sure you want to delete this lead?')) {
-      // Prevent double-clicks by disabling the button during deletion
-      if (!deleteLeadMutation.isPending) {
-        deleteLeadMutation.mutate(leadId);
-      }
+    setLeadToDelete(leadId);
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (leadToDelete && !deleteLeadMutation.isPending) {
+      deleteLeadMutation.mutate(leadToDelete);
+      setConfirmDeleteOpen(false);
+      setLeadToDelete(null);
     }
   };
 
@@ -648,6 +672,24 @@ export default function Leads() {
             setSelectedFollowupLead(null);
           }}
         />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this lead? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex flex-row justify-end space-x-2">
+              <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

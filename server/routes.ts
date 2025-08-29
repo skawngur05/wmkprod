@@ -53,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         status: "error", 
         database: "disconnected",
-        error: error.message,
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString()
       });
     }
@@ -122,6 +122,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      // Check if user account is active
+      if (!user.is_active) {
+        console.log("❌ User account is inactive");
+        return res.status(401).json({ message: "Account is disabled. Please contact administrator." });
+      }
+
       // Ensure permissions is always an array
       let permissions = [];
       if (user.permissions) {
@@ -142,6 +148,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Final permissions array:", permissions);
 
+      // Log successful login activity
+      await storage.logActivity(
+        user.id.toString(),
+        'LOGIN',
+        'AUTH',
+        user.id.toString(),
+        `User ${user.username} logged in successfully`
+      );
+
       // Simple session - in production use proper session management
       res.json({ 
         user: { 
@@ -158,6 +173,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid request data", errors: error.errors });
       }
       res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  // User status validation endpoint
+  app.post("/api/auth/validate", async (req, res) => {
+    try {
+      const { username } = req.body;
+      
+      if (!username) {
+        return res.status(400).json({ message: "Username required" });
+      }
+
+      const user = await storage.getUserByUsername(username.toLowerCase());
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      if (!user.is_active) {
+        return res.status(401).json({ message: "Account is disabled. Please contact administrator." });
+      }
+
+      res.json({ valid: true });
+    } catch (error) {
+      console.error("User validation error:", error);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -268,6 +309,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Creating lead in database...");
       const lead = await storage.createLead(leadData);
       console.log("Lead created successfully:", lead);
+
+      // Log activity
+      await storage.logActivity(
+        '1', // TODO: Get actual user ID from session/auth
+        'CREATE_LEAD',
+        'LEAD',
+        lead.id.toString(),
+        `Created lead: ${lead.name} - ${lead.phone}`
+      );
       
       res.status(201).json(lead);
     } catch (error) {
@@ -294,6 +344,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!lead) {
         return res.status(404).json({ message: "Lead not found" });
       }
+
+      // Log activity
+      await storage.logActivity(
+        '1', // TODO: Get actual user ID from session/auth
+        'UPDATE_LEAD',
+        'LEAD',
+        req.params.id,
+        `Updated lead: ${lead.name} - Changes: ${Object.keys(updates).join(', ')}`
+      );
       
       res.json(lead);
     } catch (error) {
@@ -308,10 +367,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/leads/:id", async (req, res) => {
     try {
+      // Get lead info before deletion for logging
+      const lead = await storage.getLead(req.params.id);
       const deleted = await storage.deleteLead(req.params.id);
+      
       if (!deleted) {
         return res.status(404).json({ message: "Lead not found" });
       }
+
+      // Log activity
+      await storage.logActivity(
+        '1', // TODO: Get actual user ID from session/auth
+        'DELETE_LEAD',
+        'LEAD',
+        req.params.id,
+        `Deleted lead: ${lead?.name || 'unknown'}`
+      );
+      
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete lead" });
@@ -570,6 +642,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const bookletData = insertSampleBookletSchema.parse(req.body);
       const booklet = await storage.createSampleBooklet(bookletData);
+
+      // Log activity
+      await storage.logActivity(
+        '1', // TODO: Get actual user ID from session/auth
+        'CREATE_BOOKLET',
+        'SAMPLE_BOOKLET',
+        booklet.id.toString(),
+        `Created sample booklet: ${booklet.order_number} for ${booklet.customer_name}`
+      );
+
       res.status(201).json(booklet);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -588,6 +670,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!booklet) {
         return res.status(404).json({ message: "Sample booklet not found" });
       }
+
+      // Log activity
+      await storage.logActivity(
+        '1', // TODO: Get actual user ID from session/auth
+        'UPDATE_BOOKLET',
+        'SAMPLE_BOOKLET',
+        req.params.id,
+        `Updated sample booklet: ${booklet.order_number} - Changes: ${Object.keys(updates).join(', ')}`
+      );
       
       res.json(booklet);
     } catch (error) {
@@ -602,10 +693,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/sample-booklets/:id", async (req, res) => {
     try {
+      // Get booklet info before deletion for logging
+      const booklet = await storage.getSampleBooklet(req.params.id);
       const deleted = await storage.deleteSampleBooklet(req.params.id);
+      
       if (!deleted) {
         return res.status(404).json({ message: "Sample booklet not found" });
       }
+
+      // Log activity
+      await storage.logActivity(
+        '1', // TODO: Get actual user ID from session/auth
+        'DELETE_BOOKLET',
+        'SAMPLE_BOOKLET',
+        req.params.id,
+        `Deleted sample booklet: ${booklet?.order_number || 'unknown'}`
+      );
+      
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete sample booklet" });
@@ -917,7 +1021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Calculate average project values
-      for (const installer of installerMetrics.values()) {
+      for (const installer of Array.from(installerMetrics.values())) {
         installer.averageProjectValue = installer.totalInstallations > 0 
           ? installer.totalValue / installer.totalInstallations 
           : 0;
@@ -1256,12 +1360,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get installer email from database
         const installerData = await storage.getInstallers();
         const installer = installerData.find(inst => 
-          inst.name.toLowerCase() === installation.assigned_installer.toLowerCase()
+          installation.assigned_installer && inst.name.toLowerCase() === installation.assigned_installer.toLowerCase()
         );
         
         if (!installer || !installer.email) {
           return res.status(400).json({ 
-            message: `No email address found for installer: ${installation.assigned_installer}` 
+            message: `No email address found for installer: ${installation.assigned_installer || 'unassigned'}` 
           });
         }
         
@@ -2063,6 +2167,15 @@ WMK CRM System`
         is_active: is_active !== undefined ? is_active : true
       });
 
+      // Log activity
+      await storage.logActivity(
+        '1', // TODO: Get actual user ID from session/auth
+        'CREATE_USER',
+        'USER',
+        newUser.id.toString(),
+        `Created user: ${username} with role: ${role}`
+      );
+
       res.json(newUser);
     } catch (error) {
       console.error("Create user error:", error);
@@ -2082,6 +2195,15 @@ WMK CRM System`
         console.log('User not found:', id);
         return res.status(404).json({ message: "User not found" });
       }
+
+      // Log activity
+      await storage.logActivity(
+        '1', // TODO: Get actual user ID from session/auth
+        'UPDATE_USER',
+        'USER',
+        id,
+        `Updated user: ${updatedUser.username} - Changes: ${Object.keys(updates).join(', ')}`
+      );
       
       console.log('User updated successfully:', updatedUser);
       res.json(updatedUser);
@@ -2094,11 +2216,23 @@ WMK CRM System`
   app.delete("/api/admin/users/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Get user info before deletion for logging
+      const user = await storage.getUser(id);
       const deleted = await storage.deleteUser(id);
       
       if (!deleted) {
         return res.status(404).json({ message: "User not found" });
       }
+
+      // Log activity
+      await storage.logActivity(
+        '1', // TODO: Get actual user ID from session/auth
+        'DELETE_USER',
+        'USER',
+        id,
+        `Deleted user: ${user?.username || 'unknown'}`
+      );
       
       res.status(204).send();
     } catch (error) {

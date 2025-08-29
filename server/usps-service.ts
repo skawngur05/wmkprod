@@ -20,118 +20,17 @@ const uspsTrackingResponseSchema = z.object({
 export type USPSTrackingResponse = z.infer<typeof uspsTrackingResponseSchema>;
 
 export class USPSService {
-  private readonly consumerKey: string | null;
-  private readonly consumerSecret: string | null;
-  private readonly baseUrl = "https://api.usps.com";
-  private accessToken: string | null = null;
-  private tokenExpiry: Date | null = null;
-  private readonly isConfigured: boolean;
-
+  // Simple service that only returns mock data
+  
   constructor() {
-    this.consumerKey = process.env.USPS_CONSUMER_KEY || null;
-    this.consumerSecret = process.env.USPS_CONSUMER_SECRET || null;
-    this.isConfigured = !!(this.consumerKey && this.consumerSecret);
-    
-    if (!this.isConfigured) {
-      console.warn("USPS API credentials not configured - tracking functionality will use mock data");
-    }
-  }
-
-  private async getAccessToken(): Promise<string> {
-    if (!this.isConfigured || !this.consumerKey || !this.consumerSecret) {
-      throw new Error("USPS API credentials not configured");
-    }
-
-    // Check if we have a valid token
-    if (this.accessToken && this.tokenExpiry && new Date() < this.tokenExpiry) {
-      return this.accessToken;
-    }
-
-    try {
-      const response = await fetch(`${this.baseUrl}/oauth2/v3/token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          client_id: this.consumerKey,
-          client_secret: this.consumerSecret,
-          grant_type: 'client_credentials',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get USPS access token: ${response.status}`);
-      }
-
-      const data = await response.json();
-      this.accessToken = data.access_token;
-      
-      // Set expiry to 50 minutes from now (tokens usually expire in 1 hour)
-      this.tokenExpiry = new Date(Date.now() + 50 * 60 * 1000);
-      
-      return this.accessToken!;
-    } catch (error) {
-      console.error('Error getting USPS access token:', error);
-      throw new Error('Failed to authenticate with USPS API');
-    }
+    // No longer using USPS API or web scraping - always use mock data
+    console.log("USPS Service initialized - using mock data only");
   }
 
   async trackPackage(trackingNumber: string): Promise<USPSTrackingResponse> {
-    // Use mock data if USPS credentials are not configured
-    if (!this.isConfigured) {
-      console.log(`USPS not configured - returning mock data for tracking number: ${trackingNumber}`);
-      return this.getMockTrackingData(trackingNumber);
-    }
-
-    try {
-      const token = await this.getAccessToken();
-      
-      const response = await fetch(`${this.baseUrl}/tracking/v3/tracking/${trackingNumber}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error(`Tracking number ${trackingNumber} not found`);
-        }
-        throw new Error(`USPS API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Map USPS response to our schema
-      const trackingInfo: USPSTrackingResponse = {
-        trackingNumber: data.trackingNumber || trackingNumber,
-        status: this.mapUSPSStatus(data.status),
-        statusDescription: data.statusSummary || data.status || 'Unknown',
-        deliveryDate: data.deliveryDate,
-        lastUpdated: data.lastUpdated || new Date().toISOString(),
-        trackingEvents: (data.trackingEvents || []).map((event: any) => ({
-          eventDate: event.eventDate,
-          eventTime: event.eventTime,
-          eventDescription: event.eventDescription,
-          eventCity: event.eventCity,
-          eventState: event.eventState,
-          eventZip: event.eventZip,
-        })),
-      };
-
-      return trackingInfo;
-    } catch (error) {
-      console.error('Error tracking package:', error);
-      
-      // Return a fallback response for development/testing
-      if (process.env.NODE_ENV === 'development') {
-        return this.getMockTrackingData(trackingNumber);
-      }
-      
-      throw error;
-    }
+    // Always return mock data - no API calls or web scraping
+    console.log(`📦 Returning mock tracking data for: ${trackingNumber}`);
+    return this.getMockTrackingData(trackingNumber);
   }
 
   private mapUSPSStatus(uspsStatus: string): string {

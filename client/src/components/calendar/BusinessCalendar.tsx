@@ -2,8 +2,18 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { useQuery } from '@tanstack/react-query';
-import { CalendarEvent, Lead } from '@shared/schema';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { CalendarEvent, Lead, InsertCalendarEvent, UpdateCalendarEvent, EVENT_TYPES, ASSIGNEES } from '@shared/schema';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { CalendarDays, User, MapPin, FileText, Plus, Edit, Trash2 } from 'lucide-react';
 
 interface CalendarEventDisplay {
   id: string;
@@ -21,6 +31,32 @@ interface CalendarEventDisplay {
 }
 
 export function BusinessCalendar() {
+  const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [addEventModalOpen, setAddEventModalOpen] = useState(false);
+  const [editEventModalOpen, setEditEventModalOpen] = useState(false);
+  // Helper function to get default start time (next hour)
+  const getDefaultStartTime = (): Date => {
+    const now = new Date();
+    const nextHour = new Date(now);
+    nextHour.setHours(now.getHours() + 1, 0, 0, 0); // Next hour, 0 minutes, 0 seconds
+    return nextHour;
+  };
+
+  const [formData, setFormData] = useState<Partial<InsertCalendarEvent>>({
+    title: '',
+    type: 'installation',
+    start_date: getDefaultStartTime(),
+    end_date: undefined,
+    all_day: false,
+    description: '',
+    location: '',
+    assigned_to: 'none',
+  });
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   // Fetch installations (already in database)
   const { data: installations = [], isLoading: installationsLoading } = useQuery<Lead[]>({
     queryKey: ['/api/installations'],
@@ -29,6 +65,68 @@ export function BusinessCalendar() {
   // Fetch calendar events from the API
   const { data: events = [], isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
     queryKey: ['/api/calendar/events'],
+  });
+
+  // Mutations for CRUD operations
+  const createEventMutation = useMutation({
+    mutationFn: async (eventData: InsertCalendarEvent) => {
+      const response = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventData),
+      });
+      if (!response.ok) throw new Error('Failed to create event');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
+      toast({ title: 'Success', description: 'Event created successfully!' });
+      setAddEventModalOpen(false);
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to create event', variant: 'destructive' });
+    },
+  });
+
+  const updateEventMutation = useMutation({
+    mutationFn: async ({ id, ...updates }: UpdateCalendarEvent & { id: number }) => {
+      const response = await fetch(`/api/calendar/events/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (!response.ok) throw new Error('Failed to update event');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
+      toast({ title: 'Success', description: 'Event updated successfully!' });
+      setEditEventModalOpen(false);
+      setEventModalOpen(false);
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to update event', variant: 'destructive' });
+    },
+  });
+
+  const deleteEventMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/calendar/events/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete event');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
+      toast({ title: 'Success', description: 'Event deleted successfully!' });
+      setEventModalOpen(false);
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to delete event', variant: 'destructive' });
+    },
   });
 
   if (installationsLoading || eventsLoading) {
@@ -58,6 +156,7 @@ export function BusinessCalendar() {
         assignedTo: Array.isArray(lead.assigned_installer) && lead.assigned_installer.length > 0
           ? lead.assigned_installer.join(', ') 
           : 'Not assigned',
+        isEditable: false, // Installation events are read-only
       },
     }));
 
@@ -88,41 +187,107 @@ export function BusinessCalendar() {
       allDay: event.all_day,
       color,
       extendedProps: {
+        id: event.id, // Store database ID for editing/deleting
         type: event.type,
         description: event.description,
         location: event.location,
         assignedTo: event.assigned_to,
+        isEditable: true, // Mark as editable calendar event
       },
     };
   });
 
   const allEvents = [...installationEvents, ...otherEvents];
 
+  // Helper function to format date for datetime-local input
+  const formatDateTimeLocal = (date: Date | string | null | undefined): string => {
+    if (!date) return '';
+    const d = new Date(date);
+    // Adjust for timezone offset to get local time
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().slice(0, 16);
+  };
+
+  // Helper function to parse datetime-local input to proper Date
+  const parseDateTimeLocal = (value: string): Date | undefined => {
+    if (!value) return undefined;
+    // datetime-local gives us local time, create Date object accordingly
+    return new Date(value);
+  };
+
   const handleEventClick = (info: any) => {
     const { event } = info;
-    const { extendedProps } = event;
-    
-    let alertMessage = `${event.title}\n`;
-    alertMessage += `Type: ${extendedProps.type.replace('-', ' ').toUpperCase()}\n`;
-    alertMessage += `Date: ${event.start.toLocaleDateString()}\n`;
-    
-    if (extendedProps.assignedTo) {
-      alertMessage += `Assigned to: ${extendedProps.assignedTo}\n`;
+    setSelectedEvent(event);
+    setEventModalOpen(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      type: 'installation',
+      start_date: getDefaultStartTime(),
+      end_date: undefined,
+      all_day: false,
+      description: '',
+      location: '',
+      assigned_to: 'none',
+    });
+  };
+
+  const handleAddEvent = () => {
+    resetForm();
+    setAddEventModalOpen(true);
+  };
+
+  const handleEditEvent = () => {
+    if (selectedEvent && selectedEvent.extendedProps.isEditable) {
+      setFormData({
+        title: selectedEvent.title || '',
+        type: selectedEvent.extendedProps.type || 'installation',
+        start_date: selectedEvent.start,
+        end_date: selectedEvent.end,
+        all_day: selectedEvent.allDay || false,
+        description: selectedEvent.extendedProps.description || '',
+        location: selectedEvent.extendedProps.location || '',
+        assigned_to: selectedEvent.extendedProps.assignedTo || 'none',
+      });
+      setEventModalOpen(false);
+      setEditEventModalOpen(true);
     }
-    
-    if (extendedProps.location) {
-      alertMessage += `Location: ${extendedProps.location}\n`;
+  };
+
+  const handleDeleteEvent = () => {
+    if (selectedEvent && selectedEvent.extendedProps.isEditable && selectedEvent.extendedProps.id) {
+      deleteEventMutation.mutate(selectedEvent.extendedProps.id);
     }
-    
-    if (extendedProps.description) {
-      alertMessage += `Description: ${extendedProps.description}`;
+  };
+
+  const handleSubmit = (isEdit: boolean) => {
+    const eventData = {
+      ...formData,
+      start_date: formData.start_date ? new Date(formData.start_date) : new Date(),
+      end_date: formData.end_date ? new Date(formData.end_date) : undefined,
+      assigned_to: formData.assigned_to === 'none' ? null : formData.assigned_to,
+    };
+
+    if (isEdit && selectedEvent && selectedEvent.extendedProps.isEditable && selectedEvent.extendedProps.id) {
+      updateEventMutation.mutate({ id: selectedEvent.extendedProps.id, ...eventData });
+    } else if (!isEdit) {
+      createEventMutation.mutate(eventData as InsertCalendarEvent);
     }
-    
-    alert(alertMessage);
   };
 
   return (
     <div className="calendar-container">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Business Calendar</h3>
+        <Button onClick={handleAddEvent} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Add Event
+        </Button>
+      </div>
+      
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
@@ -185,6 +350,227 @@ export function BusinessCalendar() {
           </div>
         </div>
       </div>
+
+      {/* Event Details Modal */}
+      <Dialog open={eventModalOpen} onOpenChange={setEventModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" />
+              Event Details
+            </DialogTitle>
+            <DialogDescription>
+              View event information and manage event actions.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedEvent && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg">{selectedEvent.title}</h3>
+                <Badge variant="outline" className="mt-1">
+                  {selectedEvent.extendedProps.type.replace('-', ' ').toUpperCase()}
+                </Badge>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    {selectedEvent.start.toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                    {selectedEvent.start.toTimeString() !== selectedEvent.start.toDateString() && 
+                      ` at ${selectedEvent.start.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit'
+                      })}`
+                    }
+                  </span>
+                </div>
+
+                {selectedEvent.extendedProps.assignedTo && (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Assigned to: {selectedEvent.extendedProps.assignedTo}</span>
+                  </div>
+                )}
+
+                {selectedEvent.extendedProps.location && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{selectedEvent.extendedProps.location}</span>
+                  </div>
+                )}
+
+                {selectedEvent.extendedProps.description && (
+                  <div className="flex items-start gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <span className="text-sm">{selectedEvent.extendedProps.description}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons - Only show for editable events */}
+              {selectedEvent?.extendedProps?.isEditable && (
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button 
+                    onClick={handleEditEvent} 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button 
+                    onClick={handleDeleteEvent} 
+                    variant="destructive" 
+                    className="flex items-center gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </Button>
+                </div>
+              )}
+              {!selectedEvent?.extendedProps?.isEditable && (
+                <div className="flex justify-center pt-4 border-t">
+                  <span className="text-sm text-muted-foreground">
+                    Installation events can be managed in the Installations section
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Event Modal */}
+      <Dialog open={addEventModalOpen || editEventModalOpen} onOpenChange={(open) => {
+        if (!open) {
+          setAddEventModalOpen(false);
+          setEditEventModalOpen(false);
+          resetForm();
+        }
+      }}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editEventModalOpen ? 'Edit Event' : 'Add New Event'}
+            </DialogTitle>
+            <DialogDescription>
+              {editEventModalOpen ? 'Update the event details below.' : 'Fill in the details to create a new calendar event.'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">Event Title</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter event title"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="type">Event Type</Label>
+              <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select event type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EVENT_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="start_date">Start Date & Time</Label>
+              <Input
+                id="start_date"
+                type="datetime-local"
+                value={formatDateTimeLocal(formData.start_date)}
+                onChange={(e) => setFormData({ ...formData, start_date: parseDateTimeLocal(e.target.value) })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="end_date">End Date & Time (Optional)</Label>
+              <Input
+                id="end_date"
+                type="datetime-local"
+                value={formatDateTimeLocal(formData.end_date)}
+                onChange={(e) => setFormData({ ...formData, end_date: parseDateTimeLocal(e.target.value) })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="assigned_to">Assigned To</Label>
+              <Select value={formData.assigned_to || undefined} onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {ASSIGNEES.map((assignee) => (
+                    <SelectItem key={assignee} value={assignee}>
+                      {assignee}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="location">Location (Optional)</Label>
+              <Input
+                id="location"
+                value={formData.location || ''}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="Enter location"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                value={formData.description || ''}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Enter event description"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button 
+                onClick={() => handleSubmit(editEventModalOpen)} 
+                className="flex-1"
+                disabled={!formData.title || createEventMutation.isPending || updateEventMutation.isPending}
+              >
+                {createEventMutation.isPending || updateEventMutation.isPending ? 'Saving...' : (editEventModalOpen ? 'Update Event' : 'Create Event')}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setAddEventModalOpen(false);
+                  setEditEventModalOpen(false);
+                  resetForm();
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

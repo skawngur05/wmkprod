@@ -11,6 +11,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
   
   const { login } = useAuth();
   const [, setLocation] = useLocation();
@@ -31,19 +32,67 @@ export default function Login() {
     setIsLoading(true);
     setError('');
 
-    const success = await login(username, password);
+    const result = await login(username, password);
     
-    if (success) {
-      setLocation('/dashboard');
+    if (result.success) {
+      setLoginSuccess(true);
+      
+      // Show success animation for 1.5 seconds then redirect
+      setTimeout(() => {
+        setLocation('/dashboard');
+      }, 1500);
     } else {
-      setError('Invalid credentials. Please try again.');
+      setError(result.error || 'Login failed. Please try again.');
     }
     
     setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex">
+    <>
+      {/* Success Animation Overlay */}
+      {loginSuccess && (
+        <div className="fixed inset-0 bg-green-600 z-50 flex items-center justify-center">
+          <div className="text-center text-white animate-pulse">
+            <div className="mb-4">
+              <svg 
+                className="w-16 h-16 mx-auto text-white animate-bounce" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M5 13l4 4L19 7" 
+                />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Login Successful!</h2>
+            <p className="text-green-100">Taking you to your dashboard...</p>
+          </div>
+          
+          <style>{`
+            @keyframes fadeIn {
+              from {
+                opacity: 0;
+                transform: scale(0.8);
+              }
+              to {
+                opacity: 1;
+                transform: scale(1);
+              }
+            }
+            
+            .fixed {
+              animation: fadeIn 0.5s ease-out;
+            }
+          `}</style>
+        </div>
+      )}
+      
+      <div className="min-h-screen flex">
       {/* Left Side - Brand Section */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-green-700 relative overflow-hidden">
         {/* Animated Background Pattern */}
@@ -236,6 +285,7 @@ export default function Login() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

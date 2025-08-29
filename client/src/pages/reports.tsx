@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { HardHat, TrendingUp, DollarSign, CheckCircle } from 'lucide-react';
 import { InstallerPerformanceTable } from '@/components/reports/installer-performance-table';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 interface AnalyticsData {
   executiveDashboard: {
@@ -105,7 +107,7 @@ export default function Reports() {
       if (!response.ok) throw new Error('Failed to fetch analytics data');
       return response.json();
     },
-    enabled: reportType === 'analytics'
+    enabled: reportType === 'analytics' || reportType === 'lead-origin-pie'
   });
 
   const { data: installerData, isLoading: isLoadingInstallers } = useQuery<InstallerReportsData>({
@@ -165,7 +167,7 @@ export default function Reports() {
     { value: '12', label: 'December' }
   ];
 
-  const isLoading = reportType === 'analytics' ? isLoadingAnalytics : isLoadingInstallers;
+  const isLoading = reportType === 'analytics' || reportType === 'lead-origin-pie' ? isLoadingAnalytics : isLoadingInstallers;
 
   if (isLoading) {
     return (
@@ -173,14 +175,14 @@ export default function Reports() {
         <div className="flex justify-center items-center min-h-[50vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading {reportType === 'analytics' ? 'analytics' : 'installer'} data...</p>
+            <p className="text-gray-600">Loading {reportType === 'analytics' ? 'analytics' : reportType === 'installers' ? 'installer' : 'lead origin pie chart'} data...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  if (reportType === 'analytics' && !analyticsData) {
+  if ((reportType === 'analytics' || reportType === 'lead-origin-pie') && !analyticsData) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
@@ -230,6 +232,7 @@ export default function Reports() {
                 <SelectContent>
                   <SelectItem value="analytics">Lead Analytics</SelectItem>
                   <SelectItem value="installers">Installer Reports</SelectItem>
+                  <SelectItem value="lead-origin-pie">Lead Origin Pie Chart</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -283,7 +286,7 @@ export default function Reports() {
         <div className="mt-4">
           <Badge variant="outline" className="text-sm">
             Showing data for: {
-              reportType === 'analytics' && analyticsData ? 
+              (reportType === 'analytics' || reportType === 'lead-origin-pie') && analyticsData ? 
                 (analyticsData.filterInfo.period === 'all-time' ? 'All Time' : 
                   (selectedMonth && selectedMonth !== 'all') ? `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : selectedYear
                 ) :
@@ -665,6 +668,234 @@ export default function Reports() {
                       ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* Lead Origin Pie Chart */}
+      {reportType === 'lead-origin-pie' && analyticsData && (
+        <>
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl font-semibold flex items-center gap-2">
+                  <TrendingUp className="h-6 w-6 text-blue-600" />
+                  Lead Origin Performance - Pie Chart
+                </CardTitle>
+                <p className="text-gray-600">Visual breakdown of lead sources and their conversion rates</p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Pie Chart */}
+                  <div className="h-80">
+                    <ChartContainer
+                      config={{
+                        ...analyticsData.leadOriginPerformance.reduce((acc, origin, index) => {
+                          const colors = [
+                            '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+                            '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6B7280'
+                          ];
+                          acc[origin.origin] = {
+                            label: formatOriginName(origin.origin),
+                            color: colors[index % colors.length]
+                          };
+                          return acc;
+                        }, {} as Record<string, { label: string; color: string }>)
+                      }}
+                    >
+                      <PieChart>
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-white p-3 border rounded-lg shadow-lg">
+                                  <p className="font-semibold">{formatOriginName(data.origin)}</p>
+                                  <p className="text-blue-600">Total Leads: {data.totalLeads}</p>
+                                  <p className="text-green-600">Sold: {data.soldLeads}</p>
+                                  <p className="text-purple-600">Conversion: {formatPercentage(data.conversionRate)}</p>
+                                  <p className="text-orange-600">Revenue: {formatCurrency(data.totalRevenue)}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Pie
+                          data={analyticsData.leadOriginPerformance}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ origin, percent }) => 
+                            percent > 0.05 ? `${formatOriginName(origin)} (${(percent * 100).toFixed(1)}%)` : ''
+                          }
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="totalLeads"
+                        >
+                          {analyticsData.leadOriginPerformance.map((entry, index) => {
+                            const colors = [
+                              '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+                              '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6B7280'
+                            ];
+                            return (
+                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                            );
+                          })}
+                        </Pie>
+                        <ChartLegend
+                          content={({ payload }) => (
+                            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-4">
+                              {payload?.map((entry, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-sm" 
+                                    style={{ backgroundColor: entry.color }}
+                                  />
+                                  <span className="text-sm text-gray-600">{entry.value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        />
+                      </PieChart>
+                    </ChartContainer>
+                  </div>
+
+                  {/* Lead Origin Statistics */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Summary</h3>
+                    <div className="space-y-3 max-h-80 overflow-y-auto">
+                      {analyticsData.leadOriginPerformance
+                        .sort((a, b) => b.totalLeads - a.totalLeads)
+                        .map((origin, index) => (
+                          <div key={origin.origin} className="bg-gray-50 p-4 rounded-lg">
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-semibold text-gray-900">
+                                {formatOriginName(origin.origin)}
+                              </h4>
+                              <Badge className={
+                                index === 0 ? 'bg-yellow-100 text-yellow-800' :
+                                index === 1 ? 'bg-gray-100 text-gray-800' :
+                                index === 2 ? 'bg-orange-100 text-orange-800' :
+                                'bg-blue-100 text-blue-800'
+                              }>
+                                #{index + 1}
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-600">Total Leads:</span>
+                                <span className="font-medium ml-2">{origin.totalLeads}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Sold:</span>
+                                <span className="font-medium ml-2 text-green-600">{origin.soldLeads}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Conversion:</span>
+                                <span className="font-medium ml-2 text-blue-600">
+                                  {formatPercentage(origin.conversionRate)}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Revenue:</span>
+                                <span className="font-medium ml-2 text-purple-600">
+                                  {formatCurrency(origin.totalRevenue)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="mt-2">
+                              <span className="text-gray-600 text-sm">Avg Deal Size:</span>
+                              <span className="font-medium ml-2 text-orange-600">
+                                {formatCurrency(origin.averageDealSize)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Lead Origin Insights */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">🎯 Best Converting Source</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analyticsData.leadOriginPerformance.length > 0 && (() => {
+                  const bestConverter = [...analyticsData.leadOriginPerformance]
+                    .sort((a, b) => b.conversionRate - a.conversionRate)[0];
+                  return (
+                    <div>
+                      <div className="text-2xl font-bold text-green-600 mb-1">
+                        {formatOriginName(bestConverter.origin)}
+                      </div>
+                      <div className="text-lg text-green-500">
+                        {formatPercentage(bestConverter.conversionRate)} conversion
+                      </div>
+                      <div className="text-sm text-gray-600 mt-2">
+                        {bestConverter.soldLeads} of {bestConverter.totalLeads} leads converted
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">📈 Highest Volume Source</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analyticsData.leadOriginPerformance.length > 0 && (() => {
+                  const highestVolume = [...analyticsData.leadOriginPerformance]
+                    .sort((a, b) => b.totalLeads - a.totalLeads)[0];
+                  return (
+                    <div>
+                      <div className="text-2xl font-bold text-blue-600 mb-1">
+                        {formatOriginName(highestVolume.origin)}
+                      </div>
+                      <div className="text-lg text-blue-500">
+                        {highestVolume.totalLeads} total leads
+                      </div>
+                      <div className="text-sm text-gray-600 mt-2">
+                        {formatPercentage((highestVolume.totalLeads / analyticsData.executiveDashboard.totalLeads) * 100)} of all leads
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">💰 Highest Revenue Source</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analyticsData.leadOriginPerformance.length > 0 && (() => {
+                  const highestRevenue = [...analyticsData.leadOriginPerformance]
+                    .sort((a, b) => b.totalRevenue - a.totalRevenue)[0];
+                  return (
+                    <div>
+                      <div className="text-2xl font-bold text-purple-600 mb-1">
+                        {formatOriginName(highestRevenue.origin)}
+                      </div>
+                      <div className="text-lg text-purple-500">
+                        {formatCurrency(highestRevenue.totalRevenue)}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-2">
+                        {formatPercentage((highestRevenue.totalRevenue / analyticsData.executiveDashboard.totalRevenue) * 100)} of total revenue
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </div>

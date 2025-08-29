@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Lead, Installer, LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useLeadFormChanges } from '@/hooks/use-form-changes';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,14 +35,20 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     notes: '',
     deposit_paid: false,
     balance_paid: false,
+    pickup_date: '',
     installation_date: '',
+    installation_end_date: '',
     assigned_installer: [] as string[],
     selected_colors: [] as string[]
   });
+  const [originalFormData, setOriginalFormData] = useState<typeof formData | null>(null);
   const [newNote, setNewNote] = useState('');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Track form changes to disable save button when no changes
+  const { shouldDisableSave } = useLeadFormChanges(formData, originalFormData);
 
   // Fetch WMK colors
   const { data: wmkColors = [] } = useQuery({
@@ -83,7 +90,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
 
   useEffect(() => {
     if (lead) {
-      setFormData({
+      const initialData = {
         name: lead.name || '',
         phone: lead.phone || '',
         email: lead.email || '',
@@ -97,14 +104,18 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         notes: lead.notes || '',
         deposit_paid: lead.deposit_paid || false,
         balance_paid: lead.balance_paid || false,
+        pickup_date: (lead as any).pickup_date ? new Date((lead as any).pickup_date).toISOString().split('T')[0] : '',
         installation_date: lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : '',
+        installation_end_date: (lead as any).installation_end_date ? new Date((lead as any).installation_end_date).toISOString().split('T')[0] : '',
         assigned_installer: (() => {
           if (!lead.assigned_installer) return [];
           if (Array.isArray(lead.assigned_installer)) return lead.assigned_installer;
           return lead.assigned_installer.split(',').map(s => s.trim()).filter(s => s);
         })(),
         selected_colors: (lead as any).selected_colors || []
-      });
+      };
+      setFormData(initialData);
+      setOriginalFormData(initialData); // Store original for comparison
     }
   }, [lead]);
 
@@ -146,7 +157,9 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       notes: updatedNotes || null,
       deposit_paid: formData.deposit_paid,
       balance_paid: formData.balance_paid,
+      pickup_date: formData.pickup_date ? new Date(formData.pickup_date) : null,
       installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
+      installation_end_date: formData.installation_end_date ? new Date(formData.installation_end_date) : null,
       assigned_installer: formData.assigned_installer,
       selected_colors: formData.selected_colors
     };
@@ -218,19 +231,33 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
               
               {/* Customer Address - Only show when status is sold */}
               {formData.remarks === 'Sold' && (
-                <div className="space-y-1">
-                  <Label htmlFor="customer_address" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    CUSTOMER ADDRESS FOR INSTALLATION
-                  </Label>
-                  <Textarea
-                    id="customer_address"
-                    value={formData.customer_address}
-                    onChange={(e) => setFormData({...formData, customer_address: e.target.value})}
-                    data-testid="textarea-edit-customer-address"
-                    className="text-base resize-none"
-                    rows={3}
-                    placeholder="Enter the complete installation address..."
-                  />
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="customer_address" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      CUSTOMER ADDRESS FOR INSTALLATION
+                    </Label>
+                    <Textarea
+                      id="customer_address"
+                      value={formData.customer_address}
+                      onChange={(e) => setFormData({...formData, customer_address: e.target.value})}
+                      data-testid="textarea-edit-customer-address"
+                      className="text-base resize-none"
+                      rows={3}
+                      placeholder="Enter the complete installation address..."
+                    />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor="installation_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">INSTALLATION DATE</Label>
+                    <Input
+                      id="installation_date"
+                      type="date"
+                      value={formData.installation_date}
+                      onChange={(e) => setFormData({...formData, installation_date: e.target.value})}
+                      data-testid="input-edit-installation-date"
+                      className="h-11 text-base"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -298,17 +325,32 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                 />
               </div>
               
-              {formData.remarks === 'Sold' && (
+              {formData.remarks === 'Sold' && formData.deposit_paid && (
                 <div className="space-y-1">
-                  <Label htmlFor="installation_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">INSTALLATION DATE</Label>
+                  <Label htmlFor="pickup_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">PICKUP DATE</Label>
                   <Input
-                    id="installation_date"
+                    id="pickup_date"
                     type="date"
-                    value={formData.installation_date}
-                    onChange={(e) => setFormData({...formData, installation_date: e.target.value})}
-                    data-testid="input-edit-installation-date"
+                    value={formData.pickup_date}
+                    onChange={(e) => setFormData({...formData, pickup_date: e.target.value})}
+                    data-testid="input-edit-pickup-date"
                     className="h-11 text-base"
                   />
+                </div>
+              )}
+              
+              {formData.remarks === 'Sold' && (
+                <div className="space-y-1">
+                  <Label htmlFor="installation_end_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">INSTALLATION END DATE</Label>
+                  <Input
+                    id="installation_end_date"
+                    type="date"
+                    value={formData.installation_end_date}
+                    onChange={(e) => setFormData({...formData, installation_end_date: e.target.value})}
+                    data-testid="input-edit-installation-end-date"
+                    className="h-11 text-base"
+                  />
+                  <p className="text-xs text-gray-500">Leave empty for single-day installations</p>
                 </div>
               )}
             </div>
@@ -554,9 +596,10 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
             </Button>
             <Button
               type="submit"
-              disabled={updateLeadMutation.isPending}
+              disabled={updateLeadMutation.isPending || shouldDisableSave}
               data-testid="button-save-edit"
-              className="px-8 h-10 bg-green-600 hover:bg-green-700"
+              className="px-8 h-10 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={shouldDisableSave ? "No changes to save" : ""}
             >
               {updateLeadMutation.isPending ? 'Saving...' : 'Update Lead'}
             </Button>

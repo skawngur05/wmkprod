@@ -107,7 +107,7 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/login">
-        {user ? <Redirect to={(user.role === 'admin' || user.role === 'administrator') ? '/admin' : '/dashboard'} /> : <Login />}
+        {user ? <Redirect to="/dashboard" /> : <Login />}
       </Route>
       
       <Route path="/dashboard">
@@ -197,7 +197,7 @@ function AppRouter() {
       </Route>
       
       <Route path="/">
-        <Redirect to={user?.role === 'admin' ? '/admin' : '/dashboard'} />
+        <Redirect to="/dashboard" />
       </Route>
       
       <Route component={NotFound} />
