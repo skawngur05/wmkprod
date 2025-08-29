@@ -18,7 +18,7 @@ if (!process.env.DATABASE_URL) {
 // Parse the DATABASE_URL to create proper pool config
 const dbUrl = new URL(process.env.DATABASE_URL);
 
-// Create connection pool with timeout settings for shared hosting
+// Create connection pool (only supported options)
 const connection = mysql.createPool({
   host: dbUrl.hostname,
   port: parseInt(dbUrl.port) || 3306,
@@ -26,11 +26,8 @@ const connection = mysql.createPool({
   password: dbUrl.password,
   database: dbUrl.pathname.substring(1), // Remove leading slash
   connectionLimit: 5,
-  timeout: 60000,
-  reconnect: true,
-  idleTimeout: 300000,
-  queueLimit: 0,
-  ssl: false // Usually false for shared hosting
+  queueLimit: 0
+  // ssl: undefined // Omit or set to undefined if not used
 });
 
 export const db = drizzle(connection, { schema, mode: 'default' });
