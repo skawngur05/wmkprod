@@ -134,7 +134,7 @@ export default function Leads() {
     onError: (error: Error, leadId: string, context: any) => {
       // If it's a 404 error, the lead might already be deleted
       if (error.message.includes('404')) {
-        toast({ title: "Info", description: "Lead was already deleted" });
+        toast({ title: "Info", description: "Lead has been deleted" });
         // Still refresh the data to reflect the current state
         queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
         queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });

@@ -4,8 +4,8 @@ import { useLocation } from 'wouter';
 import wmkLogo from '@/assets/wmk-logo.png';
 
 export default function Login() {
-  const [username, setUsername] = useState('kim');
-  const [password, setPassword] = useState('password');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -206,12 +206,7 @@ export default function Login() {
               </div>
 
               {/* Debug Info */}
-              <div className="text-center mt-4">
-                <div className="text-xs text-gray-500 bg-gray-100 rounded p-2">
-                  <strong>Test Accounts:</strong><br />
-                  kim, patrick, lina (password: password)
-                </div>
-              </div>
+              
             </form>
           </div>
         </div>

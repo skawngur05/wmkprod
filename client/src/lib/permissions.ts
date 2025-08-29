@@ -8,10 +8,12 @@ export const PERMISSIONS = {
   FOLLOWUPS: 'followups',
   SAMPLE_BOOKLETS: 'sample-booklets',
   INSTALLATIONS: 'installations',
+  INSTALLERS: 'installers',
   REPORTS: 'reports',
   ADMIN_PANEL: 'admin',
   USER_MANAGEMENT: 'user-management',
   EMAIL_TEMPLATES: 'email-templates',
+  ACTIVITY_LOG: 'activity-log',
   SYSTEM_SETTINGS: 'system-settings'
 } as const;
 
@@ -27,11 +29,11 @@ export const ROUTE_PERMISSIONS: Record<string, string> = {
   '/admin': PERMISSIONS.ADMIN_PANEL,
   '/admin/users': PERMISSIONS.USER_MANAGEMENT,
   '/user-management': PERMISSIONS.USER_MANAGEMENT,
-  '/admin/installers': PERMISSIONS.ADMIN_PANEL,
+  '/admin/installers': PERMISSIONS.INSTALLERS,
   '/admin/lead-origins': PERMISSIONS.ADMIN_PANEL,
   '/admin/email-templates': PERMISSIONS.EMAIL_TEMPLATES,
   '/admin/smtp-settings': PERMISSIONS.SYSTEM_SETTINGS,
-  '/admin/activity': PERMISSIONS.ADMIN_PANEL,
+  '/admin/activity': PERMISSIONS.ACTIVITY_LOG,
 };
 
 /**
@@ -90,10 +92,10 @@ export function getNavigationItems(user: User | null) {
   const adminItems = [
     { path: '/admin', icon: 'fas fa-shield-alt', label: 'Admin Dashboard', testId: 'nav-admin-dashboard', permission: PERMISSIONS.ADMIN_PANEL },
     { path: '/admin/users', icon: 'fas fa-users-cog', label: 'User Management', testId: 'nav-admin-users', permission: PERMISSIONS.USER_MANAGEMENT },
-    { path: '/admin/installers', icon: 'fas fa-user-cog', label: 'Installers', testId: 'nav-admin-installers', permission: PERMISSIONS.ADMIN_PANEL },
+    { path: '/admin/installers', icon: 'fas fa-user-cog', label: 'Installers', testId: 'nav-admin-installers', permission: PERMISSIONS.INSTALLERS },
     { path: '/admin/email-templates', icon: 'fas fa-mail-bulk', label: 'Email Templates', testId: 'nav-admin-email-templates', permission: PERMISSIONS.EMAIL_TEMPLATES },
     { path: '/admin/smtp-settings', icon: 'fas fa-server', label: 'SMTP Settings', testId: 'nav-admin-smtp', permission: PERMISSIONS.SYSTEM_SETTINGS },
-    { path: '/admin/activity', icon: 'fas fa-history', label: 'Activity Log', testId: 'nav-admin-activity', permission: PERMISSIONS.ADMIN_PANEL },
+    { path: '/admin/activity', icon: 'fas fa-history', label: 'Activity Log', testId: 'nav-admin-activity', permission: PERMISSIONS.ACTIVITY_LOG },
   ];
   
   // Filter items based on permissions

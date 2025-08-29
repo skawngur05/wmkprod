@@ -646,13 +646,27 @@ function FollowupsTable({
 
               {/* Follow-up Date - 2 columns */}
               <div className="md:col-span-2">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-orange-600" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {formatDate(lead.next_followup_date?.toString() || null)}
-                    </p>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-orange-600" />
+                    <div>
+                      <p className="text-xs text-gray-500">Next Follow-up</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {formatDate(lead.next_followup_date?.toString() || null)}
+                      </p>
+                    </div>
                   </div>
+                  {lead.installation_date && (
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <p className="text-xs text-gray-500">Installation</p>
+                        <p className="text-sm font-medium text-blue-700">
+                          {formatDate(lead.installation_date?.toString() || null)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

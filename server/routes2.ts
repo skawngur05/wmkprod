@@ -1,15 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertLeadSchema, updateLeadSchema, insertSampleBookletSchema, updateSampleBookletSchema, insertCalendarEventSchema, updateCalendarEventSchema, insertRepairRequestSchema, repairRequests, leads as leadsTable, wmkColors, completedProjects } from "@shared/schema";
+import { insertLeadSchema, updateLeadSchema, insertSampleBookletSchema, updateSampleBookletSchema, insertCalendarEventSchema, updateCalendarEventSchema, insertRepairRequestSchema, repairRequests, leads as leadsTable, wmkColors } from "@shared/schema";
 import { uspsService } from "./usps-service";
 import { trackingScheduler } from "./tracking-scheduler";
 import { z } from "zod";
 import { emailService } from "./email-service";
 import { eq, like, or, desc, and } from 'drizzle-orm';
 import { db } from './db';
-import path from "path";
-import fs from "fs";
 
 const loginSchema = z.object({
   username: z.string(),
@@ -18,103 +16,16 @@ const loginSchema = z.object({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // API Test page route (serve the test HTML)
-  app.get("/api-test.html", (req, res) => {
-    const testPagePath = path.resolve(process.cwd(), "api-test.html");
-    if (fs.existsSync(testPagePath)) {
-      res.sendFile(testPagePath);
-    } else {
-      res.status(404).send("API test page not found");
-    }
-  });
-
-  // Health check endpoint for debugging
-  app.get("/api/health", (req, res) => {
-    res.json({ 
-      status: "ok", 
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-      port: process.env.PORT 
-    });
-  });
-
-  // Database health check
-  app.get("/api/health/db", async (req, res) => {
-    try {
-      const users = await storage.getUsers();
-      res.json({ 
-        status: "ok", 
-        database: "connected",
-        userCount: users.length,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error("Database health check failed:", error);
-      res.status(500).json({ 
-        status: "error", 
-        database: "disconnected",
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-  
   // Auth endpoints
   app.post("/api/auth/login", async (req, res) => {
     try {
-      console.log("=== LOGIN REQUEST START ===");
-      console.log("Request headers:", req.headers);
-      console.log("Request body:", req.body);
+      console.log("Login request body:", req.body);
       console.log("Body type:", typeof req.body);
-      console.log("Content-Type:", req.get('Content-Type'));
       
-      // Validate request body exists
-      if (!req.body) {
-        console.log("❌ No request body found");
-        return res.status(400).json({ message: "Request body is required" });
-      }
-
-      // Parse and validate using Zod
-      const parseResult = loginSchema.safeParse(req.body);
-      if (!parseResult.success) {
-        console.log("❌ Zod validation failed:", parseResult.error);
-        return res.status(400).json({ 
-          message: "Invalid request data", 
-          errors: parseResult.error.errors 
-        });
-      }
-
-      const { username, password } = parseResult.data;
-      console.log(`🔍 Looking up user: "${username}"`);
-      
-      // Test database connection first
-      try {
-        const user = await storage.getUserByUsername(username.toLowerCase());
-        console.log("✅ Database query successful");
-        console.log("Retrieved user:", user ? { id: user.id, username: user.username, role: user.role } : null);
-        
-        if (!user) {
-          console.log("❌ User not found in database");
-          return res.status(401).json({ message: "Invalid credentials" });
-        }
-
-        console.log(`🔐 Testing password for user: ${user.username}`);
-        console.log(`Expected password: "${password}"`);
-        console.log(`Stored password: "${user.password}"`);
-        
-        if (user.password !== password) {
-          console.log("❌ Password mismatch");
-          return res.status(401).json({ message: "Invalid credentials" });
-        }
-
-        console.log("✅ Password matches");
-        
-      } catch (dbError) {
-        console.error("❌ Database error during user lookup:", dbError);
-        return res.status(500).json({ message: "Database connection error" });
-      }
-
+      const { username, password } = loginSchema.parse(req.body);
       const user = await storage.getUserByUsername(username.toLowerCase());
+      
+      console.log("Retrieved user:", user);
       console.log("User permissions type:", typeof user?.permissions);
       console.log("User permissions value:", user?.permissions);
       
@@ -732,7 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {} as Record<string, { total: number; sold: number; revenue: number }>);
       
-      const leadOriginPerformance = Object.entries(originStats).map(([origin, stats]: [string, { total: number; sold: number; revenue: number }]) => ({
+      const leadOriginPerformance = Object.entries(originStats).map(([origin, stats]) => ({
         origin,
         totalLeads: stats.total,
         soldLeads: stats.sold,
@@ -755,7 +666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {} as Record<string, { total: number; sold: number; revenue: number }>);
       
-      const teamPerformance = Object.entries(teamStats).map(([member, stats]: [string, { total: number; sold: number; revenue: number }]) => ({
+      const teamPerformance = Object.entries(teamStats).map(([member, stats]) => ({
         member,
         totalLeads: stats.total,
         soldLeads: stats.sold,
@@ -839,109 +750,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch available years" });
     }
   });
-
-  // Installer Reports API
-  app.get("/api/reports/installers", async (req, res) => {
-    try {
-      const { year, month } = req.query;
-      
-      // Get completed projects from the database
-      const completedProjectsQuery = db.select().from(completedProjects);
-      let completedProjectsData = await completedProjectsQuery;
-      
-      // Apply date filters if provided
-      if (year) {
-        const yearNum = parseInt(year as string);
-        completedProjectsData = completedProjectsData.filter(project => {
-          if (!project.completion_date) return false;
-          const projectYear = new Date(project.completion_date).getFullYear();
-          return projectYear === yearNum;
-        });
-      }
-      
-      if (month && year) {
-        const monthNum = parseInt(month as string);
-        completedProjectsData = completedProjectsData.filter(project => {
-          if (!project.completion_date) return false;
-          const projectMonth = new Date(project.completion_date).getMonth() + 1;
-          return projectMonth === monthNum;
-        });
-      }
-      
-      // Group by installer and calculate metrics
-      const installerMetrics = new Map<string, {
-        installerName: string;
-        totalInstallations: number;
-        totalValue: number;
-        averageProjectValue: number;
-        completedInstallations: number;
-        pendingInstallations: number;
-        installations: Array<{
-          projectId: number;
-          customerName: string;
-          projectValue: number;
-          installationDate: string;
-          status: 'completed' | 'pending';
-        }>;
-      }>();
-      
-      // Process completed projects
-      for (const project of completedProjectsData) {
-        if (!project.assigned_installer) continue;
-        
-        const installerName = project.assigned_installer;
-        
-        if (!installerMetrics.has(installerName)) {
-          installerMetrics.set(installerName, {
-            installerName,
-            totalInstallations: 0,
-            totalValue: 0,
-            averageProjectValue: 0,
-            completedInstallations: 0,
-            pendingInstallations: 0,
-            installations: []
-          });
-        }
-        
-        const installer = installerMetrics.get(installerName)!;
-        installer.totalInstallations++;
-        installer.completedInstallations++;
-        installer.totalValue += parseFloat(project.project_amount?.toString() || '0');
-        installer.installations.push({
-          projectId: project.id,
-          customerName: project.customer_name,
-          projectValue: parseFloat(project.project_amount?.toString() || '0'),
-          installationDate: project.completion_date?.toString() || '',
-          status: 'completed'
-        });
-      }
-      
-      // Calculate average project values
-      for (const installer of installerMetrics.values()) {
-        installer.averageProjectValue = installer.totalInstallations > 0 
-          ? installer.totalValue / installer.totalInstallations 
-          : 0;
-      }
-      
-      const installers = Array.from(installerMetrics.values());
-      const totalInstallations = installers.reduce((sum, installer) => sum + installer.totalInstallations, 0);
-      const totalValue = installers.reduce((sum, installer) => sum + installer.totalValue, 0);
-      
-      res.json({
-        installers,
-        totalInstallations,
-        totalValue,
-        filterInfo: {
-          year: year ? parseInt(year as string) : null,
-          month: month ? parseInt(month as string) : null,
-          period: year ? (month ? `${year}-${String(month).padStart(2, '0')}` : year) : 'all-time'
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching installer reports:', error);
-      res.status(500).json({ message: "Failed to fetch installer reports data" });
-    }
-  });
   
   // Installation Email Notification API
   app.post("/api/installations/email", async (req, res) => {
@@ -984,14 +792,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         recipient = installation.email;
-        subject = `Wrap My Kitchen Installation Confirmation - ${formattedDate}`;
+        subject = `WMK Kitchen Installation Confirmation - ${formattedDate}`;
         emailContent = `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wrap My Kitchen - Installation Confirmation</title>
+    <title>WMK Kitchen Solutions - Installation Confirmation</title>
 </head>
 <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
     
@@ -1002,7 +810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <tr>
             <td style="padding: 30px 20px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #e9ecef;">
                 <h1 style="margin: 0; font-size: 36px; font-weight: bold; color: #2c3e50;">
-                    WrapMy<span style="color: #007bff; font-weight: bold;">Kitchen</span>
+                    WMK<span style="color: #007bff; font-weight: bold;">Kitchen</span>
                 </h1>
                 <div style="margin: 10px 0 0; font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;">
                     Kitchen Transformation Specialists
@@ -1024,7 +832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <!-- Greeting -->
                 <p style="font-size: 16px; color: #495057; margin-bottom: 25px; line-height: 1.7;">
                     Dear <strong>${installation.name}</strong>,<br><br>
-                    We are pleased to confirm your kitchen installation appointment with <strong>Wrap My Kitchen</strong>. Our professional team is ready to transform your kitchen!
+                    We are pleased to confirm your kitchen installation appointment with <strong>WMK Kitchen Solutions</strong>. Our professional team is ready to transform your kitchen!
                 </p>
                 
                 <!-- Installation Header -->
@@ -1074,50 +882,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         </tr>
                         <tr>
                             <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>� Email</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.email || 'Not provided'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>📍 Address</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.address || 'Not provided'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>�💰 Project Value</strong>
+                                <strong>💰 Project Value</strong>
                             </td>
                             <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
                                 ${installation.project_amount ? `$${parseInt(installation.project_amount).toLocaleString()}` : 'Contact office for details'}
                             </td>
                         </tr>
-                        ${installation.selected_colors ? (() => {
-                          try {
-                            const colors = typeof installation.selected_colors === 'string' 
-                              ? JSON.parse(installation.selected_colors) 
-                              : installation.selected_colors;
-                            
-                            if (Array.isArray(colors) && colors.length > 0) {
-                              return `
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>🎨 Selected Colors</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                <strong style="color: #2c3e50; font-size: 14px;">${colors.join(', ')}</strong>
-                            </td>
-                        </tr>`;
-                            }
-                          } catch (e) {
-                            console.error('Error parsing selected_colors:', e);
-                          }
-                          return '';
-                        })() : ''}
                         <tr style="background-color: #f8f9fa;">
                             <td style="padding: 15px; color: #2c3e50; font-weight: 600; font-size: 16px;">
                                 <strong>🔧 Lead Installer</strong>
@@ -1219,24 +989,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <tr>
             <td style="background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 30px 20px;">
                 <h4 style="margin: 0 0 15px; color: white; font-size: 18px; font-weight: 600;">
-                    Wrap My Kitchen
+                    WMK Kitchen Solutions
                 </h4>
                 <p style="margin: 8px 0;">Questions about your installation? We're here to help!</p>
-                <p style="margin: 8px 0;"><strong>📞 Phone:</strong> (954) 799-6844</p>
+                <p style="margin: 8px 0;"><strong>📞 Phone:</strong> (XXX) XXX-XXXX</p>
                 <p style="margin: 8px 0;">
                     <strong>📧 Email:</strong> 
-                    <a href="mailto:info@wrapmykitchen.com" style="color: #007bff; text-decoration: none;">
-                        info@wrapmykitchen.com
+                    <a href="mailto:installations@wmk-kitchen.com" style="color: #007bff; text-decoration: none;">
+                        installations@wmk-kitchen.com
                     </a>
                 </p>
                 <p style="margin: 8px 0;">
                     <strong>🌐 Website:</strong> 
-                    <a href="https://wrapmykitchen.com" style="color: #007bff; text-decoration: none;">
-                        www.wrapmykitchen.com
+                    <a href="https://wmk-kitchen.com" style="color: #007bff; text-decoration: none;">
+                        www.wmk-kitchen.com
                     </a>
                 </p>
                 <p style="margin-top: 20px; font-size: 13px; color: #bdc3c7;">
-                    © 2025 Wrap My Kitchen. All rights reserved.<br>
+                    © 2025 WMK Kitchen Solutions. All rights reserved.<br>
                     Quality • Craftsmanship • Excellence
                 </p>
             </td>
@@ -1253,27 +1023,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No installer assigned" });
         }
         
-        // Get installer email from database
-        const installerData = await storage.getInstallers();
-        const installer = installerData.find(inst => 
-          inst.name.toLowerCase() === installation.assigned_installer.toLowerCase()
-        );
+        // For demo purposes, using a generic installer email
+        // In production, you'd have installer email addresses in your system
+        const installerEmails: Record<string, string> = {
+          'angel': 'angel@company.com',
+          'brian': 'brian@company.com', 
+          'luis': 'luis@company.com'
+        };
         
-        if (!installer || !installer.email) {
-          return res.status(400).json({ 
-            message: `No email address found for installer: ${installation.assigned_installer}` 
-          });
-        }
-        
-        recipient = installer.email;
-        subject = `Wrap My Kitchen Installation Assignment - ${formattedDate} - ${installation.name}`;
+        recipient = installerEmails[installation.assigned_installer] || 'installer@company.com';
+        subject = `WMK Installation Assignment - ${formattedDate} - ${installation.name}`;
         emailContent = `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wrap My Kitchen - Installation Assignment</title>
+    <title>WMK Kitchen Solutions - Installation Assignment</title>
 </head>
 <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
     
@@ -1284,7 +1050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <tr>
             <td style="padding: 30px 20px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #e9ecef;">
                 <h1 style="margin: 0; font-size: 36px; font-weight: bold; color: #2c3e50;">
-                    WrapMy<span style="color: #fd7e14; font-weight: bold;">Kitchen</span>
+                    WMK<span style="color: #fd7e14; font-weight: bold;">Kitchen</span>
                 </h1>
                 <div style="margin: 10px 0 0; font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;">
                     Professional Installation Team
@@ -1306,7 +1072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <!-- Greeting -->
                 <p style="font-size: 16px; color: #495057; margin-bottom: 25px; line-height: 1.7;">
                     Hi <strong>${installation.assigned_installer?.charAt(0).toUpperCase()}${installation.assigned_installer?.slice(1)}</strong>,<br><br>
-                    You have been assigned a new kitchen installation for <strong>Wrap My Kitchen </strong>. Please review the details below and prepare accordingly.
+                    You have been assigned a new kitchen installation for <strong>WMK Kitchen Solutions</strong>. Please review the details below and prepare accordingly.
                 </p>
                 
                 <!-- Assignment Header -->
@@ -1364,42 +1130,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         </tr>
                         <tr>
                             <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>� Address</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${installation.address || 'Not provided'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>�💰 Project Value</strong>
+                                <strong>💰 Project Value</strong>
                             </td>
                             <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
                                 ${installation.project_amount ? `$${parseInt(installation.project_amount).toLocaleString()}` : 'Contact office'}
                             </td>
                         </tr>
-                        ${installation.selected_colors ? (() => {
-                          try {
-                            const colors = typeof installation.selected_colors === 'string' 
-                              ? JSON.parse(installation.selected_colors) 
-                              : installation.selected_colors;
-                            
-                            if (Array.isArray(colors) && colors.length > 0) {
-                              return `
-                        <tr>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057;">
-                                <strong>🎨 Selected Colors</strong>
-                            </td>
-                            <td style="padding: 15px; border-bottom: 1px solid #f1f3f4; color: #495057; text-align: right;">
-                                ${colors.join(', ')}
-                            </td>
-                        </tr>`;
-                            }
-                          } catch (e) {
-                            console.error('Error parsing selected_colors:', e);
-                          }
-                          return '';
-                        })() : ''}
                     </tbody>
                 </table>
                 
@@ -1440,19 +1176,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                             </h3>
                             <table width="100%" border="0" cellspacing="0" cellpadding="8" style="background-color: rgba(255, 255, 255, 0.1); margin: 15px 0;">
                                 <tr>
-                                    <td style="text-align: left; color: white;">- Review project specifications and materials list</td>
+                                    <td style="text-align: left; color: white;">□ Review project specifications and materials list</td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; color: white;">- Confirm all materials are loaded and ready</td>
+                                    <td style="text-align: left; color: white;">□ Confirm all materials are loaded and ready</td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; color: white;">- Contact customer 24 hours prior to confirm</td>
+                                    <td style="text-align: left; color: white;">□ Contact customer 24 hours prior to confirm</td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; color: white;">- Verify access and parking availability</td>
+                                    <td style="text-align: left; color: white;">□ Verify access and parking availability</td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; color: white;">- Ensure all tools and equipment are prepared</td>
+                                    <td style="text-align: left; color: white;">□ Ensure all tools and equipment are prepared</td>
                                 </tr>
                             </table>
                         </td>
@@ -1526,24 +1262,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <tr>
             <td style="background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 30px 20px;">
                 <h4 style="margin: 0 0 15px; color: white; font-size: 18px; font-weight: 600;">
-                    Wrap My Kitchen Solutions - Installation Team
+                    WMK Kitchen Solutions - Installation Team
                 </h4>
                 <p style="margin: 8px 0;">Questions or support needed? Contact the office immediately.</p>
-                <p style="margin: 8px 0;"><strong>📞 Office:</strong> (954) 799-6844</p>
+                <p style="margin: 8px 0;"><strong>📞 Office:</strong> (XXX) XXX-XXXX</p>
                 <p style="margin: 8px 0;">
                     <strong>📧 Email:</strong> 
-                    <a href="mailto:info@wrapmykitchen.com" style="color: #fd7e14; text-decoration: none;">
-                        info@wrapmykitchen.com
+                    <a href="mailto:management@wmk-kitchen.com" style="color: #fd7e14; text-decoration: none;">
+                        management@wmk-kitchen.com
                     </a>
                 </p>
                 <p style="margin: 8px 0;">
                     <strong>🌐 Website:</strong> 
-                    <a href="https://www.wrapmykitchen.com" style="color: #fd7e14; text-decoration: none;">
-                        www.wrapmykitchen.com
+                    <a href="https://wmk-kitchen.com" style="color: #fd7e14; text-decoration: none;">
+                        www.wmk-kitchen.com
                     </a>
                 </p>
                 <p style="margin-top: 20px; font-size: 13px; color: #bdc3c7;">
-                    © 2025 Wrap My Kitchen. All rights reserved.<br>
+                    © 2025 WMK Kitchen Solutions. All rights reserved.<br>
                     Excellence in Every Installation
                 </p>
             </td>
@@ -2023,25 +1759,6 @@ WMK CRM System`
       res.json(users.map(user => ({ ...user, password: undefined }))); // Don't send passwords
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch users" });
-    }
-  });
-
-  // Get specific user by ID
-  app.get("/api/admin/users/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const user = await storage.getUser(id);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Don't send password in response
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      console.error('Get user error:', error);
-      res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 

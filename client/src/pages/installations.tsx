@@ -245,7 +245,10 @@ function InstallationCard({
                   size="sm" 
                   variant="outline" 
                   className="w-full h-8 text-xs text-green-600 border-green-200 hover:bg-green-50"
-                  onClick={() => onEmailClient(installation)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEmailClient(installation);
+                  }}
                   data-testid={`button-email-client-${installation.id}`}
                 >
                   <Mail className="h-3 w-3 mr-1" />
@@ -258,7 +261,10 @@ function InstallationCard({
                   size="sm" 
                   variant="outline" 
                   className="w-full h-8 text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
-                  onClick={() => onEmailInstaller(installation)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEmailInstaller(installation);
+                  }}
                   data-testid={`button-email-installer-${installation.id}`}
                 >
                   <HardHat className="h-3 w-3 mr-1" />
@@ -308,6 +314,16 @@ export default function Installations() {
     queryFn: async () => {
       const response = await fetch('/api/repair-requests');
       if (!response.ok) throw new Error('Failed to fetch repair requests');
+      return response.json();
+    }
+  });
+
+  // Fetch completed projects to check if installations are already completed
+  const { data: completedProjectsData, isLoading: isLoadingCompleted } = useQuery({
+    queryKey: ['/api/completed-projects'],
+    queryFn: async () => {
+      const response = await fetch('/api/completed-projects');
+      if (!response.ok) throw new Error('Failed to fetch completed projects');
       return response.json();
     }
   });
@@ -463,7 +479,7 @@ export default function Installations() {
     handleEditRepairRequest(repairRequest);
   };
 
-  if (isLoading || isLoadingInstallers) {
+  if (isLoading || isLoadingInstallers || isLoadingCompleted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -486,6 +502,12 @@ export default function Installations() {
     const additionalNotesText = (install.additional_notes || '');
     const isCompletedResult = additionalNotesText.includes('Installation completed and moved to completed projects');
     return isCompletedResult;
+  };
+
+  // Check if an installation is already in the completed_projects table
+  const isInCompletedProjects = (installation: Lead) => {
+    if (!completedProjectsData) return false;
+    return completedProjectsData.some((completed: any) => completed.lead_id === installation.id);
   };
 
   // Helper function to compare dates without time
@@ -1018,13 +1040,23 @@ export default function Installations() {
                     <Edit className="h-4 w-4 mr-1" />
                     Edit Details
                   </Button>
-                  <Button 
-                    onClick={() => handleMarkAsDone(selectedInstallation)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Mark as Done
-                  </Button>
+                  {!isInCompletedProjects(selectedInstallation) ? (
+                    <Button 
+                      onClick={() => handleMarkAsDone(selectedInstallation)}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Mark as Done
+                    </Button>
+                  ) : (
+                    <Button 
+                      disabled
+                      className="bg-gray-400 text-white cursor-not-allowed"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Completed
+                    </Button>
+                  )}
                   {selectedInstallation.email && (
                     <Button 
                       variant="outline"

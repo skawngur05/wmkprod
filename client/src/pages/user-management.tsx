@@ -64,6 +64,7 @@ const AVAILABLE_PERMISSIONS = [
   { id: 'admin', label: 'Admin Panel', description: 'Access administrative functions', minRole: 4 },
   { id: 'user-management', label: 'User Management', description: 'Create and manage user accounts', minRole: 4 },
   { id: 'email-templates', label: 'Email Templates', description: 'Manage email templates', minRole: 4 },
+  { id: 'activity-log', label: 'Activity Log', description: 'View system activity logs and user actions', minRole: 4 },
   { id: 'system-settings', label: 'System Settings', description: 'Configure system-wide settings', minRole: 5 },
 ] as const;
 
@@ -243,14 +244,14 @@ export default function UserManagement() {
               Create User
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
               <DialogDescription>
                 Create a new user account with role-based permissions
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-6">
+            <div className="space-y-6 pb-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="username">Username *</Label>
@@ -347,13 +348,23 @@ export default function UserManagement() {
                 <Label className="text-base font-semibold">Page Permissions</Label>
                 <p className="text-sm text-gray-600 mb-3">Select which pages this user can access</p>
                 <div className="grid grid-cols-2 gap-3">
-                  {AVAILABLE_PERMISSIONS.map((permission) => (
+                  {AVAILABLE_PERMISSIONS
+                    .filter((permission) => {
+                      // If current user is an owner, only show permissions they currently have
+                      if (user?.role === 'owner') {
+                        const userPermissions = parsePermissions(user.permissions || []);
+                        return userPermissions.includes(permission.id);
+                      }
+                      // Admins can assign all permissions
+                      return true;
+                    })
+                    .map((permission) => (
                     <div key={permission.id} className="flex items-start space-x-2 p-3 border rounded-lg">
                       <Checkbox
                         id={permission.id}
                         checked={newUser.permissions.includes(permission.id)}
                         onCheckedChange={() => handlePermissionToggle(permission.id)}
-                        disabled={false} // Allow admins to set permissions for all user types
+                        disabled={false}
                         data-testid={`checkbox-${permission.id}`}
                       />
                       <div className="flex-1">
@@ -365,15 +376,16 @@ export default function UserManagement() {
                     </div>
                   ))}
                 </div>
-                {(newUser.role === 'admin' || newUser.role === 'owner') && (
+                {user?.role === 'owner' && (
                   <p className="text-sm text-blue-600 mt-2">
                     <Shield className="h-4 w-4 inline mr-1" />
-                    Note: {newUser.role === 'admin' ? 'Administrators' : 'Owners'} typically have access to all pages by default, but you can customize their permissions if needed.
+                    As an owner, you can only assign permissions that you currently have access to.
                   </p>
                 )}
-                {newUser.role && newUser.role !== 'admin' && newUser.role !== 'owner' && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    Permissions automatically assigned based on role hierarchy. You can customize them below.
+                {user?.role === 'admin' && newUser.role === 'admin' && (
+                  <p className="text-sm text-blue-600 mt-2">
+                    <Shield className="h-4 w-4 inline mr-1" />
+                    Administrators typically have access to all pages by default, but you can customize their permissions if needed.
                   </p>
                 )}
               </div>
@@ -441,7 +453,7 @@ export default function UserManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {(tableUser.role === 'admin' || tableUser.role === 'owner') ? (
+                      {tableUser.role === 'admin' ? (
                         <Badge variant="outline" className="text-xs">All Permissions</Badge>
                       ) : (
                         parsePermissions(tableUser.permissions).slice(0, 2).map((perm: string) => (
@@ -450,7 +462,7 @@ export default function UserManagement() {
                           </Badge>
                         ))
                       )}
-                      {parsePermissions(tableUser.permissions).length > 2 && tableUser.role !== 'admin' && tableUser.role !== 'owner' && (
+                      {parsePermissions(tableUser.permissions).length > 2 && tableUser.role !== 'admin' && (
                         <Badge variant="outline" className="text-xs">
                           +{parsePermissions(tableUser.permissions).length - 2} more
                         </Badge>
@@ -467,8 +479,9 @@ export default function UserManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {/* Only allow editing if current user has equal or higher authority */}
-                      {(ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) >= (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0) ? (
+                      {/* Only allow editing if current user has higher authority, except admins can edit equals */}
+                      {((ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) > (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0)) || 
+                       (user?.role === 'admin' && (ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) >= (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0)) ? (
                         <Button 
                           variant="outline" 
                           size="sm"
@@ -499,8 +512,10 @@ export default function UserManagement() {
                           <Edit className="h-4 w-4" />
                         </Button>
                       )}
-                      {/* Only allow deleting if current user has equal or higher authority and it's not the admin user */}
-                      {tableUser.username !== 'admin' && (ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) >= (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0) ? (
+                      {/* Only allow deleting if current user has higher authority, except admins can delete equals, and never delete admin user */}
+                      {tableUser.username !== 'admin' && 
+                       (((ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) > (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0)) || 
+                        (user?.role === 'admin' && (ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY] || 0) >= (ROLE_HIERARCHY[tableUser.role as keyof typeof ROLE_HIERARCHY] || 0))) ? (
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -611,6 +626,7 @@ export default function UserManagement() {
                   <Select 
                     value={editingUser.role} 
                     onValueChange={(value) => handleRoleChange(value, true)}
+                    disabled={editingUser.role === 'owner' && editingUser.username === user?.username}
                   >
                     <SelectTrigger data-testid="select-edit-role">
                       <SelectValue />
@@ -629,6 +645,9 @@ export default function UserManagement() {
                       )}
                     </SelectContent>
                   </Select>
+                  {editingUser.role === 'owner' && editingUser.username === user?.username && (
+                    <p className="text-xs text-gray-500 mt-1">You cannot change your own role.</p>
+                  )}
                 </div>
 
                 <div>
@@ -640,7 +659,7 @@ export default function UserManagement() {
                         <Checkbox
                           checked={(editingUser.permissions || []).includes(permission.id)}
                           onCheckedChange={() => handlePermissionToggle(permission.id, true)}
-                          disabled={false} // Allow admins to modify permissions for all users
+                          disabled={editingUser.role === 'owner' && editingUser.username === user?.username}
                           data-testid={`checkbox-edit-${permission.id}`}
                         />
                         <div className="flex-1">
@@ -652,11 +671,27 @@ export default function UserManagement() {
                       </div>
                     ))}
                   </div>
-                  {(editingUser.role === 'admin' || editingUser.role === 'owner') && (
+                  {editingUser.role === 'owner' && editingUser.username === user?.username && (
                     <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-md">
                       <p className="text-sm text-blue-800 flex items-center">
                         <Shield className="h-4 w-4 mr-2" />
-                        Note: {editingUser.role === 'admin' ? 'Administrators' : 'Owners'} typically have access to all pages by default, but you can still customize their permissions if needed.
+                        You cannot change your own page permissions. Only admins can modify your permissions.
+                      </p>
+                    </div>
+                  )}
+                  {editingUser.role === 'owner' && editingUser.username !== user?.username && (
+                    <div className="mt-4 p-3 bg-yellow-100 border border-yellow-200 rounded-md">
+                      <p className="text-sm text-yellow-800 flex items-center">
+                        <Shield className="h-4 w-4 mr-2" />
+                        As an owner, you can modify permissions for other owners, but only admins can modify your permissions.
+                      </p>
+                    </div>
+                  )}
+                  {editingUser.role === 'admin' && (
+                    <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-md">
+                      <p className="text-sm text-blue-800 flex items-center">
+                        <Shield className="h-4 w-4 mr-2" />
+                        Administrators have access to all pages by default, but you can customize their permissions if needed.
                       </p>
                     </div>
                   )}
