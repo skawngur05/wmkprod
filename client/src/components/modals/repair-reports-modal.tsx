@@ -18,6 +18,14 @@ interface RepairReportsModalProps {
 }
 
 export function RepairReportsModal({ show, onHide }: RepairReportsModalProps) {
+  // Helper function to get today's date in YYYY-MM-DD format (timezone-safe)
+  const getTodayDateString = () => {
+    const today = new Date();
+    return today.getFullYear() + '-' + 
+           String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+           String(today.getDate()).padStart(2, '0');
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState<Lead | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -28,7 +36,7 @@ export function RepairReportsModal({ show, onHide }: RepairReportsModalProps) {
     address: '',
     issue_description: '',
     priority: 'Medium' as 'Low' | 'Medium' | 'High' | 'Urgent',
-    date_reported: new Date().toISOString().split('T')[0],
+    date_reported: getTodayDateString(),
   });
 
   const { toast } = useToast();
@@ -95,7 +103,7 @@ export function RepairReportsModal({ show, onHide }: RepairReportsModalProps) {
       address: '',
       issue_description: '',
       priority: 'Medium',
-      date_reported: new Date().toISOString().split('T')[0],
+      date_reported: getTodayDateString(),
     });
     setSelectedProject(null);
     setShowCreateForm(false);
@@ -228,7 +236,7 @@ export function RepairReportsModal({ show, onHide }: RepairReportsModalProps) {
                               {project.installation_date && (
                                 <div className="flex items-center gap-1 mt-1">
                                   <Calendar className="h-3 w-3" />
-                                  {new Date(project.installation_date).toLocaleDateString()}
+                                  {project.installation_date}
                                 </div>
                               )}
                             </div>
@@ -379,7 +387,7 @@ export function RepairReportsModal({ show, onHide }: RepairReportsModalProps) {
                           <div className="flex items-center gap-4 text-xs text-gray-500">
                             <span>📞 {request.phone}</span>
                             {request.email && <span>✉️ {request.email}</span>}
-                            <span>📅 {new Date(request.date_reported).toLocaleDateString()}</span>
+                            <span>📅 {request.date_reported}</span>
                           </div>
                         </div>
                       </div>

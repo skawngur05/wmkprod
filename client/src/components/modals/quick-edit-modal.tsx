@@ -22,6 +22,23 @@ interface QuickEditModalProps {
 }
 
 export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalProps) {
+  // Helper function to format date without timezone issues
+  const formatDateForInput = (dateValue: string | Date | null) => {
+    if (!dateValue) return '';
+    // If it's already a string in YYYY-MM-DD format, return as-is
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    // If it's a Date object or other format, convert to YYYY-MM-DD
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '';
+    // Use local time methods since we're storing as simple strings
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -49,6 +66,9 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
 
   // Track form changes to disable save button when no changes
   const { shouldDisableSave } = useLeadFormChanges(formData, originalFormData);
+  
+  // Include newNote in the disable logic - if there's a new note, enable the save button
+  const shouldDisableSaveButton = shouldDisableSave && !newNote.trim();
 
   // Fetch WMK colors
   const { data: wmkColors = [] } = useQuery({
@@ -99,14 +119,13 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         assigned_to: lead.assigned_to || '',
         customer_address: (lead as any).customer_address || '',
         project_amount: lead.project_amount ? lead.project_amount.toString() : '',
-        next_followup_date: lead.next_followup_date ? 
-          new Date(lead.next_followup_date).toISOString().split('T')[0] : '',
+        next_followup_date: formatDateForInput(lead.next_followup_date),
         notes: lead.notes || '',
         deposit_paid: lead.deposit_paid || false,
         balance_paid: lead.balance_paid || false,
-        pickup_date: (lead as any).pickup_date ? new Date((lead as any).pickup_date).toISOString().split('T')[0] : '',
-        installation_date: lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : '',
-        installation_end_date: (lead as any).installation_end_date ? new Date((lead as any).installation_end_date).toISOString().split('T')[0] : '',
+        pickup_date: formatDateForInput((lead as any).pickup_date),
+        installation_date: formatDateForInput(lead.installation_date),
+        installation_end_date: formatDateForInput((lead as any).installation_end_date),
         assigned_installer: (() => {
           if (!lead.assigned_installer) return [];
           if (Array.isArray(lead.assigned_installer)) return lead.assigned_installer;
@@ -125,24 +144,48 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     // Handle new note addition and color selection note
     let updatedNotes = formData.notes || '';
     if (newNote.trim()) {
-      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const today = new Date();
+      const timestamp = today.getFullYear() + '-' + 
+                       String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(today.getDate()).padStart(2, '0');
       const newNoteWithTimestamp = `[${timestamp}] ${newNote.trim()}`;
       updatedNotes = updatedNotes ? `${updatedNotes}\n${newNoteWithTimestamp}` : newNoteWithTimestamp;
     }
     
     // Add installer assignment note if installers are assigned
     if (formData.remarks === 'Sold' && formData.assigned_installer.length > 0) {
-      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const today = new Date();
+      const timestamp = today.getFullYear() + '-' + 
+                       String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(today.getDate()).padStart(2, '0');
       const installerNote = `[${timestamp}] Assigned installers: ${formData.assigned_installer.map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ')}`;
       updatedNotes = updatedNotes ? `${updatedNotes}\n${installerNote}` : installerNote;
     }
     
     // Add color selection note after payment status if colors are selected
     if (formData.remarks === 'Sold' && formData.selected_colors.length > 0 && (formData.deposit_paid || formData.balance_paid)) {
-      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const today = new Date();
+      const timestamp = today.getFullYear() + '-' + 
+                       String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(today.getDate()).padStart(2, '0');
       const colorNote = `[${timestamp}] Selected colors: ${formData.selected_colors.join(', ')}`;
       updatedNotes = updatedNotes ? `${updatedNotes}\n${colorNote}` : colorNote;
     }
+
+    // PRODUCTION BULLETPROOF FIX: Ensure all dates are strings
+    const ensureDateString = (dateValue: any): string | null => {
+      if (!dateValue) return null;
+      if (typeof dateValue === 'string') return dateValue;
+      if (dateValue instanceof Date) {
+        const year = dateValue.getFullYear();
+        const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const day = String(dateValue.getDate()).padStart(2, '0');
+        const result = `${year}-${month}-${day}`;
+        console.log(`🔧 PRODUCTION FIX: Converted Date object to string: ${result}`);
+        return result;
+      }
+      return String(dateValue);
+    };
 
     const updates = {
       name: formData.name,
@@ -153,13 +196,13 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       assigned_to: formData.assigned_to,
       customer_address: formData.customer_address || null,
       project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null,
-      next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date) : null,
+      next_followup_date: ensureDateString(formData.next_followup_date),
       notes: updatedNotes || null,
       deposit_paid: formData.deposit_paid,
       balance_paid: formData.balance_paid,
-      pickup_date: formData.pickup_date ? new Date(formData.pickup_date) : null,
-      installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
-      installation_end_date: formData.installation_end_date ? new Date(formData.installation_end_date) : null,
+      pickup_date: ensureDateString(formData.pickup_date),
+      installation_date: ensureDateString(formData.installation_date),
+      installation_end_date: ensureDateString(formData.installation_end_date),
       assigned_installer: formData.assigned_installer,
       selected_colors: formData.selected_colors
     };
@@ -223,6 +266,25 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                     {ASSIGNEES.map(assignee => (
                       <SelectItem key={assignee} value={assignee}>
                         {assignee.charAt(0).toUpperCase() + assignee.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="lead_origin" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">LEAD ORIGIN</Label>
+                <Select
+                  value={formData.lead_origin}
+                  onValueChange={(value) => setFormData({...formData, lead_origin: value})}
+                >
+                  <SelectTrigger data-testid="select-edit-lead-origin" className="h-11 text-base">
+                    <SelectValue placeholder="Select lead origin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_ORIGINS.map(origin => (
+                      <SelectItem key={origin} value={origin}>
+                        {origin.charAt(0).toUpperCase() + origin.slice(1).replace(/([A-Z])/g, ' $1').trim()}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -596,10 +658,10 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
             </Button>
             <Button
               type="submit"
-              disabled={updateLeadMutation.isPending || shouldDisableSave}
+              disabled={updateLeadMutation.isPending || shouldDisableSaveButton}
               data-testid="button-save-edit"
               className="px-8 h-10 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={shouldDisableSave ? "No changes to save" : ""}
+              title={shouldDisableSaveButton ? "No changes to save" : ""}
             >
               {updateLeadMutation.isPending ? 'Saving...' : 'Update Lead'}
             </Button>

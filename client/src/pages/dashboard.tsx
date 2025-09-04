@@ -180,6 +180,208 @@ export default function Dashboard() {
             transform: translateY(0);
           }
         }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+          .container-fluid {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+          
+          .stats-card .card-body {
+            padding: 0.75rem 0.5rem;
+          }
+          
+          .stats-card h3 {
+            font-size: 1.25rem;
+          }
+          
+          .stats-card h6 {
+            font-size: 0.75rem;
+          }
+          
+          .stats-card .fa-2x {
+            font-size: 1.25em !important;
+          }
+          
+          /* Compact dashboard sections */
+          .dashboard-section {
+            margin-bottom: 1rem !important;
+          }
+          
+          .card {
+            margin-bottom: 1rem;
+          }
+          
+          .card-header h5 {
+            font-size: 1rem;
+          }
+          
+          /* Table improvements for mobile */
+          .table td, .table th {
+            padding: 0.375rem 0.25rem;
+            font-size: 0.8rem;
+            line-height: 1.2;
+          }
+          
+          .table strong {
+            font-size: 0.85rem;
+          }
+          
+          .table small {
+            font-size: 0.7rem;
+          }
+          
+          /* Follow-up items mobile improvements */
+          .list-group-item {
+            padding: 0.75rem 0.5rem;
+          }
+          
+          .list-group-item h6 {
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+          }
+          
+          .list-group-item p {
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+          }
+          
+          .list-group-item small {
+            font-size: 0.7rem;
+          }
+          
+          /* Mobile-friendly buttons */
+          .btn-sm {
+            padding: 0.25rem 0.4rem;
+            font-size: 0.7rem;
+          }
+          
+          .btn-circle {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            font-size: 0.7rem;
+          }
+          
+          /* Better badge sizing */
+          .badge {
+            font-size: 0.65rem;
+            padding: 0.25rem 0.4rem;
+          }
+          
+          /* Mobile card optimizations */
+          .card-footer {
+            padding: 0.5rem;
+          }
+          
+          .card-footer .btn-sm {
+            font-size: 0.75rem;
+            padding: 0.375rem 0.75rem;
+          }
+        }
+
+        /* Extra small devices */
+        @media (max-width: 576px) {
+          .container-fluid {
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+          }
+          
+          h1.h3 {
+            font-size: 1.5rem !important;
+          }
+          
+          .stats-card .card-body {
+            padding: 0.5rem 0.375rem;
+          }
+          
+          .stats-card h3 {
+            font-size: 1.1rem;
+          }
+          
+          .stats-card h6 {
+            font-size: 0.7rem;
+            line-height: 1.1;
+          }
+          
+          .stats-card .fa-2x {
+            font-size: 1.1em !important;
+          }
+          
+          /* Ultra compact table for mobile */
+          .table {
+            font-size: 0.75rem;
+          }
+          
+          .table td, .table th {
+            padding: 0.25rem 0.125rem;
+            vertical-align: middle;
+          }
+          
+          .table strong {
+            font-size: 0.8rem;
+          }
+          
+          /* Single column layout for very small screens */
+          .mobile-stack-xs {
+            flex-direction: column;
+          }
+          
+          .mobile-stack-xs > * {
+            margin-bottom: 0.5rem;
+          }
+          
+          /* Calendar mobile adjustments */
+          .card-body {
+            padding: 0.75rem 0.5rem;
+          }
+          
+          /* Action buttons row layout */
+          .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+          
+          .text-end {
+            text-align: left !important;
+          }
+          
+          .text-end .btn {
+            margin-right: 0.25rem;
+          }
+        }
+
+        /* Landscape phone orientation */
+        @media (max-width: 768px) and (orientation: landscape) {
+          .stats-card .card-body {
+            padding: 0.5rem;
+          }
+          
+          .stats-card h3 {
+            font-size: 1rem;
+          }
+          
+          .stats-card .fa-2x {
+            font-size: 1em !important;
+          }
+        }
+
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+          .stats-card {
+            transition: none;
+          }
+          
+          .stats-card:active {
+            transform: scale(0.98);
+            transition: transform 0.1s ease;
+          }
+          
+          .btn:active {
+            transform: scale(0.95);
+          }
+        }
       `}</style>
       
       <div className="container-fluid py-4">
@@ -197,7 +399,7 @@ export default function Dashboard() {
 
         {/* Statistics Cards */}
         <div className={`row mb-4 dashboard-section ${animationStep >= 2 ? 'animate' : ''}`}>
-        <div className="col-md-3 mb-3">
+        <div className="col-6 col-sm-6 col-md-3 mb-3">
           <div 
             className="card stats-card clickable-card" 
             data-testid="stat-total-leads"
@@ -222,7 +424,7 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div className="col-md-3 mb-3">
+        <div className="col-6 col-sm-6 col-md-3 mb-3">
           <div 
             className="card stats-card clickable-card" 
             data-testid="stat-sold-leads"
@@ -247,7 +449,7 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div className="col-md-3 mb-3">
+        <div className="col-6 col-sm-6 col-md-3 mb-3">
           <div 
             className="card stats-card clickable-card" 
             data-testid="stat-today-followups"
@@ -272,7 +474,7 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div className="col-md-3 mb-3">
+        <div className="col-6 col-sm-6 col-md-3 mb-3">
           <div 
             className="card stats-card clickable-card" 
             data-testid="stat-new-today"
@@ -316,7 +518,7 @@ export default function Dashboard() {
 
       <div className={`row dashboard-section ${animationStep >= 3 ? 'animate' : ''}`}>
         {/* Today's Follow-ups */}
-        <div className="col-lg-6 mb-4">
+        <div className="col-12 col-md-6 col-lg-6 mb-4">
           <div className="card" data-testid="todays-followups">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">
@@ -341,8 +543,8 @@ export default function Dashboard() {
                       }`}
                       data-testid={`followup-item-${lead.id}`}
                     >
-                      <div className="d-flex justify-content-between align-items-center">
-                        <div>
+                      <div className="d-flex justify-content-between align-items-start flex-wrap">
+                        <div className="flex-grow-1 me-2">
                           <h6 className="mb-1">{lead.name}</h6>
                           <p className="mb-1 text-muted small">Phone: {lead.phone}</p>
                           <small className={
@@ -357,16 +559,18 @@ export default function Dashboard() {
                              isDueToday(lead.next_followup_date) ? 'Due today' : 'Scheduled'}
                           </small>
                         </div>
-                        <div className="text-end">
+                        <div className="d-flex gap-2 mt-2 mt-sm-0">
                           <button
-                            className="btn btn-sm btn-outline-primary me-1"
+                            className="btn btn-sm btn-outline-primary"
                             onClick={() => openQuickEdit(lead)}
                             data-testid={`button-edit-${lead.id}`}
                           >
                             <i className="fas fa-edit"></i>
+                            <span className="d-none d-sm-inline ms-1">Edit</span>
                           </button>
                           <button className="btn btn-sm btn-outline-success" data-testid={`button-call-${lead.id}`}>
                             <i className="fas fa-phone"></i>
+                            <span className="d-none d-sm-inline ms-1">Call</span>
                           </button>
                         </div>
                       </div>
@@ -384,7 +588,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Leads */}
-        <div className="col-lg-6 mb-4">
+        <div className="col-12 col-md-6 col-lg-6 mb-4">
           <div className="card" data-testid="recent-leads">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">
@@ -400,14 +604,14 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="table-responsive">
-                  <table className="table table-hover mb-0">
+                  <table className="table table-hover mb-0 table-sm">
                     <thead className="table-light">
                       <tr>
                         <th>Name</th>
-                        <th>Origin</th>
+                        <th className="d-none d-sm-table-cell">Origin</th>
                         <th>Status</th>
-                        <th>Amount</th>
-                        <th>Actions</th>
+                        <th className="d-none d-md-table-cell">Amount</th>
+                        <th className="text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -415,12 +619,11 @@ export default function Dashboard() {
                         <tr key={lead.id} data-testid={`recent-lead-${lead.id}`}>
                           <td>
                             <div>
-                              <strong>{lead.name}</strong>
-                              <br />
-                              <small className="text-muted">{lead.phone}</small>
+                              <strong className="d-block">{lead.name}</strong>
+                              <small className="text-muted d-block">{lead.phone}</small>
                             </div>
                           </td>
-                          <td>
+                          <td className="d-none d-sm-table-cell">
                             {(() => {
                               const originColors = getOriginColor(lead.lead_origin);
                               return (
@@ -497,14 +700,15 @@ export default function Dashboard() {
                               );
                             })()}
                           </td>
-                          <td>
+                          <td className="d-none d-md-table-cell">
                             {lead.project_amount ? formatCurrency(lead.project_amount) : '-'}
                           </td>
-                          <td>
+                          <td className="text-center">
                             <button
                               className="btn btn-circle btn-outline-primary btn-sm"
                               onClick={() => openQuickEdit(lead)}
                               data-testid={`button-quick-edit-${lead.id}`}
+                              title="Edit Lead"
                             >
                               <i className="fas fa-edit"></i>
                             </button>

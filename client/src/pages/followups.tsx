@@ -21,19 +21,37 @@ interface FollowupsData {
   overdue: Lead[];
   dueToday: Lead[];
   upcoming: Lead[];
+  upcomingCount?: number; // Total count for stats
 }
+
+// Helper function to format date for form input using local system time
+const formatDateForInput = (dateValue: string | Date | null) => {
+  if (!dateValue) return '';
+  // If it's already a string in YYYY-MM-DD format, return as-is
+  if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return dateValue;
+  }
+  // If it's a Date object or other format, convert to YYYY-MM-DD
+  const date = new Date(dateValue);
+  if (isNaN(date.getTime())) return '';
+  // Use local time methods since we're storing as simple strings
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 // Quick Edit Form Component
 function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lead; onClose: () => void; wmkColors: any[]; installersData: any[] }) {
   const [formData, setFormData] = useState({
-    next_followup_date: lead.next_followup_date ? new Date(lead.next_followup_date).toISOString().split('T')[0] : '',
+    next_followup_date: formatDateForInput(lead.next_followup_date),
     remarks: lead.remarks,
     notes: lead.notes || '',
     project_amount: lead.project_amount || '',
     assigned_to: lead.assigned_to,
-    installation_date: lead.installation_date ? new Date(lead.installation_date).toISOString().split('T')[0] : '',
-    installation_end_date: (lead as any).installation_end_date ? new Date((lead as any).installation_end_date).toISOString().split('T')[0] : '',
-    pickup_date: (lead as any).pickup_date ? new Date((lead as any).pickup_date).toISOString().split('T')[0] : '',
+    installation_date: formatDateForInput(lead.installation_date),
+    installation_end_date: formatDateForInput((lead as any).installation_end_date),
+    pickup_date: formatDateForInput((lead as any).pickup_date),
     assigned_installer: (() => {
       if (!lead.assigned_installer) return [];
       if (Array.isArray(lead.assigned_installer)) return lead.assigned_installer;
@@ -82,34 +100,43 @@ function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lea
     // Handle new note addition
     let updatedNotes = formData.notes || '';
     if (newNote.trim()) {
-      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const today = new Date();
+      const timestamp = today.getFullYear() + '-' + 
+                       String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(today.getDate()).padStart(2, '0');
       const newNoteWithTimestamp = `[${timestamp}] ${newNote.trim()}`;
       updatedNotes = updatedNotes ? `${updatedNotes}\n${newNoteWithTimestamp}` : newNoteWithTimestamp;
     }
     
     // Add installer assignment note if installers are assigned
     if (formData.remarks === 'Sold' && formData.assigned_installer.length > 0) {
-      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const today = new Date();
+      const timestamp = today.getFullYear() + '-' + 
+                       String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(today.getDate()).padStart(2, '0');
       const installerNote = `[${timestamp}] Assigned installers: ${formData.assigned_installer.map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ')}`;
       updatedNotes = updatedNotes ? `${updatedNotes}\n${installerNote}` : installerNote;
     }
     
     // Add color selection note after payment status if colors are selected
     if (formData.remarks === 'Sold' && formData.selected_colors.length > 0 && (formData.deposit_paid || formData.balance_paid)) {
-      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const today = new Date();
+      const timestamp = today.getFullYear() + '-' + 
+                       String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(today.getDate()).padStart(2, '0');
       const colorNote = `[${timestamp}] Selected colors: ${formData.selected_colors.join(', ')}`;
       updatedNotes = updatedNotes ? `${updatedNotes}\n${colorNote}` : colorNote;
     }
 
     const updates: Partial<Lead> = {
-      next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date) : null,
+      next_followup_date: formData.next_followup_date || null,
       remarks: formData.remarks,
       notes: updatedNotes || null,
       project_amount: formData.project_amount || null,
       assigned_to: formData.assigned_to,
-      installation_date: formData.installation_date ? new Date(formData.installation_date) : null,
-      installation_end_date: formData.installation_end_date ? new Date(formData.installation_end_date) : null,
-      pickup_date: formData.pickup_date ? new Date(formData.pickup_date) : null,
+      installation_date: formData.installation_date || null,
+      installation_end_date: formData.installation_end_date || null,
+      pickup_date: formData.pickup_date || null,
       assigned_installer: Array.isArray(formData.assigned_installer) 
         ? (formData.assigned_installer.length > 0 ? formData.assigned_installer.join(', ') : null)
         : (formData.assigned_installer as string | null),
@@ -535,12 +562,25 @@ const formatCurrency = (amount: string | null) => {
 
 const formatDate = (dateString: string | null) => {
   if (!dateString) return 'Not set';
-  return new Date(dateString).toLocaleDateString('en-US', { 
-    weekday: 'short', 
-    month: 'short', 
-    day: 'numeric',
-    year: 'numeric'
-  });
+  
+  // If it's already a simple date string like "2025-08-29", parse it without timezone conversion
+  if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    
+    // Format without timezone conversion
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    // Calculate day of week for the date (timezone-safe)
+    const tempDate = new Date(year, month - 1, day);
+    const dayOfWeek = tempDate.getDay();
+    
+    return `${weekdayNames[dayOfWeek]}, ${monthNames[month - 1]} ${day}, ${year}`;
+  }
+  
+  // Fallback for other date formats - return as string to avoid timezone conversion
+  return String(dateString);
 };
 
 const getStatusBadge = (status: string) => {
@@ -589,6 +629,24 @@ function FollowupsTable({
   status?: 'overdue' | 'due-today' | 'upcoming';
   wmkColorsData?: any[];
 }) {
+  const { toast } = useToast();
+
+  // Function to copy text to clipboard
+  const copyToClipboard = async (text: string, type: 'phone' | 'email') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Copied to clipboard",
+        description: `${type === 'phone' ? 'Phone number' : 'Email address'} copied successfully`,
+      });
+    } catch (err) {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
   if (leads.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -630,7 +688,7 @@ function FollowupsTable({
                       {lead.lead_origin.replace('-', ' ')}
                     </p>
                     <p className="text-sm text-gray-700 font-medium mt-1">
-                      Created: {lead.date_created ? new Date(lead.date_created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                      Created: {lead.date_created ? formatDate(lead.date_created) : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -646,9 +704,8 @@ function FollowupsTable({
                       onClick={(e) => {
                         e.stopPropagation();
                         if (lead.phone) {
-                          navigator.clipboard.writeText(lead.phone);
+                          copyToClipboard(lead.phone, 'phone');
                         }
-                        // Toast notification would go here if needed
                       }}
                       className="ml-2 p-1 hover:bg-gray-100 rounded transition-all duration-200 opacity-50 hover:opacity-100"
                       title="Copy phone number"
@@ -663,8 +720,9 @@ function FollowupsTable({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigator.clipboard.writeText(lead.email || '');
-                          // Toast notification would go here if needed
+                          if (lead.email) {
+                            copyToClipboard(lead.email, 'email');
+                          }
                         }}
                         className="ml-2 p-1 hover:bg-gray-100 rounded transition-all duration-200 opacity-50 hover:opacity-100"
                         title="Copy email address"
@@ -893,21 +951,59 @@ export default function Followups() {
     );
   }
 
-  const { overdue = [], dueToday = [], upcoming = [] } = followupsData || {};
+  const { overdue = [], dueToday = [], upcoming = [], upcomingCount } = followupsData || {};
   
-  // Filter out inactive leads (not interested, not compatible, not in service area)
-  const activeOverdue = overdue.filter(lead => lead.remarks && !['not-interested', 'not-compatible', 'not-service-area'].includes(lead.remarks));
-  const activeDueToday = dueToday.filter(lead => lead.remarks && !['not-interested', 'not-compatible', 'not-service-area'].includes(lead.remarks));
-  const activeUpcoming = upcoming.filter(lead => lead.remarks && !['not-interested', 'not-compatible', 'not-service-area'].includes(lead.remarks));
+  // Custom filter function to determine if a lead needs follow-up
+  const needsFollowup = (lead: Lead) => {
+    // Always exclude these statuses
+    if (lead.remarks && ['not-interested', 'not-compatible', 'not-service-area'].includes(lead.remarks)) {
+      return false;
+    }
+    
+    // For sold projects, only include if balance is not paid
+    if (lead.remarks === 'Sold') {
+      return !lead.balance_paid; // Show sold projects that haven't paid the balance
+    }
+    
+    // Include all other statuses (new, in-progress, quoted, etc.)
+    return true;
+  };
+  
+  // Filter leads that need follow-up and sort by date
+  const activeOverdue = overdue
+    .filter(needsFollowup)
+    .sort((a, b) => {
+      if (!a.next_followup_date || !b.next_followup_date) return 0;
+      return new Date(a.next_followup_date).getTime() - new Date(b.next_followup_date).getTime();
+    });
+  
+  const activeDueToday = dueToday
+    .filter(needsFollowup)
+    .sort((a, b) => {
+      if (!a.next_followup_date || !b.next_followup_date) return 0;
+      return new Date(a.next_followup_date).getTime() - new Date(b.next_followup_date).getTime();
+    });
+  
+  const activeUpcoming = upcoming
+    .filter(needsFollowup)
+    .sort((a, b) => {
+      if (!a.next_followup_date || !b.next_followup_date) return 0;
+      return new Date(a.next_followup_date).getTime() - new Date(b.next_followup_date).getTime();
+    });
   
   // Get next 7 days of upcoming follow-ups
   const today = new Date();
   const next7Days = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const upcomingWeek = activeUpcoming.filter(lead => {
-    if (!lead.next_followup_date) return false;
-    const followupDate = new Date(lead.next_followup_date);
-    return followupDate <= next7Days;
-  });
+  const upcomingWeek = activeUpcoming
+    .filter(lead => {
+      if (!lead.next_followup_date) return false;
+      const followupDate = new Date(lead.next_followup_date);
+      return followupDate <= next7Days;
+    })
+    .sort((a, b) => {
+      if (!a.next_followup_date || !b.next_followup_date) return 0;
+      return new Date(a.next_followup_date).getTime() - new Date(b.next_followup_date).getTime();
+    });
   
   // Scheduled installations (sold leads with installation dates)
   const scheduledInstallations = installations.filter(lead => lead.installation_date);

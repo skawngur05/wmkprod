@@ -10,6 +10,14 @@ interface AddBookletModalProps {
 }
 
 export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProps) {
+  // Helper function to get today's date as string (timezone-safe)
+  const getTodayDateString = () => {
+    const today = new Date();
+    return today.getFullYear() + '-' + 
+           String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+           String(today.getDate()).padStart(2, '0');
+  };
+
   const [formData, setFormData] = useState<InsertSampleBooklet>({
     order_number: '',
     customer_name: '',
@@ -18,7 +26,7 @@ export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProp
     phone: '',
     product_type: 'Sample Booklet Only',
     status: 'Pending',
-    date_ordered: new Date(),
+    date_ordered: getTodayDateString() as any,
     notes: null,
   });
 
@@ -42,7 +50,7 @@ export default function AddBookletModal({ isOpen, onClose }: AddBookletModalProp
         phone: '',
         product_type: 'Sample Booklet Only',
         status: 'Pending',
-        date_ordered: new Date(),
+        date_ordered: getTodayDateString() as any,
         notes: null,
       });
     },

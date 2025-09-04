@@ -10,6 +10,14 @@ interface AddLeadModalProps {
 }
 
 export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
+  // Helper function to get today's date in YYYY-MM-DD format (timezone-safe)
+  const getTodayDateString = () => {
+    const today = new Date();
+    return today.getFullYear() + '-' + 
+           String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+           String(today.getDate()).padStart(2, '0');
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -79,6 +87,21 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
       return;
     }
     
+    // PRODUCTION BULLETPROOF FIX: Ensure all dates are strings
+    const ensureDateString = (dateValue: any): string | null => {
+      if (!dateValue) return null;
+      if (typeof dateValue === 'string') return dateValue;
+      if (dateValue instanceof Date) {
+        const year = dateValue.getFullYear();
+        const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const day = String(dateValue.getDate()).padStart(2, '0');
+        const result = `${year}-${month}-${day}`;
+        console.log(`🔧 ADD-LEAD PRODUCTION FIX: Converted Date object to string: ${result}`);
+        return result;
+      }
+      return String(dateValue);
+    };
+    
     const leadData = {
       name: formData.name,
       phone: formData.phone,
@@ -88,14 +111,14 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
       project_amount: formData.project_amount ? formData.project_amount : "0.00",
       notes: formData.notes || null,
       remarks: "New", // Fixed: capital N to match enum
-      date_created: new Date().toISOString().split('T')[0], // Add required date_created field
+      date_created: getTodayDateString(), // Add required date_created field
       next_followup_date: null,
       additional_notes: null,
       deposit_paid: formData.deposit_paid,
       balance_paid: formData.balance_paid,
-      pickup_date: formData.pickup_date || null,
-      installation_date: formData.installation_date || null,
-      installation_end_date: formData.installation_end_date || null,
+      pickup_date: ensureDateString(formData.pickup_date),
+      installation_date: ensureDateString(formData.installation_date),
+      installation_end_date: ensureDateString(formData.installation_end_date),
       assigned_installer: null
     };
 

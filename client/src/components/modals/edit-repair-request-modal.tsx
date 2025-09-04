@@ -16,6 +16,23 @@ interface EditRepairRequestModalProps {
 }
 
 export function EditRepairRequestModal({ show, onHide, repairRequest }: EditRepairRequestModalProps) {
+  // Helper function to format date without timezone issues
+  const formatDateForInput = (dateValue: string | Date | null) => {
+    if (!dateValue) return '';
+    // If it's already a string in YYYY-MM-DD format, return as-is
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    // If it's a Date object or other format, convert to YYYY-MM-DD
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '';
+    // Use local time methods since we're storing as simple strings
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [formData, setFormData] = useState({
     customer_name: '',
     phone: '',
@@ -47,8 +64,8 @@ export function EditRepairRequestModal({ show, onHide, repairRequest }: EditRepa
         issue_description: repairRequest.issue_description || '',
         priority: repairRequest.priority || 'Medium',
         status: repairRequest.status || 'Pending',
-        date_reported: repairRequest.date_reported ? new Date(repairRequest.date_reported).toISOString().split('T')[0] : '',
-        completion_date: repairRequest.completion_date ? new Date(repairRequest.completion_date).toISOString().split('T')[0] : '',
+        date_reported: formatDateForInput(repairRequest.date_reported),
+        completion_date: formatDateForInput(repairRequest.completion_date),
         notes: repairRequest.notes || '',
       };
       setFormData(initialData);
@@ -97,7 +114,14 @@ export function EditRepairRequestModal({ show, onHide, repairRequest }: EditRepa
   };
 
   const handleMarkAsDone = () => {
-    const today = new Date().toISOString().split('T')[0];
+    const getTodayDateString = () => {
+      const today = new Date();
+      return today.getFullYear() + '-' + 
+             String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+             String(today.getDate()).padStart(2, '0');
+    };
+    
+    const today = getTodayDateString();
     const updateData = {
       ...formData,
       status: 'Completed',

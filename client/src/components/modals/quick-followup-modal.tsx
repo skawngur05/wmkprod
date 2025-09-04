@@ -66,10 +66,25 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
     }
   });
 
+  // Helper function to format date for input (timezone-safe)
+  const formatDateForInput = (dateValue: string | Date | null) => {
+    if (!dateValue) return '';
+    // If it's already a string in YYYY-MM-DD format, return as-is
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    // If it's a Date object or other format, convert to YYYY-MM-DD
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '';
+    // Use local time methods since we're storing as simple strings
+    return date.getFullYear() + '-' + 
+           String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+           String(date.getDate()).padStart(2, '0');
+  };
+
   useEffect(() => {
     if (lead) {
-      setNextFollowupDate(lead.next_followup_date ? 
-        new Date(lead.next_followup_date).toISOString().split('T')[0] : '');
+      setNextFollowupDate(formatDateForInput(lead.next_followup_date));
       setAssignedTo(lead.assigned_to || '');
     }
   }, [lead]);
@@ -95,11 +110,10 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const today = new Date().toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    const todayDate = new Date();
+    const today = todayDate.getFullYear() + '-' + 
+                  String(todayDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                  String(todayDate.getDate()).padStart(2, '0');
 
     const noteToAdd = selectedTemplate === 'Custom note...' ? customNote : quickNote;
     const timestampedNote = noteToAdd ? `[${today}] ${noteToAdd}` : '';
@@ -111,7 +125,7 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
       : timestampedNote;
 
     const updates = {
-      next_followup_date: nextFollowupDate ? new Date(nextFollowupDate) : null,
+      next_followup_date: nextFollowupDate && nextFollowupDate.trim() ? String(nextFollowupDate.trim()) : null,
       assigned_to: assignedTo || null,
       notes: updatedNotes || null
     };
@@ -150,13 +164,24 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
                 <Label className="text-sm font-medium text-blue-900">Current Follow-up Date</Label>
               </div>
               <div className="text-lg font-semibold text-blue-800">
-                {lead.next_followup_date ? 
-                  new Date(lead.next_followup_date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric', 
-                    month: 'long',
-                    day: 'numeric'
-                  }) : 
+                {lead.next_followup_date ? (() => {
+                  const dateStr = lead.next_followup_date;
+                  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                    // Parse the date string directly without timezone conversion
+                    const [year, month, day] = dateStr.split('-').map(Number);
+                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                       'July', 'August', 'September', 'October', 'November', 'December'];
+                    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    
+                    // Calculate day of week for the date
+                    const tempDate = new Date(year, month - 1, day);
+                    const dayOfWeek = tempDate.getDay();
+                    
+                    return `${weekdayNames[dayOfWeek]}, ${monthNames[month - 1]} ${day}, ${year}`;
+                  }
+                  // For other date formats, just return the string
+                  return dateStr;
+                })() : 
                   'No follow-up date set'
                 }
               </div>
@@ -255,7 +280,12 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
                       </div>
                       <div className="flex-1">
                         <p className="text-sm text-green-800 font-medium">
-                          [{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}] {quickNote}
+                          [{(() => {
+                            const todayDate = new Date();
+                            return todayDate.getFullYear() + '-' + 
+                                   String(todayDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                                   String(todayDate.getDate()).padStart(2, '0');
+                          })()} ] {quickNote}
                         </p>
                       </div>
                     </div>

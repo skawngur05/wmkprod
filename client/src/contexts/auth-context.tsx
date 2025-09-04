@@ -3,7 +3,13 @@ import { User } from '@shared/schema';
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (username: string, password: string) => Promise<{ 
+    success: boolean; 
+    error?: string;
+    rateLimited?: boolean;
+    timeUntilReset?: number;
+    shouldContactAdmin?: boolean;
+  }>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -56,7 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (username: string, password: string): Promise<{ 
+    success: boolean; 
+    error?: string;
+    rateLimited?: boolean;
+    timeUntilReset?: number;
+    shouldContactAdmin?: boolean;
+  }> => {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -73,7 +85,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: true };
       } else {
         const errorData = await response.json();
-        return { success: false, error: errorData.message || 'Login failed' };
+        return { 
+          success: false, 
+          error: errorData.message || 'Login failed',
+          rateLimited: errorData.rateLimited || false,
+          timeUntilReset: errorData.timeUntilReset,
+          shouldContactAdmin: errorData.shouldContactAdmin || false
+        };
       }
     } catch (error) {
       console.error('Login error:', error);

@@ -1,1 +1,0 @@
-ALTER TABLE `calendar_events` ADD `google_event_id` varchar(255);

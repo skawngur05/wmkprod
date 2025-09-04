@@ -203,14 +203,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateLead(id: string, updates: UpdateLead): Promise<Lead | undefined> {
-    // Convert string dates to Date objects if needed
+    // PRODUCTION BULLETPROOF: Force all dates to remain as strings
     const processedUpdates: any = { ...updates };
-    if (typeof processedUpdates.next_followup_date === 'string') {
-      processedUpdates.next_followup_date = new Date(processedUpdates.next_followup_date);
-    }
-    if (typeof processedUpdates.installation_date === 'string') {
-      processedUpdates.installation_date = new Date(processedUpdates.installation_date);
-    }
+    
+    // AGGRESSIVE DATE PROTECTION - Convert any Date objects to strings
+    ['next_followup_date', 'pickup_date', 'installation_date', 'installation_end_date'].forEach(field => {
+      if (processedUpdates[field] !== undefined && processedUpdates[field] !== null) {
+        if (processedUpdates[field] instanceof Date) {
+          const date = processedUpdates[field] as Date;
+          processedUpdates[field] = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+      }
+    });
     
     // Handle selected_colors array to JSON string conversion
     if (processedUpdates.selected_colors) {
@@ -267,12 +271,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSampleBooklet(insertBooklet: InsertSampleBooklet): Promise<SampleBooklet> {
-    const id = randomUUID();
-    const bookletWithId = { ...insertBooklet, id };
-    await db.insert(sampleBooklets).values(bookletWithId);
+    // Insert without specifying id (it's auto-increment)
+    const result = await db.insert(sampleBooklets).values(insertBooklet);
     
-    const result = await db.select().from(sampleBooklets).where(eq(sampleBooklets.id, id)).limit(1);
-    return result[0];
+    // Get the inserted record using the insertId
+    const insertId = result[0].insertId;
+    const createdBooklet = await db.select().from(sampleBooklets).where(eq(sampleBooklets.id, insertId)).limit(1);
+    return createdBooklet[0];
   }
 
   async updateSampleBooklet(id: string, updates: UpdateSampleBooklet): Promise<SampleBooklet | undefined> {

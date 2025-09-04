@@ -504,7 +504,14 @@ export default function UserManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-gray-500">
-                    {tableUser.last_login ? new Date(tableUser.last_login).toLocaleDateString() : 'Never'}
+                    {tableUser.last_login ? (() => {
+                      const dateStr = String(tableUser.last_login);
+                      if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                        const [year, month, day] = dateStr.split('-').map(Number);
+                        return new Date(year, month - 1, day).toLocaleDateString();
+                      }
+                      return new Date(dateStr).toLocaleDateString();
+                    })() : 'Never'}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Lead, Installer } from '@shared/schema';
+import { formatDate } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
@@ -35,6 +36,21 @@ import {
   Palette
 } from 'lucide-react';
 
+// Timezone-safe date formatting helper
+const formatDateForEmail = (dateString: string) => {
+  if (!dateString) return '';
+  
+  // If it's a simple date string like "2025-08-29", parse it without timezone conversion
+  if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // month is 0-indexed
+    return date.toLocaleDateString();
+  }
+  
+  // Fallback for other date formats
+  return new Date(dateString).toLocaleDateString();
+};
+
 // Installation Card Component
 function InstallationCard({ 
   installation, 
@@ -54,16 +70,6 @@ function InstallationCard({
   const formatCurrency = (amount: string | null) => {
     if (!amount) return 'Not set';
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(parseFloat(amount));
-  };
-  
-  const formatDate = (dateString: string | Date | null) => {
-    if (!dateString) return 'Not set';
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    });
   };
 
   const formatInstallationDate = (startDate: string | Date | null, endDate: string | Date | null) => {
@@ -167,7 +173,7 @@ function InstallationCard({
                   {type === 'repair' ? 'Service Job' : type === 'completed' ? 'Completed Project' : 'Installation'}
                 </p>
                 <p className="text-sm text-gray-700 font-medium mb-2">
-                  Created: {installation.date_created ? new Date(installation.date_created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                  Created: {installation.date_created ? formatDate(installation.date_created) : 'N/A'}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {getPriorityBadge()}
@@ -519,7 +525,7 @@ export default function Installations() {
 
   const handleEmailRepairClient = (repairRequest: any) => {
     if (repairRequest.email) {
-      window.open(`mailto:${repairRequest.email}?subject=Repair Request Update&body=Dear ${repairRequest.customer_name},%0D%0A%0D%0ARegarding your repair request reported on ${new Date(repairRequest.date_reported).toLocaleDateString()}...`, '_self');
+      window.open(`mailto:${repairRequest.email}?subject=Repair Request Update&body=Dear ${repairRequest.customer_name},%0D%0A%0D%0ARegarding your repair request reported on ${formatDateForEmail(repairRequest.date_reported)}...`, '_self');
     } else {
       toast({
         title: "No Email",
@@ -565,11 +571,24 @@ export default function Installations() {
     return completedProjectsData.some((completed: any) => completed.lead_id === installation.id);
   };
 
-  // Helper function to compare dates without time
+  // Helper function to compare dates without time (timezone-safe)
   const isDateToday = (dateString: string | Date) => {
-    const installDate = new Date(dateString);
     const today = new Date();
-    return installDate.toDateString() === today.toDateString();
+    
+    // Handle simple date strings like "2025-08-29" without timezone conversion
+    let installDate;
+    if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      installDate = new Date(year, month - 1, day); // month is 0-indexed
+    } else {
+      installDate = new Date(dateString);
+    }
+    
+    return (
+      installDate.getDate() === today.getDate() &&
+      installDate.getMonth() === today.getMonth() &&
+      installDate.getFullYear() === today.getFullYear()
+    );
   };
 
   const isDateInFuture = (dateString: string | Date) => {
@@ -593,14 +612,16 @@ export default function Installations() {
     return install.installation_date && 
       isDateToday(install.installation_date) &&
       !isRepair(install) &&
-      !isCompleted(install);
+      !isCompleted(install) &&
+      !isInCompletedProjects(install);
   }) || [];
 
   const futureInstallations = installations?.filter(install => {
     return install.installation_date && 
       isDateInFuture(install.installation_date) &&
       !isRepair(install) &&
-      !isCompleted(install);
+      !isCompleted(install) &&
+      !isInCompletedProjects(install);
   }).sort((a, b) => {
     // Sort by installation date (earliest first)
     const dateA = new Date(a.installation_date!);
@@ -612,7 +633,7 @@ export default function Installations() {
   const upcomingInstallations = [...todaysInstallations, ...futureInstallations];
 
   const repairJobs = installations?.filter(install => {
-    const isRepairJob = isRepair(install) && !isCompleted(install);
+    const isRepairJob = isRepair(install) && !isCompleted(install) && !isInCompletedProjects(install);
     return isRepairJob;
   }) || [];
 
@@ -625,13 +646,7 @@ export default function Installations() {
   const totalRepairJobs = repairJobs.length + activeRepairRequests.length;
 
   const completedProjects = installations?.filter(install => {
-    const isCompletedProject = isCompleted(install) || (
-      install.installation_date && 
-      isDateInPast(install.installation_date) &&
-      !isRepair(install) &&
-      !isCompleted(install)
-    );
-    
+    const isCompletedProject = isCompleted(install) || isInCompletedProjects(install);
     return isCompletedProject;
   }) || [];
 
@@ -834,12 +849,7 @@ export default function Installations() {
                             <div>
                               <p className="text-xs font-medium text-gray-600 uppercase">Date Reported</p>
                               <p className="text-sm font-medium text-gray-900">
-                                {new Date(request.date_reported).toLocaleDateString('en-US', { 
-                                  weekday: 'short', 
-                                  month: 'short', 
-                                  day: 'numeric',
-                                  year: 'numeric'
-                                })}
+                                {formatDate(request.date_reported)}
                               </p>
                             </div>
                           </div>
@@ -1105,12 +1115,7 @@ export default function Installations() {
                         <Calendar className="h-4 w-4 text-orange-600" />
                         <span className="text-sm">
                           <strong>Installation Date:</strong> {selectedInstallation.installation_date ? 
-                            new Date(selectedInstallation.installation_date).toLocaleDateString('en-US', { 
-                              weekday: 'long', 
-                              year: 'numeric', 
-                              month: 'long', 
-                              day: 'numeric' 
-                            }) : 'Not scheduled'}
+                            formatDate(selectedInstallation.installation_date) : 'Not scheduled'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1244,7 +1249,7 @@ export default function Installations() {
                 <div className="bg-gray-50 p-3 rounded-md text-sm">
                   <p><strong>Customer:</strong> {selectedInstallation?.name}</p>
                   <p><strong>Date:</strong> {selectedInstallation?.installation_date ? 
-                    new Date(selectedInstallation.installation_date).toLocaleDateString() : 'Not scheduled'}</p>
+                    formatDateForEmail(selectedInstallation.installation_date) : 'Not scheduled'}</p>
                   {selectedInstallation?.assigned_installer && (
                     <p><strong>Installer:</strong> {selectedInstallation.assigned_installer}</p>
                   )}

@@ -17,13 +17,38 @@ import { enrichFromDatabase, type InternalEnrichmentData } from '@/lib/internal-
 import { EnrichmentModal } from '@/components/enrichment-modal';
 
 export default function AddLead() {
+  // Helper function to format date for form input (timezone-safe)
+  const formatDateForInput = (dateValue: string | Date | null) => {
+    if (!dateValue) return '';
+    // If it's already a string in YYYY-MM-DD format, return as-is
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    // If it's a Date object or other format, convert to YYYY-MM-DD
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '';
+    // Use local time methods since we're storing as simple strings
+    return date.getFullYear() + '-' + 
+           String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+           String(date.getDate()).padStart(2, '0');
+  };
+
+  // Helper function to get today's date without timezone conversion
+  const getTodayDateString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
     lead_origin: 'facebook',
     remarks: 'New', // Fixed: capital N to match enum
-    assigned_to: 'kim',
+    assigned_to: 'Kim',
     project_amount: '',
     next_followup_date: '',
     notes: '',
@@ -33,7 +58,7 @@ export default function AddLead() {
     assigned_installer: [] as string[], // Keep as array for UI, will convert for submission
     deposit_paid: false,
     balance_paid: false,
-    date_created: new Date().toISOString().split('T')[0], // Default to today, but allow editing
+    date_created: getTodayDateString(), // Default to today without timezone conversion
     selected_colors: [] as string[]
   });
   
@@ -149,15 +174,15 @@ export default function AddLead() {
         remarks: formData.remarks,
         assigned_to: formData.assigned_to,
         project_amount: formData.project_amount ? formData.project_amount : "0.00", // Keep as string for decimal
-        next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date).toISOString().split('T')[0] : null,
+        next_followup_date: formData.next_followup_date || null,
         notes: formData.notes || null,
-        pickup_date: formData.pickup_date ? new Date(formData.pickup_date).toISOString().split('T')[0] : null,
-        installation_date: formData.installation_date ? new Date(formData.installation_date).toISOString().split('T')[0] : null,
-        installation_end_date: formData.installation_end_date ? new Date(formData.installation_end_date).toISOString().split('T')[0] : null,
+        pickup_date: formData.pickup_date || null,
+        installation_date: formData.installation_date || null,
+        installation_end_date: formData.installation_end_date || null,
         assigned_installer: formData.assigned_installer.length > 0 ? formData.assigned_installer.join(', ') : null, // Convert array to string
         deposit_paid: formData.deposit_paid,
         balance_paid: formData.balance_paid,
-        date_created: formData.date_created, // Use the form date instead of always generating new
+        date_created: formData.date_created, // Use the form date as-is
         additional_notes: null, // Add missing field that might be expected
         selected_colors: formData.selected_colors
       };

@@ -20,6 +20,20 @@ export function formatCurrency(amount: string | number): string {
 }
 
 export function formatDate(date: string | Date): string {
+  if (!date) return '';
+  
+  // If it's a simple date string like "2025-08-29", parse it without timezone conversion
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [year, month, day] = date.split('-').map(Number);
+    const d = new Date(year, month - 1, day); // month is 0-indexed
+    return d.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+  
+  // Fallback for other date formats or Date objects
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('en-US', {
     year: 'numeric',

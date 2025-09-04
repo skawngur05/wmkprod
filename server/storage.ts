@@ -319,16 +319,34 @@ export class MemStorage implements IStorage {
     const existingLead = this.leads.get(id);
     if (!existingLead) return undefined;
 
-    // Process date fields properly
-    const processedUpdates: any = { ...updates };
-    if (typeof processedUpdates.next_followup_date === 'string') {
-      processedUpdates.next_followup_date = new Date(processedUpdates.next_followup_date);
-    }
-    if (typeof processedUpdates.installation_date === 'string') {
-      processedUpdates.installation_date = new Date(processedUpdates.installation_date);
-    }
+    // Debug dates being stored
+    console.log('Date Debug - Storage updateLead input:', {
+      next_followup_date: updates.next_followup_date,
+      pickup_date: (updates as any).pickup_date,
+      installation_date: updates.installation_date,
+      installation_end_date: (updates as any).installation_end_date,
+      types: {
+        next_followup_date: typeof updates.next_followup_date,
+        pickup_date: typeof (updates as any).pickup_date,
+        installation_date: typeof updates.installation_date,
+        installation_end_date: typeof (updates as any).installation_end_date
+      }
+    });
 
+    // Store date fields as strings directly - no Date conversion
+    // Database now uses VARCHAR(10) columns for timezone-free storage
+    const processedUpdates: any = { ...updates };
+    
     const updatedLead: Lead = { ...existingLead, ...processedUpdates };
+    
+    // Debug final lead object
+    console.log('Date Debug - Final updated lead dates:', {
+      next_followup_date: updatedLead.next_followup_date,
+      pickup_date: (updatedLead as any).pickup_date,
+      installation_date: updatedLead.installation_date,
+      installation_end_date: (updatedLead as any).installation_end_date
+    });
+    
     this.leads.set(id, updatedLead);
     return updatedLead;
   }
@@ -344,15 +362,21 @@ export class MemStorage implements IStorage {
   }
 
   async getLeadsWithFollowupsDue(date: Date): Promise<Lead[]> {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Convert input date to YYYY-MM-DD string for comparison
+    const targetDateString = date.toISOString().split('T')[0];
+    
+    console.log('Date Debug - getLeadsWithFollowupsDue comparing against:', targetDateString);
 
     return Array.from(this.leads.values()).filter(lead => {
       if (!lead.next_followup_date) return false;
-      const followupDate = new Date(lead.next_followup_date);
-      return followupDate >= startOfDay && followupDate <= endOfDay;
+      
+      // Since dates are now stored as strings (YYYY-MM-DD), compare strings directly
+      const followupDateString = typeof lead.next_followup_date === 'string' 
+        ? lead.next_followup_date 
+        : lead.next_followup_date.toISOString().split('T')[0];
+        
+      console.log(`Date Debug - Comparing followup ${followupDateString} with target ${targetDateString}`);
+      return followupDateString === targetDateString;
     });
   }
 

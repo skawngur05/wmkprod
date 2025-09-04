@@ -15,6 +15,157 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarDays, User, MapPin, FileText, Plus, Edit, Trash2 } from 'lucide-react';
 
+// US Holiday utility functions
+const getUSHolidays = (year: number) => {
+  const holidays = [];
+  
+  // New Year's Day
+  holidays.push({
+    id: `holiday-new-year-${year}`,
+    title: "New Year's Day",
+    start: `${year}-01-01`,
+    allDay: true,
+    color: '#EC4899',
+    extendedProps: { type: 'us-holiday', isEditable: false }
+  });
+  
+  // Martin Luther King Jr. Day (3rd Monday in January)
+  const mlkDay = getNthWeekdayOfMonth(year, 0, 1, 3); // 3rd Monday of January
+  holidays.push({
+    id: `holiday-mlk-${year}`,
+    title: "Martin Luther King Jr. Day",
+    start: formatDateToYMD(mlkDay),
+    allDay: true,
+    color: '#EC4899',
+    extendedProps: { type: 'us-holiday', isEditable: false }
+  });
+  
+  // Presidents Day (3rd Monday in February)
+  const presidentsDay = getNthWeekdayOfMonth(year, 1, 1, 3); // 3rd Monday of February
+  holidays.push({
+    id: `holiday-presidents-${year}`,
+    title: "Presidents Day",
+    start: formatDateToYMD(presidentsDay),
+    allDay: true,
+    color: '#EC4899',
+    extendedProps: { type: 'us-holiday', isEditable: false }
+  });
+  
+  // Memorial Day (Last Monday in May)
+  const memorialDay = getLastWeekdayOfMonth(year, 4, 1); // Last Monday of May
+  holidays.push({
+    id: `holiday-memorial-${year}`,
+    title: "Memorial Day",
+    start: formatDateToYMD(memorialDay),
+    allDay: true,
+    color: '#EC4899',
+    extendedProps: { type: 'us-holiday', isEditable: false }
+  });
+  
+  // Independence Day
+  holidays.push({
+    id: `holiday-independence-${year}`,
+    title: "Independence Day",
+    start: `${year}-07-04`,
+    allDay: true,
+    color: '#EC4899',
+    extendedProps: { type: 'us-holiday', isEditable: false }
+  });
+  
+  // Labor Day (1st Monday in September)
+  const laborDay = getNthWeekdayOfMonth(year, 8, 1, 1); // 1st Monday of September
+  holidays.push({
+    id: `holiday-labor-${year}`,
+    title: "Labor Day",
+    start: formatDateToYMD(laborDay),
+    allDay: true,
+    color: '#EC4899',
+    extendedProps: { type: 'us-holiday', isEditable: false }
+  });
+  
+  // Columbus Day (2nd Monday in October)
+  const columbusDay = getNthWeekdayOfMonth(year, 9, 1, 2); // 2nd Monday of October
+  holidays.push({
+    id: `holiday-columbus-${year}`,
+    title: "Columbus Day",
+    start: formatDateToYMD(columbusDay),
+    allDay: true,
+    color: '#EC4899',
+    extendedProps: { type: 'us-holiday', isEditable: false }
+  });
+  
+  // Veterans Day
+  holidays.push({
+    id: `holiday-veterans-${year}`,
+    title: "Veterans Day",
+    start: `${year}-11-11`,
+    allDay: true,
+    color: '#EC4899',
+    extendedProps: { type: 'us-holiday', isEditable: false }
+  });
+  
+  // Thanksgiving (4th Thursday in November)
+  const thanksgiving = getNthWeekdayOfMonth(year, 10, 4, 4); // 4th Thursday of November
+  holidays.push({
+    id: `holiday-thanksgiving-${year}`,
+    title: "Thanksgiving Day",
+    start: formatDateToYMD(thanksgiving),
+    allDay: true,
+    color: '#EC4899',
+    extendedProps: { type: 'us-holiday', isEditable: false }
+  });
+  
+  // Christmas Day
+  holidays.push({
+    id: `holiday-christmas-${year}`,
+    title: "Christmas Day",
+    start: `${year}-12-25`,
+    allDay: true,
+    color: '#EC4899',
+    extendedProps: { type: 'us-holiday', isEditable: false }
+  });
+  
+  return holidays;
+};
+
+// Helper function to get the nth weekday of a month
+const getNthWeekdayOfMonth = (year: number, month: number, weekday: number, n: number) => {
+  const date = new Date(year, month, 1);
+  const firstWeekday = date.getDay();
+  const offset = (weekday - firstWeekday + 7) % 7;
+  date.setDate(1 + offset + (n - 1) * 7);
+  return date;
+};
+
+// Helper function to get the last weekday of a month
+const getLastWeekdayOfMonth = (year: number, month: number, weekday: number) => {
+  const date = new Date(year, month + 1, 0); // Last day of the month
+  const lastDay = date.getDate();
+  const lastWeekday = date.getDay();
+  const offset = (lastWeekday - weekday + 7) % 7;
+  date.setDate(lastDay - offset);
+  return date;
+};
+
+// Helper function to format date to YYYY-MM-DD using local system time
+const formatDateToYMD = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to format datetime to ISO string using local system time
+const formatDateTimeLocal = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+
 interface CalendarEventDisplay {
   id: string;
   title: string;
@@ -146,7 +297,7 @@ export function BusinessCalendar() {
     .map(lead => ({
       id: `installation-${lead.id}`,
       title: `Installation: ${lead.name}`,
-      start: new Date(lead.installation_date!).toISOString(),
+      start: formatDateTimeLocal(new Date(lead.installation_date!)),
       allDay: false,
       color: '#10B981', // Green for installations
       extendedProps: {
@@ -160,11 +311,34 @@ export function BusinessCalendar() {
       },
     }));
 
+  // Convert pickup dates to calendar events
+  const pickupEvents: CalendarEventDisplay[] = installations
+    .filter(lead => lead.pickup_date && lead.remarks === 'Sold')
+    .map(lead => ({
+      id: `pickup-${lead.id}`,
+      title: `Pickup: ${lead.name}`,
+      start: formatDateTimeLocal(new Date(lead.pickup_date!)),
+      allDay: false,
+      color: '#3B82F6', // Blue for pickups
+      extendedProps: {
+        type: 'pickup',
+        description: `Project: ${lead.project_amount ? `$${lead.project_amount}` : 'N/A'}`,
+        location: 'Pickup Location',
+        assignedTo: Array.isArray(lead.assigned_installer) && lead.assigned_installer.length > 0
+          ? lead.assigned_installer.join(', ') 
+          : 'Not assigned',
+        isEditable: false, // Pickup events are read-only
+      },
+    }));
+
   // Convert other events to calendar format
   const otherEvents: CalendarEventDisplay[] = events.map(event => {
     let color = '#6B7280'; // Default gray
     
     switch (event.type) {
+      case 'pickup':
+        color = '#3B82F6'; // Blue
+        break;
       case 'leave':
         color = '#EF4444'; // Red
         break;
@@ -182,8 +356,8 @@ export function BusinessCalendar() {
     return {
       id: event.id.toString(), // Convert number to string
       title: event.title,
-      start: new Date(event.start_date).toISOString(),
-      end: event.end_date ? new Date(event.end_date).toISOString() : undefined,
+      start: formatDateTimeLocal(new Date(event.start_date)),
+      end: event.end_date ? formatDateTimeLocal(new Date(event.end_date)) : undefined,
       allDay: event.all_day,
       color,
       extendedProps: {
@@ -197,16 +371,26 @@ export function BusinessCalendar() {
     };
   });
 
-  const allEvents = [...installationEvents, ...otherEvents];
+  // Generate US holidays for current and next year
+  const currentYear = new Date().getFullYear();
+  const usHolidays = [
+    ...getUSHolidays(currentYear),
+    ...getUSHolidays(currentYear + 1)
+  ];
+
+  const allEvents = [...installationEvents, ...pickupEvents, ...otherEvents, ...usHolidays];
 
   // Helper function to format date for datetime-local input
-  const formatDateTimeLocal = (date: Date | string | null | undefined): string => {
+  const formatDateTimeForInput = (date: Date | string | null | undefined): string => {
     if (!date) return '';
     const d = new Date(date);
-    // Adjust for timezone offset to get local time
-    const offset = d.getTimezoneOffset();
-    const localDate = new Date(d.getTime() - (offset * 60 * 1000));
-    return localDate.toISOString().slice(0, 16);
+    // Use local system time directly
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
   // Helper function to parse datetime-local input to proper Date
@@ -329,6 +513,10 @@ export function BusinessCalendar() {
               <div className="d-flex align-items-center">
                 <div className="me-2" style={{ width: '12px', height: '12px', backgroundColor: '#10B981', borderRadius: '2px' }}></div>
                 <small>Installations</small>
+              </div>
+              <div className="d-flex align-items-center">
+                <div className="me-2" style={{ width: '12px', height: '12px', backgroundColor: '#3B82F6', borderRadius: '2px' }}></div>
+                <small>Pickups</small>
               </div>
               <div className="d-flex align-items-center">
                 <div className="me-2" style={{ width: '12px', height: '12px', backgroundColor: '#EF4444', borderRadius: '2px' }}></div>
@@ -496,7 +684,7 @@ export function BusinessCalendar() {
               <Input
                 id="start_date"
                 type="datetime-local"
-                value={formatDateTimeLocal(formData.start_date)}
+                value={formatDateTimeForInput(formData.start_date)}
                 onChange={(e) => setFormData({ ...formData, start_date: parseDateTimeLocal(e.target.value) })}
               />
             </div>
@@ -506,7 +694,7 @@ export function BusinessCalendar() {
               <Input
                 id="end_date"
                 type="datetime-local"
-                value={formatDateTimeLocal(formData.end_date)}
+                value={formatDateTimeForInput(formData.end_date)}
                 onChange={(e) => setFormData({ ...formData, end_date: parseDateTimeLocal(e.target.value) })}
               />
             </div>

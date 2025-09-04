@@ -12,23 +12,108 @@ export default function Login() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [timeUntilReset, setTimeUntilReset] = useState(0);
+  const [shouldContactAdmin, setShouldContactAdmin] = useState(false);
   
   const { login } = useAuth();
   const [, setLocation] = useLocation();
 
   // Auto-dismiss error after 5 seconds
   useEffect(() => {
-    if (error) {
+    if (error && !isRateLimited) {
       const timer = setTimeout(() => {
         setError('');
       }, 5000);
       
       return () => clearTimeout(timer);
     }
-  }, [error]);
+  }, [error, isRateLimited]);
+
+  // Check rate limit status when username changes or page loads
+  useEffect(() => {
+    const checkRateLimit = async () => {
+      if (!username.trim()) {
+        setIsRateLimited(false);
+        setShouldContactAdmin(false);
+        setTimeUntilReset(0);
+        setError('');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/auth/rate-limit-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.rateLimited) {
+            setIsRateLimited(true);
+            setTimeUntilReset(data.timeUntilReset);
+            setShouldContactAdmin(data.shouldContactAdmin);
+            
+            const minutes = Math.ceil(data.timeUntilReset / (60 * 1000));
+            let message = `Too many failed login attempts. Please try again in ${minutes} minute(s).`;
+            
+            if (data.shouldContactAdmin) {
+              message = "Multiple failed login attempts detected. Please contact your system administrator for assistance.";
+            }
+            
+            setError(message);
+          } else {
+            setIsRateLimited(false);
+            setShouldContactAdmin(false);
+            setTimeUntilReset(0);
+            if (error && (error.includes('Too many failed') || error.includes('Multiple failed'))) {
+              setError('');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Rate limit check failed:', error);
+      }
+    };
+
+    // Debounce the rate limit check
+    const timer = setTimeout(checkRateLimit, 500);
+    return () => clearTimeout(timer);
+  }, [username]);
+
+  // Countdown timer for rate limiting
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (isRateLimited && timeUntilReset > 0) {
+      timer = setInterval(() => {
+        setTimeUntilReset(prev => {
+          if (prev <= 1000) {
+            setIsRateLimited(false);
+            setShouldContactAdmin(false);
+            setError('');
+            return 0;
+          }
+          return prev - 1000;
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isRateLimited, timeUntilReset]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isRateLimited) {
+      return;
+    }
+    
     setIsLoading(true);
     setError('');
 
@@ -36,16 +121,32 @@ export default function Login() {
     
     if (result.success) {
       setLoginSuccess(true);
+      setIsRateLimited(false);
+      setShouldContactAdmin(false);
+      setTimeUntilReset(0);
       
       // Show success animation for 1.5 seconds then redirect
       setTimeout(() => {
         setLocation('/dashboard');
       }, 1500);
     } else {
+      // Check for rate limiting response
+      if (result.rateLimited) {
+        setIsRateLimited(true);
+        setTimeUntilReset(result.timeUntilReset || 300000); // Default to 5 minutes
+        setShouldContactAdmin(result.shouldContactAdmin || false);
+      }
+      
       setError(result.error || 'Login failed. Please try again.');
     }
     
     setIsLoading(false);
+  };
+
+  const formatTimeRemaining = (milliseconds: number) => {
+    const minutes = Math.floor(milliseconds / 60000);
+    const seconds = Math.floor((milliseconds % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -167,7 +268,10 @@ export default function Login() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your username"
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                    disabled={isRateLimited}
+                    className={`w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+                      isRateLimited ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                     required
                   />
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -188,7 +292,10 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full pl-10 pr-10 py-3 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                    disabled={isRateLimited}
+                    className={`w-full pl-10 pr-10 py-3 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+                      isRateLimited ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                     required
                   />
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -203,22 +310,71 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Error Message */}
+              {/* Error/Rate Limit Message */}
               {error && (
-                <div className="bg-red-50 border-l-4 border-red-400 rounded-lg p-4 animate-shake">
+                <div className={`border-l-4 rounded-lg p-4 animate-shake ${
+                  isRateLimited 
+                    ? 'bg-orange-50 border-orange-400' 
+                    : shouldContactAdmin 
+                      ? 'bg-red-50 border-red-400'
+                      : 'bg-red-50 border-red-400'
+                }`}>
                   <div className="flex items-start">
                     <div className="flex-shrink-0">
-                      <div className="w-6 h-6 bg-red-400 rounded-full flex items-center justify-center">
-                        <i className="fas fa-exclamation text-white text-xs"></i>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                        isRateLimited 
+                          ? 'bg-orange-400' 
+                          : shouldContactAdmin 
+                            ? 'bg-red-500'
+                            : 'bg-red-400'
+                      }`}>
+                        <i className={`fas ${
+                          isRateLimited 
+                            ? 'fa-clock' 
+                            : shouldContactAdmin 
+                              ? 'fa-user-shield'
+                              : 'fa-exclamation'
+                        } text-white text-xs`}></i>
                       </div>
                     </div>
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-red-800">
-                        Login Failed
+                      <h3 className={`text-sm font-medium ${
+                        isRateLimited 
+                          ? 'text-orange-800' 
+                          : shouldContactAdmin 
+                            ? 'text-red-900'
+                            : 'text-red-800'
+                      }`}>
+                        {isRateLimited 
+                          ? 'Account Temporarily Locked' 
+                          : shouldContactAdmin 
+                            ? 'Contact Administrator'
+                            : 'Login Failed'
+                        }
                       </h3>
-                      <p className="mt-1 text-sm text-red-700">
+                      <p className={`mt-1 text-sm ${
+                        isRateLimited 
+                          ? 'text-orange-700' 
+                          : shouldContactAdmin 
+                            ? 'text-red-800'
+                            : 'text-red-700'
+                      }`}>
                         {error}
                       </p>
+                      {isRateLimited && timeUntilReset > 0 && (
+                        <p className="mt-2 text-sm font-medium text-orange-800">
+                          Time remaining: {formatTimeRemaining(timeUntilReset)}
+                        </p>
+                      )}
+                      {shouldContactAdmin && (
+                        <div className="mt-2 text-sm text-red-800">
+                          <p className="font-medium">Please contact your system administrator:</p>
+                          <ul className="mt-1 ml-4 list-disc space-y-1">
+                            <li>Email: admin@wrapmykitchen.com</li>
+                            <li>Phone: (555) 123-4567</li>
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -227,13 +383,22 @@ export default function Login() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading || isRateLimited}
+                className={`w-full font-medium py-3 px-4 rounded-md transition-colors focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isRateLimited 
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500'
+                }`}
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
                     <i className="fas fa-spinner fa-spin mr-2"></i>
                     Signing In...
+                  </div>
+                ) : isRateLimited ? (
+                  <div className="flex items-center justify-center">
+                    <i className="fas fa-clock mr-2"></i>
+                    Account Locked
                   </div>
                 ) : (
                   'Sign In'

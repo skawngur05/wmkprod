@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -86,6 +86,22 @@ export default function Reports() {
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [reportType, setReportType] = useState<string>('analytics');
+  const [animationStep, setAnimationStep] = useState(0);
+
+  // Animation effect - stagger the appearance of different sections
+  useEffect(() => {
+    const timer1 = setTimeout(() => setAnimationStep(1), 100);
+    const timer2 = setTimeout(() => setAnimationStep(2), 300);
+    const timer3 = setTimeout(() => setAnimationStep(3), 500);
+    const timer4 = setTimeout(() => setAnimationStep(4), 700);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
+    };
+  }, []);
   
   const { data: yearsData } = useQuery<YearsData>({
     queryKey: ['/api/reports/years'],
@@ -206,9 +222,39 @@ export default function Reports() {
   const { executiveDashboard, leadOriginPerformance = [], teamPerformance, monthlyBreakdown } = analyticsDataExists ? analyticsData : { executiveDashboard: null, leadOriginPerformance: [], teamPerformance: null, monthlyBreakdown: null };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
+      <style>{`
+        .dashboard-section {
+          opacity: 0;
+          transform: translateY(30px);
+          transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .dashboard-section.animate {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Smooth page entry animation */
+        .reports-container {
+          animation: pageEnter 0.6s ease-out;
+        }
+
+        @keyframes pageEnter {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      
+      <div className="container mx-auto px-4 py-8 reports-container">
       {/* Header with Report Type and Time-Based Filtering */}
-      <div className="mb-8">
+      <div className={`mb-8 dashboard-section ${animationStep >= 1 ? 'animate' : ''}`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900" data-testid="reports-title">
@@ -304,7 +350,7 @@ export default function Reports() {
       {reportType === 'analytics' && analyticsDataExists && (
         <>
           {/* Executive Dashboard - Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 dashboard-section ${animationStep >= 2 ? 'animate' : ''}`}>
             <Card data-testid="metric-total-leads">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600">Total Leads</CardTitle>
@@ -354,7 +400,7 @@ export default function Reports() {
         </Card>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 dashboard-section ${animationStep >= 3 ? 'animate' : ''}`}>
         {/* Lead Origin Performance Analysis */}
         <Card data-testid="lead-origin-performance">
           <CardHeader>
@@ -444,7 +490,7 @@ export default function Reports() {
       
       {/* Monthly Breakdown - Annual View */}
       {!selectedMonth && monthlyBreakdown && monthlyBreakdown.length > 0 && (
-        <Card className="mb-8" data-testid="monthly-breakdown">
+        <Card className={`mb-8 dashboard-section ${animationStep >= 4 ? 'animate' : ''}`} data-testid="monthly-breakdown">
           <CardHeader>
             <CardTitle className="text-xl font-semibold">
               Monthly Breakdown - {selectedYear === 'all' ? new Date().getFullYear() : selectedYear}
@@ -544,7 +590,7 @@ export default function Reports() {
       {reportType === 'installers' && installerData && (
         <>
           {/* Installer Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 dashboard-section ${animationStep >= 2 ? 'animate' : ''}`}>
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -601,14 +647,16 @@ export default function Reports() {
           </div>
           
           {/* Installer Performance Table */}
-          <InstallerPerformanceTable 
-            installers={installerData.installers}
-            totalInstallations={installerData.totalInstallations}
-            totalValue={installerData.totalValue}
-          />
+          <div className="animate-in fade-in slide-in-from-left duration-700 ease-out delay-400">
+            <InstallerPerformanceTable 
+              installers={installerData.installers}
+              totalInstallations={installerData.totalInstallations}
+              totalValue={installerData.totalValue}
+            />
+          </div>
           
           {/* Top Performers */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 animate-in fade-in slide-in-from-bottom duration-700 ease-out delay-600">
             <Card>
               <CardHeader>
                 <CardTitle>🏆 Top Performer by Volume</CardTitle>
@@ -677,7 +725,7 @@ export default function Reports() {
       {/* Lead Origin Pie Chart */}
       {reportType === 'lead-origin-pie' && analyticsData && (
         <>
-          <div className="mb-8">
+          <div className={`mb-8 dashboard-section ${animationStep >= 2 ? 'animate' : ''}`}>
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl font-semibold flex items-center gap-2">
@@ -902,5 +950,6 @@ export default function Reports() {
         </>
       )}
     </div>
+    </>
   );
 }

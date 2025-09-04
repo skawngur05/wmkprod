@@ -11,12 +11,92 @@ import { db } from './db';
 import path from "path";
 import fs from "fs";
 
+// Rate limiting for login attempts
+const loginAttempts = new Map<string, number[]>(); // Store login attempts by IP/username
+const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes lockout
+
+// Production API protection middleware
+const requireAuth = (req: any, res: any, next: any) => {
+  if (process.env.NODE_ENV === 'production') {
+    // In production, API should only be accessible from the same origin
+    const referer = req.get('Referer');
+    const host = req.get('Host');
+    
+    if (!referer || !host) {
+      return res.status(403).json({ message: "Direct API access not allowed in production" });
+    }
+    
+    // Check if request is coming from the same origin
+    try {
+      const refererHost = new URL(referer).host;
+      if (refererHost !== host) {
+        return res.status(403).json({ message: "Cross-origin API access not allowed" });
+      }
+    } catch (error) {
+      return res.status(403).json({ message: "Invalid referer header" });
+    }
+  }
+  
+  next();
+};
+
+function getRateLimitKey(ip: string, username: string): string {
+  return `${ip}:${username}`;
+}
+
+function isRateLimited(key: string): { limited: boolean; attempts?: number; timeUntilReset?: number; shouldContactAdmin?: boolean } {
+  const attempts = loginAttempts.get(key);
+  if (!attempts) return { limited: false };
+  
+  const now = Date.now();
+  
+  // Clean old attempts
+  const recentAttempts = attempts.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+  
+  if (recentAttempts.length === 0) {
+    loginAttempts.delete(key);
+    return { limited: false };
+  }
+  
+  // Update with cleaned attempts
+  loginAttempts.set(key, recentAttempts);
+  
+  if (recentAttempts.length >= MAX_LOGIN_ATTEMPTS) {
+    const oldestAttempt = Math.min(...recentAttempts);
+    const timeUntilReset = LOCKOUT_DURATION - (now - oldestAttempt);
+    
+    return {
+      limited: true,
+      attempts: recentAttempts.length,
+      timeUntilReset: Math.max(0, timeUntilReset),
+      shouldContactAdmin: recentAttempts.length >= 10
+    };
+  }
+  
+  return { limited: false, attempts: recentAttempts.length };
+}
+
+function recordFailedAttempt(key: string): void {
+  const attempts = loginAttempts.get(key) || [];
+  attempts.push(Date.now());
+  loginAttempts.set(key, attempts);
+}
+
+function clearAttempts(key: string): void {
+  loginAttempts.delete(key);
+}
+
 const loginSchema = z.object({
   username: z.string(),
   password: z.string(),
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Apply API protection middleware to all /api routes in production
+  app.use('/api', requireAuth);
   
   // API Test page route (serve the test HTML)
   app.get("/api-test.html", (req, res) => {
@@ -60,6 +140,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Auth endpoints
+  app.post("/api/auth/rate-limit-status", async (req, res) => {
+    try {
+      const { username } = req.body;
+      if (!username) {
+        return res.status(400).json({ message: "Username required" });
+      }
+      
+      const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
+      const rateLimitKey = getRateLimitKey(clientIp, username.toLowerCase());
+      const rateLimitStatus = isRateLimited(rateLimitKey);
+      
+      res.json({
+        rateLimited: rateLimitStatus.limited,
+        timeUntilReset: rateLimitStatus.timeUntilReset || 0,
+        shouldContactAdmin: rateLimitStatus.shouldContactAdmin || false,
+        attempts: rateLimitStatus.attempts || 0
+      });
+    } catch (error) {
+      console.error("Rate limit status check error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.post("/api/auth/login", async (req, res) => {
     try {
       console.log("=== LOGIN REQUEST START ===");
@@ -85,6 +188,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { username, password } = parseResult.data;
+      const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
+      const rateLimitKey = getRateLimitKey(clientIp, username.toLowerCase());
+      
+      // Check rate limiting
+      const rateLimitStatus = isRateLimited(rateLimitKey);
+      if (rateLimitStatus.limited) {
+        console.log(`🚫 Rate limited: ${rateLimitKey}, attempts: ${rateLimitStatus.attempts}`);
+        
+        const minutes = Math.ceil((rateLimitStatus.timeUntilReset || 0) / (60 * 1000));
+        let message = `Too many failed login attempts. Please try again in ${minutes} minute(s).`;
+        
+        if (rateLimitStatus.shouldContactAdmin) {
+          message = "Multiple failed login attempts detected. Please contact your system administrator for assistance.";
+        }
+        
+        return res.status(429).json({ 
+          message,
+          rateLimited: true,
+          timeUntilReset: rateLimitStatus.timeUntilReset,
+          shouldContactAdmin: rateLimitStatus.shouldContactAdmin
+        });
+      }
+      
       console.log(`🔍 Looking up user: "${username}"`);
       
       // Test database connection first
@@ -95,6 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!user) {
           console.log("❌ User not found in database");
+          recordFailedAttempt(rateLimitKey);
           return res.status(401).json({ message: "Invalid credentials" });
         }
 
@@ -104,6 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (user.password !== password) {
           console.log("❌ Password mismatch");
+          recordFailedAttempt(rateLimitKey);
           return res.status(401).json({ message: "Invalid credentials" });
         }
 
@@ -119,14 +247,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("User permissions value:", user?.permissions);
       
       if (!user || user.password !== password) {
+        recordFailedAttempt(rateLimitKey);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       // Check if user account is active
       if (!user.is_active) {
         console.log("❌ User account is inactive");
+        recordFailedAttempt(rateLimitKey);
         return res.status(401).json({ message: "Account is disabled. Please contact administrator." });
       }
+
+      // Clear failed attempts on successful login
+      clearAttempts(rateLimitKey);
 
       // Ensure permissions is always an array
       let permissions = [];
@@ -333,11 +466,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/leads/:id", async (req, res) => {
     try {
-      console.log('Received lead update request for ID:', req.params.id);
-      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      // PRODUCTION FIX: Pre-process dates to ensure they remain as strings
+      const preprocessedBody = { ...req.body };
+      ['next_followup_date', 'pickup_date', 'installation_date', 'installation_end_date'].forEach(field => {
+        if (preprocessedBody[field] && typeof preprocessedBody[field] === 'object' && preprocessedBody[field] instanceof Date) {
+          const dateObj = preprocessedBody[field] as Date;
+          const year = dateObj.getFullYear();
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getDate()).padStart(2, '0');
+          preprocessedBody[field] = `${year}-${month}-${day}`;
+        }
+      });
       
-      const updates = updateLeadSchema.parse(req.body);
-      console.log('Parsed updates:', JSON.stringify(updates, null, 2));
+      const updates = updateLeadSchema.parse(preprocessedBody);
+      console.log('==============================');
       
       const lead = await storage.updateLead(req.params.id, updates);
       
@@ -393,10 +535,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Follow-up endpoints
   app.get("/api/followups", async (req, res) => {
     try {
-      const today = new Date();
-      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const todayYear = now.getFullYear();
+      const todayMonth = now.getMonth();
+      const todayDate = now.getDate();
       
       const allLeads = await storage.getLeads();
+      
       // Filter out leads with "Not Interested" status from follow-ups
       const activeLeads = allLeads.filter(lead => 
         lead.remarks !== 'Not Interested' && 
@@ -406,24 +551,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const overdue = activeLeads.filter(lead => {
         if (!lead.next_followup_date) return false;
-        return new Date(lead.next_followup_date) < yesterday;
+        // Parse date string and compare date components only
+        const [year, month, day] = lead.next_followup_date.split('-').map(Number);
+        return year < todayYear || 
+               (year === todayYear && month - 1 < todayMonth) ||
+               (year === todayYear && month - 1 === todayMonth && day < todayDate);
       });
 
       const dueToday = activeLeads.filter(lead => {
         if (!lead.next_followup_date) return false;
-        const followupDate = new Date(lead.next_followup_date);
-        return followupDate.toDateString() === today.toDateString();
+        // Parse date string and compare date components only
+        const [year, month, day] = lead.next_followup_date.split('-').map(Number);
+        return year === todayYear && month - 1 === todayMonth && day === todayDate;
       });
       
-      const upcoming = activeLeads.filter(lead => {
+      const allUpcoming = activeLeads.filter(lead => {
         if (!lead.next_followup_date) return false;
-        return new Date(lead.next_followup_date) > today;
-      }).slice(0, 10); // Limit to next 10
+        // Parse date string and compare date components only
+        const [year, month, day] = lead.next_followup_date.split('-').map(Number);
+        return year > todayYear || 
+               (year === todayYear && month - 1 > todayMonth) ||
+               (year === todayYear && month - 1 === todayMonth && day > todayDate);
+      }).sort((a, b) => {
+        // Sort by follow-up date ascending (earliest first)
+        return a.next_followup_date.localeCompare(b.next_followup_date);
+      });
 
+      // Return all upcoming leads so frontend can properly calculate weekly stats
+      // Frontend will handle table display limiting
       res.json({
         overdue,
         dueToday,
-        upcoming
+        upcoming: allUpcoming, // Return all upcoming leads
+        upcomingCount: allUpcoming.length // Total count for reference
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch follow-ups" });
@@ -640,8 +800,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/sample-booklets", async (req, res) => {
     try {
+      console.log('=== SAMPLE BOOKLET CREATION START ===');
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      
       const bookletData = insertSampleBookletSchema.parse(req.body);
+      console.log('Parsed booklet data:', JSON.stringify(bookletData, null, 2));
+      
       const booklet = await storage.createSampleBooklet(bookletData);
+      console.log('Created booklet:', JSON.stringify(booklet, null, 2));
 
       // Log activity
       await storage.logActivity(
@@ -654,10 +820,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json(booklet);
     } catch (error) {
+      console.error('=== SAMPLE BOOKLET CREATION ERROR ===');
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Full error:', error);
+      
       if (error instanceof z.ZodError) {
+        console.error("Booklet validation errors:", error.errors);
         return res.status(400).json({ message: "Invalid booklet data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create sample booklet" });
+      
+      res.status(500).json({ message: "Failed to create sample booklet", error: error.message });
     }
   });
 
@@ -713,6 +886,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete sample booklet" });
+    }
+  });
+
+  // Send email for sample booklet
+  app.post("/api/sample-booklets/:id/email", async (req, res) => {
+    try {
+      const bookletId = req.params.id;
+      const { emailType } = req.body;
+      
+      const booklet = await storage.getSampleBooklet(bookletId);
+      if (!booklet) {
+        return res.status(404).json({ message: "Sample booklet not found" });
+      }
+
+      if (!booklet.email) {
+        return res.status(400).json({ message: "No email address for this booklet" });
+      }
+
+      if (emailType === 'tracking_notification') {
+        if (!booklet.tracking_number) {
+          return res.status(400).json({ message: "No tracking number available" });
+        }
+
+        const success = await emailService.sendTrackingNotification(
+          booklet.email,
+          booklet.customer_name,
+          booklet.order_number,
+          booklet.tracking_number
+        );
+
+        if (success) {
+          // Log the email activity
+          await storage.logActivity(
+            '1', // TODO: Get actual user ID from session/auth
+            'EMAIL_SENT',
+            'SAMPLE_BOOKLET',
+            bookletId,
+            `Sent tracking notification to ${booklet.email} for order ${booklet.order_number}`
+          );
+          
+          res.json({ message: "Tracking notification sent successfully" });
+        } else {
+          res.status(500).json({ message: "Failed to send tracking notification" });
+        }
+      } else {
+        res.status(400).json({ message: "Invalid email type" });
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      res.status(500).json({ message: "Failed to send email" });
     }
   });
 

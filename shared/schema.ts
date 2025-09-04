@@ -34,8 +34,8 @@ export const leads = mysqlTable("leads", {
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 100 }),
   lead_origin: mysqlEnum("lead_origin", ["Facebook", "Google Text", "Instagram", "Trade Show", "WhatsApp", "Commercial", "Referral", "Website"]).notNull(),
-  date_created: date("date_created").notNull(),
-  next_followup_date: date("next_followup_date"),
+  date_created: varchar("date_created", { length: 10 }).notNull(), // Store as YYYY-MM-DD string
+  next_followup_date: varchar("next_followup_date", { length: 10 }), // Store as YYYY-MM-DD string
   remarks: mysqlEnum("remarks", ["Not Interested", "Not Service Area", "Not Compatible", "Sold", "In Progress", "New"]).default("New"),
   assigned_to: mysqlEnum("assigned_to", ["Kim", "Patrick", "Lina"]).notNull(),
   notes: text("notes"),
@@ -45,9 +45,9 @@ export const leads = mysqlTable("leads", {
   updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
   deposit_paid: boolean("deposit_paid").default(false),
   balance_paid: boolean("balance_paid").default(false),
-  pickup_date: date("pickup_date"), // New field for pickup date
-  installation_date: date("installation_date"),
-  installation_end_date: date("installation_end_date"), // For multi-day installations
+  pickup_date: varchar("pickup_date", { length: 10 }), // Store as YYYY-MM-DD string
+  installation_date: varchar("installation_date", { length: 10 }), // Store as YYYY-MM-DD string
+  installation_end_date: varchar("installation_end_date", { length: 10 }), // Store as YYYY-MM-DD string
   assigned_installer: varchar("assigned_installer", { length: 100 }), // Single installer name
   address: text("address"),
   selected_colors: text("selected_colors"), // JSON string of selected WMK colors
@@ -64,11 +64,70 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
 }).extend({
-  date_created: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : new Date())]).optional(),
-  next_followup_date: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
-  pickup_date: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
-  installation_date: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
-  installation_end_date: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
+  date_created: z.union([
+    z.string(), // Accept date strings directly
+    z.date().transform(date => {
+      // Convert Date object to YYYY-MM-DD string
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })
+  ]).optional(),
+  next_followup_date: z.union([
+    z.string().refine(val => {
+      // Allow empty strings or valid YYYY-MM-DD format
+      return val === '' || /^\d{4}-\d{2}-\d{2}$/.test(val);
+    }, "Date must be in YYYY-MM-DD format"), 
+    z.date().transform(date => {
+      // PRODUCTION FIX: Use timezone-safe methods
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const result = `${year}-${month}-${day}`;
+      return result;
+    }), 
+    z.null()
+  ]).optional(),
+  pickup_date: z.union([
+    z.string().refine(val => {
+      return val === '' || /^\d{4}-\d{2}-\d{2}$/.test(val);
+    }, "Date must be in YYYY-MM-DD format"),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const result = `${year}-${month}-${day}`;
+      return result;
+    }),
+    z.null()
+  ]).optional(),
+  installation_date: z.union([
+    z.string().refine(val => {
+      return val === '' || /^\d{4}-\d{2}-\d{2}$/.test(val);
+    }, "Date must be in YYYY-MM-DD format"),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const result = `${year}-${month}-${day}`;
+      return result;
+    }),
+    z.null()
+  ]).optional(),
+  installation_end_date: z.union([
+    z.string().refine(val => {
+      return val === '' || /^\d{4}-\d{2}-\d{2}$/.test(val);
+    }, "Date must be in YYYY-MM-DD format"),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const result = `${year}-${month}-${day}`;
+      return result;
+    }),
+    z.null()
+  ]).optional(),
   assigned_installer: z.union([
     z.string(),
     z.array(z.string()).transform(arr => arr.join(', ')),
@@ -78,10 +137,78 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
 });
 
 export const updateLeadSchema = insertLeadSchema.partial().extend({
-  next_followup_date: z.union([z.date(), z.string().datetime(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
-  pickup_date: z.union([z.date(), z.string().datetime(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
-  installation_date: z.union([z.date(), z.string().datetime(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
-  installation_end_date: z.union([z.date(), z.string().datetime(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
+  assigned_to: z.union([
+    z.enum(["Kim", "Patrick", "Lina"]),
+    z.string().refine(val => val === "", "Must be empty string or valid assignee").transform(() => "Kim" as const), // Default to Kim for empty strings
+  ]).optional(),
+  next_followup_date: z.union([
+    z.string().transform(str => {
+      // If it's an ISO string, extract just the date part
+      if (str.includes('T')) {
+        return str.split('T')[0];
+      }
+      // If it's already in YYYY-MM-DD format, return as-is
+      return str;
+    }),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }), 
+    z.null()
+  ]).optional(),
+  pickup_date: z.union([
+    z.string().transform(str => {
+      // If it's an ISO string, extract just the date part
+      if (str.includes('T')) {
+        return str.split('T')[0];
+      }
+      // If it's already in YYYY-MM-DD format, return as-is
+      return str;
+    }),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }), 
+    z.null()
+  ]).optional(),
+  installation_date: z.union([
+    z.string().transform(str => {
+      // If it's an ISO string, extract just the date part
+      if (str.includes('T')) {
+        return str.split('T')[0];
+      }
+      // If it's already in YYYY-MM-DD format, return as-is
+      return str;
+    }),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }), 
+    z.null()
+  ]).optional(),
+  installation_end_date: z.union([
+    z.string().transform(str => {
+      // If it's an ISO string, extract just the date part
+      if (str.includes('T')) {
+        return str.split('T')[0];
+      }
+      // If it's already in YYYY-MM-DD format, return as-is
+      return str;
+    }),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }), 
+    z.null()
+  ]).optional(),
   project_amount: z.union([z.string(), z.number().transform(val => val.toString()), z.null()]).optional(),
   assigned_installer: z.union([
     z.string(),
@@ -148,12 +275,12 @@ export const completedProjects = mysqlTable("completed_projects", {
   project_amount: decimal("project_amount", { precision: 10, scale: 2 }).default("0.00"),
   deposit_paid: boolean("deposit_paid").default(false),
   balance_paid: boolean("balance_paid").default(false),
-  installation_date: date("installation_date"),
-  completion_date: date("completion_date").notNull(),
+  installation_date: varchar("installation_date", { length: 10 }), // Store as YYYY-MM-DD string
+  completion_date: varchar("completion_date", { length: 10 }).notNull(), // Store as YYYY-MM-DD string
   assigned_installer: varchar("assigned_installer", { length: 100 }),
   notes: text("notes"),
   original_lead_origin: mysqlEnum("original_lead_origin", ["Facebook", "Google Text", "Instagram", "Trade Show", "WhatsApp", "Commercial", "Referral"]),
-  original_date_created: date("original_date_created"),
+  original_date_created: varchar("original_date_created", { length: 10 }), // Store as YYYY-MM-DD string
   original_assigned_to: mysqlEnum("original_assigned_to", ["Kim", "Patrick", "Lina"]),
   created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
   updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
@@ -170,8 +297,8 @@ export const repairRequests = mysqlTable("repair_requests", {
   issue_description: text("issue_description").notNull(),
   priority: mysqlEnum("priority", ["Low", "Medium", "High", "Urgent"]).default("Medium"),
   status: mysqlEnum("status", ["Pending", "In Progress", "Completed", "Cancelled"]).default("Pending"),
-  date_reported: date("date_reported").notNull(),
-  completion_date: date("completion_date"),
+  date_reported: varchar("date_reported", { length: 10 }).notNull(), // Store as YYYY-MM-DD string
+  completion_date: varchar("completion_date", { length: 10 }), // Store as YYYY-MM-DD string
   notes: text("notes"),
   created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
   updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
@@ -193,8 +320,24 @@ export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit
   id: true,
   created_at: true,
 }).extend({
-  start_date: z.string().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val),
-  end_date: z.string().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val).optional(),
+  start_date: z.string().or(z.date()).transform((val) => {
+    if (typeof val === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        return new Date(val + 'T00:00:00.000Z');
+      }
+      return new Date(val);
+    }
+    return val;
+  }),
+  end_date: z.string().or(z.date()).transform((val) => {
+    if (typeof val === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        return new Date(val + 'T00:00:00.000Z');
+      }
+      return new Date(val);
+    }
+    return val;
+  }).optional(),
 });
 
 export const updateCalendarEventSchema = insertCalendarEventSchema.partial();
@@ -205,6 +348,7 @@ export type CalendarEvent = typeof calendarEvents.$inferSelect;
 
 export const EVENT_TYPES = [
   "installation",
+  "pickup",
   "leave", 
   "trade-show",
   "showroom-visit",
@@ -222,8 +366,8 @@ export const sampleBooklets = mysqlTable("sample_booklets", {
   product_type: mysqlEnum("product_type", ["Demo Kit & Sample Booklet", "Sample Booklet Only", "Trial Kit", "Demo Kit Only"]).notNull(),
   tracking_number: varchar("tracking_number", { length: 100 }),
   status: mysqlEnum("status", ["Pending", "Shipped", "Delivered", "Refunded"]).default("Pending"),
-  date_ordered: date("date_ordered").notNull(),
-  date_shipped: date("date_shipped"),
+  date_ordered: varchar("date_ordered", { length: 10 }).notNull(), // Store as YYYY-MM-DD string
+  date_shipped: varchar("date_shipped", { length: 10 }), // Store as YYYY-MM-DD string
   notes: text("notes"),
   created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
   updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
@@ -235,7 +379,7 @@ export const installers = mysqlTable("installers", {
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 100 }),
   status: mysqlEnum("status", ["active", "inactive"]).default("active"),
-  hire_date: date("hire_date"),
+  hire_date: varchar("hire_date", { length: 10 }), // Store as YYYY-MM-DD string
   hourly_rate: decimal("hourly_rate", { precision: 10, scale: 2 }),
   specialty: text("specialty"),
   notes: text("notes"),
@@ -248,8 +392,39 @@ export const insertSampleBookletSchema = createInsertSchema(sampleBooklets).omit
   created_at: true,
   updated_at: true,
 }).extend({
-  date_ordered: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : new Date())]).optional(),
-  date_shipped: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
+  date_ordered: z.union([
+    z.string().transform(str => {
+      // If it's an ISO string, extract just the date part
+      if (str.includes('T')) {
+        return str.split('T')[0];
+      }
+      // If it's already in YYYY-MM-DD format, return as-is
+      return str;
+    }),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })
+  ]).optional(),
+  date_shipped: z.union([
+    z.string().transform(str => {
+      // If it's an ISO string, extract just the date part
+      if (str.includes('T')) {
+        return str.split('T')[0];
+      }
+      // If it's already in YYYY-MM-DD format, return as-is
+      return str;
+    }),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }), 
+    z.null()
+  ]).optional(),
 });
 
 export const updateSampleBookletSchema = insertSampleBookletSchema.partial();
@@ -263,6 +438,24 @@ export const insertInstallerSchema = createInsertSchema(installers).omit({
   id: true,
   created_at: true,
   updated_at: true,
+}).extend({
+  hire_date: z.union([
+    z.string().transform(str => {
+      // If it's an ISO string, extract just the date part
+      if (str.includes('T')) {
+        return str.split('T')[0];
+      }
+      // If it's already in YYYY-MM-DD format, return as-is
+      return str;
+    }),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }), 
+    z.null()
+  ]).optional(),
 });
 
 export const updateInstallerSchema = insertInstallerSchema.partial();
@@ -277,8 +470,39 @@ export const insertRepairRequestSchema = createInsertSchema(repairRequests).omit
   created_at: true,
   updated_at: true,
 }).extend({
-  date_reported: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : new Date())]).optional(),
-  completion_date: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null), z.null()]).optional(),
+  date_reported: z.union([
+    z.string().transform(str => {
+      // If it's an ISO string, extract just the date part
+      if (str.includes('T')) {
+        return str.split('T')[0];
+      }
+      // If it's already in YYYY-MM-DD format, return as-is
+      return str;
+    }),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })
+  ]).optional(),
+  completion_date: z.union([
+    z.string().transform(str => {
+      // If it's an ISO string, extract just the date part
+      if (str.includes('T')) {
+        return str.split('T')[0];
+      }
+      // If it's already in YYYY-MM-DD format, return as-is
+      return str;
+    }),
+    z.date().transform(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }), 
+    z.null()
+  ]).optional(),
 });
 
 export const updateRepairRequestSchema = insertRepairRequestSchema.partial();

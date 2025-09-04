@@ -53,6 +53,11 @@ export function hasPermission(user: User | null, route: string): boolean {
   // If no specific permission is required, allow access
   if (!requiredPermission) return true;
   
+  // Special case: if owner has leads permission, they also get add_lead access
+  if (user.role === 'owner' && requiredPermission === PERMISSIONS.ADD_LEAD) {
+    return Array.isArray(user.permissions) && user.permissions.includes(PERMISSIONS.LEADS);
+  }
+  
   // Check if user has the required permission
   return Array.isArray(user.permissions) && user.permissions.includes(requiredPermission) || false;
 }

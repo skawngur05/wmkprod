@@ -204,6 +204,16 @@ export default function SampleBooklets() {
 
 
   const formatDate = (date: string | Date) => {
+    if (!date) return '';
+    
+    // If it's a simple date string like "2025-08-29", parse it without timezone conversion
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const [year, month, day] = date.split('-').map(Number);
+      const dateObj = new Date(year, month - 1, day); // month is 0-indexed
+      return dateObj.toLocaleDateString();
+    }
+    
+    // Fallback for other date formats
     return new Date(date).toLocaleDateString();
   };
 

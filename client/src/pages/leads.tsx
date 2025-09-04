@@ -17,6 +17,35 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Download, Upload, Search, X, Phone, Mail, Calendar, Eye, Trash2, AlertTriangle, Clock, Check } from 'lucide-react';
 
+// Timezone-safe date formatting function
+const formatDateTimezoneAware = (dateString: string, options: Intl.DateTimeFormatOptions) => {
+  if (!dateString) return '';
+  
+  // If it's a simple date string like "2025-08-29", parse it without timezone conversion
+  if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    
+    // Format without timezone conversion
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    if (options.month === 'short' && options.day === 'numeric' && options.year === 'numeric') {
+      return `${monthNames[month - 1]} ${day}, ${year}`;
+    }
+    
+    // Handle "Sep 4" format (month short + day, no year)
+    if (options.month === 'short' && options.day === 'numeric' && !options.year) {
+      return `${monthNames[month - 1]} ${day}`;
+    }
+    
+    // For other formats, return the simple date string
+    return dateString;
+  }
+  
+  // Fallback for other date formats - return as string to avoid timezone conversion
+  return String(dateString);
+};
+
 export default function Leads() {
   const [location] = useLocation();
   const [filters, setFilters] = useState({
@@ -37,6 +66,23 @@ export default function Leads() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Function to copy text to clipboard
+  const copyToClipboard = async (text: string, type: 'phone' | 'email') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Copied to clipboard",
+        description: `${type === 'phone' ? 'Phone number' : 'Email address'} copied successfully`,
+      });
+    } catch (err) {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Read URL parameters on component mount
   useEffect(() => {
@@ -195,14 +241,32 @@ export default function Leads() {
     if (!date) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const followupDate = new Date(date);
+    
+    // Handle simple date strings like "2025-08-29" without timezone conversion
+    let followupDate;
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const [year, month, day] = date.split('-').map(Number);
+      followupDate = new Date(year, month - 1, day); // month is 0-indexed
+    } else {
+      followupDate = new Date(date);
+    }
+    
     return followupDate < today;
   };
 
   const isDueToday = (date: string | Date | null) => {
     if (!date) return false;
     const today = new Date();
-    const followupDate = new Date(date);
+    
+    // Handle simple date strings like "2025-08-29" without timezone conversion
+    let followupDate;
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const [year, month, day] = date.split('-').map(Number);
+      followupDate = new Date(year, month - 1, day); // month is 0-indexed
+    } else {
+      followupDate = new Date(date);
+    }
+    
     return (
       today.getDate() === followupDate.getDate() &&
       today.getMonth() === followupDate.getMonth() &&
@@ -341,27 +405,28 @@ export default function Leads() {
             <CardTitle className="text-lg font-semibold text-gray-900">Leads Overview</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            {/* Make sure table container allows overflow scrolling */}
+            <div className="overflow-x-auto max-w-full">
               <Table data-testid="leads-table">
-                <TableHeader>
-                  <TableRow className="bg-gray-50 hover:bg-gray-50">
-                    <TableHead className="font-semibold text-gray-900" style={{ width: '100px', minWidth: '100px' }}>Date</TableHead>
-                    <TableHead className="font-semibold text-gray-900" style={{ width: '150px', minWidth: '150px' }}>Name</TableHead>
-                    <TableHead className="font-semibold text-gray-900" style={{ width: '160px', minWidth: '160px' }}>Contact Info</TableHead>
-                    <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Origin</TableHead>
-                    <TableHead className="font-semibold text-gray-900" style={{ width: '130px', minWidth: '130px' }}>Next Follow-up</TableHead>
-                    <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Assigned To</TableHead>
-                    <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Status</TableHead>
-                    <TableHead className="font-semibold text-gray-900" style={{ width: '130px', minWidth: '130px' }}>Project Amount</TableHead>
-                    <TableHead className="font-semibold text-gray-900" style={{ width: '100px', minWidth: '100px' }}>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 hover:bg-gray-50">
+                      <TableHead className="font-semibold text-gray-900" style={{ width: '100px', minWidth: '100px' }}>Date</TableHead>
+                      <TableHead className="font-semibold text-gray-900" style={{ width: '150px', minWidth: '150px' }}>Name</TableHead>
+                      <TableHead className="font-semibold text-gray-900" style={{ width: '160px', minWidth: '160px' }}>Contact Info</TableHead>
+                      <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Origin</TableHead>
+                      <TableHead className="font-semibold text-gray-900" style={{ width: '130px', minWidth: '130px' }}>Next Follow-up</TableHead>
+                      <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Assigned To</TableHead>
+                      <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Status</TableHead>
+                      <TableHead className="font-semibold text-gray-900" style={{ width: '130px', minWidth: '130px' }}>Project Amount</TableHead>
+                      <TableHead className="font-semibold text-gray-900 sticky right-0 bg-gray-50 z-10" style={{ width: '100px', minWidth: '100px' }}>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {leads && leads.length > 0 ? (
                     leads.map((lead) => (
                       <TableRow key={lead.id} data-testid={`lead-row-${lead.id}`} className="hover:bg-gray-50">
                         <TableCell className="font-medium text-gray-900" style={{ width: '100px', maxWidth: '100px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                          {new Date(lead.date_created).toLocaleDateString('en-US', { 
+                          {formatDateTimezoneAware(lead.date_created, { 
                             month: 'short', 
                             day: 'numeric',
                             year: '2-digit'
@@ -374,9 +439,21 @@ export default function Leads() {
                         </TableCell>
                         <TableCell style={{ width: '160px', maxWidth: '160px' }}>
                           <div className="text-sm" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            <div style={{ fontSize: '0.75rem', lineHeight: '1.2' }}>{lead.phone}</div>
+                            <div 
+                              style={{ fontSize: '0.75rem', lineHeight: '1.2', cursor: 'pointer' }}
+                              className="hover:text-blue-600 hover:underline"
+                              onClick={() => lead.phone && copyToClipboard(lead.phone, 'phone')}
+                              title={`Click to copy: ${lead.phone}`}
+                            >
+                              {lead.phone}
+                            </div>
                             {lead.email && (
-                              <div style={{ fontSize: '0.7rem', color: '#6b7280', lineHeight: '1.2' }} title={lead.email}>
+                              <div 
+                                style={{ fontSize: '0.7rem', color: '#6b7280', lineHeight: '1.2', cursor: 'pointer' }} 
+                                className="hover:text-blue-600 hover:underline"
+                                title={`Click to copy: ${lead.email}`}
+                                onClick={() => lead.email && copyToClipboard(lead.email, 'email')}
+                              >
                                 {lead.email.length > 15 ? lead.email.substring(0, 15) + '...' : lead.email}
                               </div>
                             )}
@@ -455,7 +532,7 @@ export default function Leads() {
                             }>
                               {isOverdue(lead.next_followup_date) ? 'Overdue' :
                                isDueToday(lead.next_followup_date) ? 'Today' :
-                               new Date(lead.next_followup_date).toLocaleDateString('en-US', { 
+                               formatDateTimezoneAware(lead.next_followup_date, { 
                                  month: 'short', 
                                  day: 'numeric'
                                })}
@@ -543,38 +620,38 @@ export default function Leads() {
                             {lead.project_amount ? formatCurrency(lead.project_amount) : '-'}
                           </span>
                         </TableCell>
-                        <TableCell style={{ width: '120px', maxWidth: '120px' }}>
-                          <div className="flex items-center space-x-1">
+                        <TableCell className="sticky right-0 bg-white shadow-sm" style={{ width: '120px', maxWidth: '120px' }}>
+                          <div className="flex items-center gap-1 justify-center">
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => openQuickFollowup(lead)}
                               title="Quick Follow-up Update"
                               data-testid={`button-followup-lead-${lead.id}`}
-                              className="h-8 w-8 p-0"
+                              className="h-7 w-7 p-0"
                             >
-                              <Calendar className="h-4 w-4" />
+                              <Calendar className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => openQuickEdit(lead)}
                               title="View Lead Details"
                               data-testid={`button-view-lead-${lead.id}`}
-                              className="h-8 w-8 p-0"
+                              className="h-7 w-7 p-0"
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleDelete(lead.id.toString())}
                               disabled={deleteLeadMutation.isPending}
                               title="Delete Lead"
                               data-testid={`button-delete-lead-${lead.id}`}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </TableCell>

@@ -16,6 +16,31 @@ interface FormData extends Omit<UpdateSampleBooklet, 'date_shipped'> {
 }
 
 export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookletModalProps) {
+  // Helper function to format date without timezone issues
+  const formatDateForInput = (dateValue: string | Date | null) => {
+    if (!dateValue) return '';
+    // If it's already a string in YYYY-MM-DD format, return as-is
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    // If it's a Date object or other format, convert to YYYY-MM-DD
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '';
+    // Use local time methods since we're storing as simple strings
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper function to get today's date in YYYY-MM-DD format (timezone-safe)
+  const getTodayDateString = () => {
+    const today = new Date();
+    return today.getFullYear() + '-' + 
+           String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+           String(today.getDate()).padStart(2, '0');
+  };
+
   const [formData, setFormData] = useState<FormData>({});
   const [originalFormData, setOriginalFormData] = useState<FormData | null>(null);
 
@@ -36,7 +61,7 @@ export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookl
         product_type: booklet.product_type,
         status: booklet.status,
         tracking_number: booklet.tracking_number,
-        date_shipped: booklet.date_shipped ? new Date(booklet.date_shipped).toISOString().split('T')[0] : '',
+        date_shipped: formatDateForInput(booklet.date_shipped),
         notes: booklet.notes,
       };
       setFormData(initialData);
@@ -114,7 +139,7 @@ export default function EditBookletModal({ isOpen, onClose, booklet }: EditBookl
     setFormData(prev => ({
       ...prev,
       status: newStatus as "Pending" | "Shipped" | "Delivered" | "Refunded",
-      date_shipped: newStatus === 'Shipped' && !prev.date_shipped ? new Date().toISOString().split('T')[0] : prev.date_shipped
+      date_shipped: newStatus === 'Shipped' && !prev.date_shipped ? getTodayDateString() : prev.date_shipped
     }));
   };
 
