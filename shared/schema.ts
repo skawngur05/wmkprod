@@ -261,6 +261,7 @@ export const calendarEvents = mysqlTable("calendar_events", {
   assigned_to: varchar("assigned_to", { length: 255 }), // for leave events
   related_lead_id: int("related_lead_id"), // for installation events
   google_event_id: varchar("google_event_id", { length: 255 }), // Google Calendar event ID for sync
+  color: varchar("color", { length: 7 }), // Hex color code from Google Calendar (e.g., #FF5722)
   created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
 });
 

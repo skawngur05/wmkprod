@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Lead } from '@shared/schema';
@@ -16,6 +16,24 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Download, Upload, Search, X, Phone, Mail, Calendar, Eye, Trash2, AlertTriangle, Clock, Check } from 'lucide-react';
+
+// Simple search input component
+const SearchInput = ({ value, onChange }: { value: string; onChange: (value: string) => void }) => {
+  return (
+    <div className="md:col-span-4">
+      <label className="text-sm font-medium text-gray-700 mb-2 block">Search</label>
+      <Input
+        type="text"
+        placeholder="Search leads..."
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete="off"
+        data-testid="input-search-leads"
+        className="w-full"
+      />
+    </div>
+  );
+};
 
 // Timezone-safe date formatting function
 const formatDateTimezoneAware = (dateString: string, options: Intl.DateTimeFormatOptions) => {
@@ -47,7 +65,6 @@ const formatDateTimezoneAware = (dateString: string, options: Intl.DateTimeForma
 };
 
 export default function Leads() {
-  const [location] = useLocation();
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -66,6 +83,7 @@ export default function Leads() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Function to copy text to clipboard
   const copyToClipboard = async (text: string, type: 'phone' | 'email') => {
@@ -97,13 +115,13 @@ export default function Leads() {
       // For now, we can set a special search or status value
       setFilters(prev => ({ ...prev, status: 'all' })); // Adjust as needed based on your backend
     }
-  }, [location]);
+  }, []); // Only run on mount
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(filters.search);
-    }, 300); // 300ms delay
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [filters.search]);
@@ -116,14 +134,14 @@ export default function Leads() {
     assigned_to: filters.assigned_to
   }), [debouncedSearch, filters.status, filters.origin, filters.assigned_to]);
 
-  const { data: leadsResponse, isLoading } = useQuery<{
+  const { data: leadsResponse, isLoading, error, isError } = useQuery<{
     leads: Lead[];
     total: number;
     page: number;
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ['/api/leads', queryFilters, currentPage],
+    queryKey: ['leads-page', queryFilters, currentPage],
     queryFn: async () => {
       // Build query parameters from filters and pagination
       const params = new URLSearchParams();
@@ -145,6 +163,9 @@ export default function Leads() {
       
       return res.json();
     },
+    staleTime: 30 * 1000,
+    refetchOnMount: true,
+    retry: 3,
   });
 
   // Extract leads and pagination info from response
@@ -161,7 +182,12 @@ export default function Leads() {
         newFilters.assigned_to !== filters.assigned_to) {
       setCurrentPage(1);
     }
-  }, [filters]);
+  }, [filters.status, filters.origin, filters.assigned_to]);
+
+  // Simple search handler
+  const handleSearchChange = (value: string) => {
+    setFilters(prev => ({ ...prev, search: value }));
+  };
 
   // Reset page when debounced search changes
   useEffect(() => {
@@ -194,7 +220,9 @@ export default function Leads() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Lead deleted successfully!" });
+      // Invalidate multiple query patterns to ensure all lead-related data refreshes
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
     },
     onError: (error: Error, leadId: string, context: any) => {
@@ -203,6 +231,7 @@ export default function Leads() {
         toast({ title: "Info", description: "Lead has been deleted" });
         // Still refresh the data to reflect the current state
         queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+        queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
         queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       } else {
         // Rollback the optimistic update on error
@@ -274,6 +303,23 @@ export default function Leads() {
     );
   };
 
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 mb-4">
+            <AlertTriangle className="h-12 w-12 mx-auto mb-2" />
+            <p className="text-lg font-semibold">Error loading leads</p>
+            <p className="text-sm text-gray-600">{error?.message || 'Unknown error occurred'}</p>
+          </div>
+          <Button onClick={() => window.location.reload()} className="mt-4">
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -295,7 +341,7 @@ export default function Leads() {
           </div>
           <div className="flex gap-3">
             <Button
-              onClick={() => window.location.href = '/add-lead'}
+              onClick={() => setLocation('/add-lead')}
               data-testid="button-add-lead"
               className="bg-green-600 hover:bg-green-700"
             >
@@ -320,17 +366,10 @@ export default function Leads() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              <div className="md:col-span-4">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Search</label>
-                <Input
-                  type="text"
-                  placeholder="Search leads..."
-                  value={filters.search}
-                  onChange={(e) => updateFilters({...filters, search: e.target.value})}
-                  data-testid="input-search-leads"
-                  className="w-full"
-                />
-              </div>
+              <SearchInput
+                value={filters.search}
+                onChange={handleSearchChange}
+              />
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
                 <Select

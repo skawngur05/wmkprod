@@ -55,7 +55,9 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Follow-up updated successfully!" });
+      // Invalidate multiple query patterns to ensure all lead-related data refreshes
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
       onHide();

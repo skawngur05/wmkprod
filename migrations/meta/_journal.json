@@ -43,6 +43,13 @@
       "when": 1756474804543,
       "tag": "0005_abnormal_wallop",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1757081480016,
+      "tag": "0006_add_color_to_calendar_events",
+      "breakpoints": true
     }
   ]
 }

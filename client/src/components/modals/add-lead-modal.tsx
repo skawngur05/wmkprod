@@ -44,7 +44,9 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Lead created successfully!" });
+      // Invalidate multiple query patterns to ensure all lead-related data refreshes
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       resetForm();
       onHide();

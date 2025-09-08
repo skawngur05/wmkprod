@@ -4,7 +4,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CalendarEvent, Lead, InsertCalendarEvent, UpdateCalendarEvent, EVENT_TYPES, ASSIGNEES } from '@shared/schema';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarDays, User, MapPin, FileText, Plus, Edit, Trash2 } from 'lucide-react';
+import { CalendarDays, User, MapPin, FileText, Plus, Edit, Trash2, Calendar } from 'lucide-react';
 
 // US Holiday utility functions
 const getUSHolidays = (year: number) => {
@@ -207,7 +207,155 @@ export function BusinessCalendar() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
+  // Google Calendar auth state
+  const [isGoogleAuthed, setIsGoogleAuthed] = useState(false);
+
+  // Check Google Calendar auth status
+  const { data: authStatus } = useQuery({
+    queryKey: ['/api/calendar/auth/status'],
+    queryFn: async () => {
+      const response = await fetch('/api/calendar/auth/status');
+      if (!response.ok) throw new Error('Failed to check auth status');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Update authentication state when data changes
+  useEffect(() => {
+    if (authStatus?.authenticated !== undefined) {
+      setIsGoogleAuthed(authStatus.authenticated);
+    }
+  }, [authStatus]);
+
+  // Google Calendar sync function
+  const handleGoogleAuth = () => {
+    window.location.href = '/auth/google';
+  };
+
+  // Test Google Calendar connection
+  const testGoogleConnection = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/calendar/sync/test', {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Failed to test connection');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: 'Google Calendar', 
+        description: data.message,
+        variant: data.connected ? 'default' : 'destructive'
+      });
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to test Google Calendar connection',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const error = urlParams.get('error');
+
+    if (error) {
+      toast({
+        title: 'Google Calendar',
+        description: 'Authorization was cancelled or failed',
+        variant: 'destructive'
+      });
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    if (code) {
+      // Exchange code for tokens
+      exchangeCodeForTokens.mutate(code);
+    }
+  }, []);
+
+  // Sync events from Google Calendar
+  const syncFromGoogle = useMutation({
+    mutationFn: async (queryParams: string = '') => {
+      console.log('📡 Calling sync API...', queryParams);
+      const response = await fetch(`/api/calendar/sync${queryParams}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to sync from Google Calendar');
+      const result = await response.json();
+      console.log('📡 Sync API response:', result);
+      return result;
+    },
+    onSuccess: (result) => {
+      console.log('✅ Sync success:', result);
+      toast({
+        title: 'Google Calendar Sync',
+        description: `Successfully synced ${result.synced} events from Google Calendar. ${result.skipped > 0 ? `${result.skipped} events were already synced.` : ''}`,
+        variant: 'default'
+      });
+      // Refresh the calendar events
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
+    },
+    onError: (error) => {
+      console.error('❌ Sync error:', error);
+      toast({
+        title: 'Sync Failed',
+        description: 'Failed to sync events from Google Calendar',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Exchange authorization code for tokens
+  const exchangeCodeForTokens = useMutation({
+    mutationFn: async (code: string) => {
+      const response = await fetch('/auth/google/callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+      if (!response.ok) throw new Error('Failed to exchange code for tokens');
+      return response.json();
+    },
+    onSuccess: () => {
+      console.log('🎉 OAuth success! Starting automatic sync...');
+      toast({
+        title: 'Google Calendar',
+        description: 'Successfully connected to Google Calendar! Starting sync...',
+        variant: 'default'
+      });
+      // Clean URL and refresh auth status
+      window.history.replaceState({}, document.title, window.location.pathname);
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar/auth/status'] });
+      
+      // Automatically sync events after successful connection
+      setTimeout(() => {
+        console.log('🔄 Triggering automatic sync...');
+        syncFromGoogle.mutate();
+      }, 1000); // Small delay to ensure auth status is updated
+    },
+    onError: (error) => {
+      console.error('Token exchange error:', error);
+      toast({
+        title: 'Google Calendar',
+        description: 'Failed to complete authentication',
+        variant: 'destructive'
+      });
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  });
+
   // Fetch installations (already in database)
   const { data: installations = [], isLoading: installationsLoading } = useQuery<Lead[]>({
     queryKey: ['/api/installations'],
@@ -335,22 +483,28 @@ export function BusinessCalendar() {
   const otherEvents: CalendarEventDisplay[] = events.map(event => {
     let color = '#6B7280'; // Default gray
     
-    switch (event.type) {
-      case 'pickup':
-        color = '#3B82F6'; // Blue
-        break;
-      case 'leave':
-        color = '#EF4444'; // Red
-        break;
-      case 'trade-show':
-        color = '#8B5CF6'; // Purple
-        break;
-      case 'showroom-visit':
-        color = '#F59E0B'; // Amber
-        break;
-      case 'holiday':
-        color = '#EC4899'; // Pink
-        break;
+    // Use stored color for imported events (from Google Calendar) - now with proper color mapping
+    if (event.type === 'imported' && event.color) {
+      color = event.color;
+    } else {
+      // Use type-based colors for other events
+      switch (event.type) {
+        case 'pickup':
+          color = '#3B82F6'; // Blue
+          break;
+        case 'leave':
+          color = '#EF4444'; // Red
+          break;
+        case 'trade-show':
+          color = '#8B5CF6'; // Purple
+          break;
+        case 'showroom-visit':
+          color = '#F59E0B'; // Amber
+          break;
+        case 'holiday':
+          color = '#EC4899'; // Pink
+          break;
+      }
     }
 
     return {
@@ -466,10 +620,49 @@ export function BusinessCalendar() {
     <div className="calendar-container">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">Business Calendar</h3>
-        <Button onClick={handleAddEvent} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add Event
-        </Button>
+        <div className="flex items-center gap-2">
+          {!isGoogleAuthed ? (
+            <Button 
+              onClick={handleGoogleAuth} 
+              variant="outline" 
+              className="flex items-center gap-2"
+            >
+              <Calendar className="h-4 w-4" />
+              Connect Google Calendar
+            </Button>
+          ) : (
+            <>
+              <Button 
+                onClick={() => {
+                  console.log('Manual Sync Test button clicked');
+                  syncFromGoogle.mutate();
+                }} 
+                variant="outline" 
+                className="flex items-center gap-2"
+                disabled={syncFromGoogle.isPending}
+              >
+                <Calendar className="h-4 w-4" />
+                {syncFromGoogle.isPending ? 'Syncing...' : 'Manual Sync Test'}
+              </Button>
+              <Button 
+                onClick={() => {
+                  console.log('Force Refresh button clicked');
+                  syncFromGoogle.mutate('?force=true');
+                }} 
+                variant="outline" 
+                className="flex items-center gap-2 bg-orange-50 hover:bg-orange-100"
+                disabled={syncFromGoogle.isPending}
+              >
+                <Calendar className="h-4 w-4" />
+                {syncFromGoogle.isPending ? 'Refreshing...' : 'Force Refresh'}
+              </Button>
+            </>
+          )}
+          <Button onClick={handleAddEvent} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add Event
+          </Button>
+        </div>
       </div>
       
       <FullCalendar

@@ -6,6 +6,10 @@ import { uspsService } from "./usps-service";
 import { trackingScheduler } from "./tracking-scheduler";
 import { z } from "zod";
 import { emailService } from "./email-service";
+import { GoogleCalendarService } from "./google-calendar-working";
+
+// Create instance
+const googleCalendarService = new GoogleCalendarService();
 import { eq, like, or, desc, and } from 'drizzle-orm';
 import { db } from './db';
 import path from "path";
@@ -2297,6 +2301,54 @@ WMK CRM System`
     try {
       const eventData = insertCalendarEventSchema.parse(req.body);
       const event = await storage.createCalendarEvent(eventData);
+
+      // Sync to Google Calendar if credentials are available
+      try {
+        console.log('Created event object:', event);
+        
+        // Get start and end times, providing defaults if needed
+        const startTime = event.start_time || event.start_date;
+        let endTime = event.end_time || event.end_date;
+        
+        // If no end time provided, default to 1 hour after start time
+        if (!endTime && startTime) {
+          const startDate = new Date(startTime);
+          startDate.setHours(startDate.getHours() + 1);
+          endTime = startDate;
+          
+          // Update the database with the calculated end time
+          await storage.updateCalendarEvent(event.id!, { 
+            end_time: endTime.toISOString(),
+            end_date: endTime
+          });
+        }
+        
+        console.log('Attempting Google Calendar sync with:', {
+          title: event.title,
+          start: startTime,
+          end: endTime
+        });
+
+        const googleEventId = await googleCalendarService.createEvent({
+          title: event.title,
+          description: event.description || '',
+          start: startTime,
+          end: endTime,
+          location: event.location || ''
+        });
+
+        if (googleEventId) {
+          // Update the event with Google Calendar ID
+          await storage.updateCalendarEvent(event.id!, { 
+            google_event_id: googleEventId 
+          });
+          console.log('✅ Event synced to Google Calendar:', googleEventId);
+        }
+      } catch (googleError) {
+        console.warn('⚠️  Failed to sync to Google Calendar:', googleError);
+        // Continue with local event creation even if Google sync fails
+      }
+
       res.json(event);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -2311,10 +2363,29 @@ WMK CRM System`
     try {
       const { id } = req.params;
       const updates = updateCalendarEventSchema.parse(req.body);
+      
+      // Get the existing event first to check for Google Calendar ID
+      const existingEvent = await storage.getCalendarEvent(id);
       const event = await storage.updateCalendarEvent(id, updates);
       
       if (!event) {
         return res.status(404).json({ message: "Calendar event not found" });
+      }
+
+      // Sync to Google Calendar if there's a Google event ID
+      if (existingEvent?.google_event_id) {
+        try {
+          await googleCalendarService.updateEvent(existingEvent.google_event_id, {
+            title: event.title,
+            description: event.description || '',
+            start: event.start_time,
+            end: event.end_time,
+            location: event.location || ''
+          });
+          console.log('✅ Event updated in Google Calendar:', existingEvent.google_event_id);
+        } catch (googleError) {
+          console.warn('⚠️  Failed to update Google Calendar event:', googleError);
+        }
       }
       
       res.json(event);
@@ -2330,16 +2401,95 @@ WMK CRM System`
   app.delete("/api/calendar/events/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Get the event first to check for Google Calendar ID BEFORE deleting it
+      const existingEvent = await storage.getCalendarEvent(id);
+      console.log('🗑️  Deleting event:', { id, existingEvent });
+      
+      if (!existingEvent) {
+        return res.status(404).json({ message: "Calendar event not found" });
+      }
+      
       const success = await storage.deleteCalendarEvent(id);
+      console.log('📋 Delete result from database:', success);
       
       if (!success) {
-        return res.status(404).json({ message: "Calendar event not found" });
+        return res.status(500).json({ message: "Failed to delete calendar event from database" });
+      }
+
+      // Delete from Google Calendar if there's a Google event ID
+      if (existingEvent.google_event_id) {
+        console.log('🔄 Attempting to delete from Google Calendar:', existingEvent.google_event_id);
+        try {
+          const googleDeleteResult = await googleCalendarService.deleteEvent(existingEvent.google_event_id);
+          console.log('✅ Event deleted from Google Calendar:', existingEvent.google_event_id, 'Result:', googleDeleteResult);
+        } catch (googleError) {
+          console.warn('⚠️  Failed to delete Google Calendar event:', googleError);
+        }
+      } else {
+        console.log('ℹ️  No Google Calendar ID found, skipping Google Calendar deletion');
       }
       
       res.json({ message: "Calendar event deleted successfully" });
     } catch (error) {
       console.error("Failed to delete calendar event:", error);
       res.status(500).json({ message: "Failed to delete calendar event" });
+    }
+  });
+
+  // Google Calendar sync endpoints
+  app.post("/api/calendar/sync/test", async (req, res) => {
+    try {
+      const result = await googleCalendarService.testConnection();
+      res.json({ 
+        connected: result.success,
+        message: result.message
+      });
+    } catch (error) {
+      console.error("Failed to test Google Calendar connection:", error);
+      res.status(500).json({ 
+        connected: false, 
+        message: "Failed to test Google Calendar connection",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/calendar/sync/import", async (req, res) => {
+    try {
+      const { timeMin, timeMax } = req.body;
+      const googleEvents = await googleCalendarService.importEvents(timeMin, timeMax);
+      
+      // Import Google Calendar events to local database
+      let importedCount = 0;
+      for (const googleEvent of googleEvents) {
+        if (googleEvent.summary && googleEvent.start && googleEvent.end) {
+          try {
+            await storage.createCalendarEvent({
+              title: googleEvent.summary,
+              description: googleEvent.description || null,
+              start_time: googleEvent.start.dateTime || googleEvent.start.date,
+              end_time: googleEvent.end.dateTime || googleEvent.end.date,
+              location: googleEvent.location || null,
+              type: 'meeting',
+              assigned_to: 'Kim',
+              google_event_id: googleEvent.id
+            });
+            importedCount++;
+          } catch (err) {
+            console.warn('Failed to import event:', googleEvent.summary, err);
+          }
+        }
+      }
+      
+      res.json({ 
+        message: `Successfully imported ${importedCount} events from Google Calendar`,
+        importedCount,
+        totalGoogleEvents: googleEvents.length
+      });
+    } catch (error) {
+      console.error("Failed to import Google Calendar events:", error);
+      res.status(500).json({ message: "Failed to import Google Calendar events" });
     }
   });
 
@@ -2602,6 +2752,208 @@ WMK CRM System`
     } catch (error) {
       console.error('Error searching completed projects:', error);
       res.status(500).json({ error: 'Failed to search completed projects' });
+    }
+  });
+
+  // Google Calendar OAuth routes
+  app.get("/auth/google", (req, res) => {
+    try {
+      console.log('📅 Google auth route called');
+      console.log('📅 GoogleCalendarService:', !!googleCalendarService);
+      console.log('📅 getAuthUrl method:', typeof googleCalendarService.getAuthUrl);
+      
+      const authUrl = googleCalendarService.getAuthUrl();
+      console.log('📅 Generated auth URL:', authUrl);
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error('❌ Error generating auth URL:', error);
+      res.status(500).json({ error: 'Failed to generate auth URL', details: error.message });
+    }
+  });
+
+  app.get("/auth/google/callback", async (req, res) => {
+    try {
+      const { code } = req.query;
+      
+      if (!code) {
+        return res.status(400).json({ error: 'Authorization code not provided' });
+      }
+
+      const tokens = await googleCalendarService.getAccessToken(code as string);
+      
+      // Redirect to dashboard with success message
+      res.redirect('/dashboard?auth=success');
+    } catch (error) {
+      console.error('Error exchanging code for tokens:', error);
+      res.redirect('/dashboard?auth=error');
+    }
+  });
+
+  app.post("/auth/google/callback", async (req, res) => {
+    try {
+      const { code } = req.body;
+      
+      if (!code) {
+        return res.status(400).json({ error: 'Authorization code not provided' });
+      }
+
+      console.log('📅 Exchanging code for tokens...');
+      const tokens = await googleCalendarService.getAccessToken(code);
+      console.log('📅 Successfully obtained tokens');
+      
+      res.json({ success: true, message: 'Successfully authenticated with Google Calendar' });
+    } catch (error) {
+      console.error('❌ Error exchanging code for tokens:', error);
+      res.status(500).json({ error: 'Failed to exchange code for tokens', details: error.message });
+    }
+  });
+
+  app.get("/api/calendar/auth/status", (req, res) => {
+    try {
+      const isAuthenticated = googleCalendarService.isAuthenticated();
+      res.json({ authenticated: isAuthenticated });
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+      res.status(500).json({ error: 'Failed to check auth status' });
+    }
+  });
+
+  // Sync Google Calendar events to business calendar
+  app.post("/api/calendar/sync", async (req, res) => {
+    try {
+      if (!googleCalendarService.isAuthenticated()) {
+        return res.status(401).json({ error: 'Google Calendar not authenticated' });
+      }
+
+      const forceRefresh = req.query.force === 'true';
+      console.log('🔄 Starting Google Calendar sync...', forceRefresh ? '(FORCE REFRESH)' : '');
+
+      // If force refresh, clear existing Google Calendar events first
+      if (forceRefresh) {
+        console.log('🗑️  Clearing existing Google Calendar events...');
+        const existingEvents = await storage.getCalendarEvents();
+        const googleEvents = existingEvents.filter(e => e.google_event_id !== null);
+        
+        for (const event of googleEvents) {
+          try {
+            await storage.deleteCalendarEvent(event.id);
+            console.log(`🗑️  Deleted existing event: "${event.title}"`);
+          } catch (error) {
+            console.error(`❌ Error deleting event ${event.id}:`, error);
+          }
+        }
+        console.log(`🗑️  Cleared ${googleEvents.length} existing Google Calendar events`);
+      }
+      
+      // Get events from Google Calendar
+      const googleEvents = await googleCalendarService.importEvents();
+      console.log(`📅 Found ${googleEvents.length} events in Google Calendar`);
+
+      let syncedCount = 0;
+      let skippedCount = 0;
+      const errors = [];
+
+      // Get existing events to avoid duplicates
+      const existingEvents = await storage.getCalendarEvents();
+      const existingGoogleIds = new Set(
+        existingEvents
+          .map(e => e.google_event_id)
+          .filter(id => id !== null)
+      );
+
+      for (const googleEvent of googleEvents) {
+        try {
+          // Skip if we already have this event (but show debug info)
+          if (existingGoogleIds.has(googleEvent.id)) {
+            console.log(`⏭️  Skipping existing event: "${googleEvent.summary}" (ID: ${googleEvent.id})`);
+            skippedCount++;
+            continue;
+          }
+
+          // Convert Google Calendar event to our format
+          console.log('\n📅 Processing Google Event:');
+          console.log('- Title:', googleEvent.title);
+          console.log('- Start (raw):', googleEvent.start);
+          console.log('- End (raw):', googleEvent.end);
+          
+          const convertGoogleDateTime = (googleDateTime: any) => {
+            if (!googleDateTime) {
+              console.log('❌ No datetime provided');
+              return null;
+            }
+            
+            // Google Calendar service already extracts the datetime string
+            if (typeof googleDateTime === 'string') {
+              const date = new Date(googleDateTime);
+              console.log(`🕐 String conversion: ${googleDateTime} -> ${date}`);
+              return date;
+            }
+            
+            // For events with specific time (dateTime field) - fallback
+            if (googleDateTime.dateTime) {
+              const date = new Date(googleDateTime.dateTime);
+              console.log(`🕐 DateTime conversion: ${googleDateTime.dateTime} -> ${date}`);
+              return date;
+            }
+            
+            // For all-day events (date field only) - fallback
+            if (googleDateTime.date) {
+              const date = new Date(googleDateTime.date + 'T00:00:00');
+              console.log(`📅 Date conversion: ${googleDateTime.date} -> ${date}`);
+              return date;
+            }
+            
+            console.log('❌ No valid date/dateTime found');
+            return null;
+          };
+
+          const startDate = convertGoogleDateTime(googleEvent.start);
+          const endDate = convertGoogleDateTime(googleEvent.end) || startDate;
+          
+          console.log('✅ Final dates:');
+          console.log('- Start:', startDate);
+          console.log('- End:', endDate);
+
+          const localEvent = {
+            title: googleEvent.title,
+            description: googleEvent.description || '',
+            start_date: startDate,
+            end_date: endDate,
+            location: googleEvent.location || '',
+            type: 'imported' as const,
+            google_event_id: googleEvent.id,
+            all_day: !googleEvent.start?.includes('T'), // All-day if no time component
+            color: googleEvent.color || '#6B7280' // Use Google Calendar color or default gray
+          };
+
+          // Create event in local calendar
+          await storage.createCalendarEvent(localEvent);
+          syncedCount++;
+          console.log(`✅ Synced event: ${localEvent.title}`);
+
+        } catch (eventError) {
+          console.error(`❌ Failed to sync event ${googleEvent.title}:`, eventError);
+          errors.push(`Failed to sync "${googleEvent.title || 'Untitled'}": ${eventError.message}`);
+        }
+      }
+
+      const result = {
+        success: true,
+        synced: syncedCount,
+        skipped: skippedCount,
+        total: googleEvents.length,
+        errors: errors.length > 0 ? errors : undefined
+      };
+
+      console.log(`🎉 Sync complete: ${syncedCount} synced, ${skippedCount} skipped`);
+      res.json(result);
+
+    } catch (error) {
+      console.error('❌ Google Calendar sync failed:', error);
+      res.status(500).json({ 
+        error: 'Sync failed', 
+        details: error.message 
+      });
     }
   });
 

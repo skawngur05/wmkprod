@@ -98,7 +98,9 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Lead updated successfully!" });
+      // Invalidate multiple query patterns to ensure all lead-related data refreshes
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
       onSave();
@@ -206,6 +208,11 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       assigned_installer: formData.assigned_installer,
       selected_colors: formData.selected_colors
     };
+
+    // Debug logging for date updates
+    console.log('🐛 QuickEdit Debug - Original formData.next_followup_date:', formData.next_followup_date);
+    console.log('🐛 QuickEdit Debug - Processed next_followup_date:', updates.next_followup_date);
+    console.log('🐛 QuickEdit Debug - Full updates object:', updates);
 
     updateLeadMutation.mutate(updates);
   };
@@ -381,7 +388,11 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   id="next_followup_date"
                   type="date"
                   value={formData.next_followup_date}
-                  onChange={(e) => setFormData({...formData, next_followup_date: e.target.value})}
+                  onChange={(e) => {
+                    console.log('🐛 Date Input Debug - New value:', e.target.value);
+                    console.log('🐛 Date Input Debug - Previous value:', formData.next_followup_date);
+                    setFormData({...formData, next_followup_date: e.target.value});
+                  }}
                   data-testid="input-edit-followup-date"
                   className="h-11 text-base"
                 />

@@ -6,6 +6,7 @@ import { Lead } from '@shared/schema';
 import { useState, useEffect } from 'react';
 import { QuickEditModal } from '@/components/modals/quick-edit-modal';
 import { BusinessCalendar } from '@/components/calendar/BusinessCalendar';
+import { useToast } from '@/hooks/use-toast';
 
 interface DashboardStats {
   totalLeads: number;
@@ -20,6 +21,30 @@ export default function Dashboard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showQuickEdit, setShowQuickEdit] = useState(false);
   const [animationStep, setAnimationStep] = useState(0);
+  const { toast } = useToast();
+
+  // Check for OAuth success/error in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const authStatus = urlParams.get('auth');
+    
+    if (authStatus === 'success') {
+      toast({
+        title: "Google Calendar Connected!",
+        description: "Your Google Calendar has been successfully connected to the system.",
+      });
+      // Clean up the URL
+      window.history.replaceState({}, '', '/dashboard');
+    } else if (authStatus === 'error') {
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect to Google Calendar. Please try again.",
+        variant: "destructive",
+      });
+      // Clean up the URL
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [toast]);
 
   // Animation effect - stagger the appearance of different sections
   useEffect(() => {

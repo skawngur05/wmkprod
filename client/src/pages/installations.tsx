@@ -560,9 +560,16 @@ export default function Installations() {
   };
 
   const isCompleted = (install: Lead) => {
-    const additionalNotesText = (install.additional_notes || '');
-    const isCompletedResult = additionalNotesText.includes('Installation completed and moved to completed projects');
-    return isCompletedResult;
+    // A project is completed if:
+    // 1. Installation date is in the past AND
+    // 2. Both deposit and balance are paid (full payment)
+    
+    if (!install.installation_date) return false;
+    
+    const hasFullPayment = install.deposit_paid && install.balance_paid;
+    const isInstallationPast = isDateInPast(install.installation_date);
+    
+    return hasFullPayment && isInstallationPast;
   };
 
   // Check if an installation is already in the completed_projects table

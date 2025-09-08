@@ -79,9 +79,11 @@ function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lea
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate multiple query patterns to ensure all lead-related data refreshes
       queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
       queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
       toast({ title: 'Lead updated successfully' });
       onClose();
     },
@@ -924,9 +926,11 @@ export default function Followups() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate multiple query patterns to ensure all lead-related data refreshes
       queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
       queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
       toast({ title: 'Lead updated successfully' });
       setIsEditModalOpen(false);
     },

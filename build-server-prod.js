@@ -21,7 +21,7 @@ try {
     bundle: true,
     platform: 'node',
     target: 'node18',
-    outfile: join(__dirname, 'index.js'), // Output directly to root
+    outfile: join(__dirname, 'dist/index.js'), // Output to dist folder for deployment
     external: [
       'sqlite3',
       'mysql2',
@@ -35,24 +35,20 @@ try {
       'nodemailer',
       'puppeteer',
       'cheerio',
-      'node-cron'
+      'node-cron',
+      'dotenv',
+      'fs',
+      'path',
+      'url',
+      'module',
+      'googleapis',
+      'fs/promises'
     ],
-    format: 'esm',
-    banner: {
-      js: `
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const require = createRequire(import.meta.url);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-`
-    }
+    format: 'esm'
   });
   
   console.log('Production server built successfully!');
-  console.log(`Output: ${join(__dirname, 'index.js')}`);
+  console.log(`Output: ${join(__dirname, 'dist/index.js')}`);
 } catch (error) {
   console.error('Production server build failed:', error);
   process.exit(1);

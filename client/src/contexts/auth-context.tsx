@@ -52,13 +52,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
-      // Check immediately
-      validateUserStatus();
+      // Don't check immediately to avoid blocking page load
+      // Check after 2 seconds to allow page to load first
+      const initialTimeout = setTimeout(validateUserStatus, 2000);
 
-      // Check every 5 minutes
+      // Check every 5 minutes after that
       const interval = setInterval(validateUserStatus, 5 * 60 * 1000);
 
-      return () => clearInterval(interval);
+      return () => {
+        clearTimeout(initialTimeout);
+        clearInterval(interval);
+      };
     }
   }, [user]);
 
