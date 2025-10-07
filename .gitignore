@@ -49,6 +49,7 @@ dist.zip
 
 # Google API credentials (keep secure)
 google-tokens.json
+server/google-tokens.json
 client_secret_*.json
 
 # CSV import files (optional - uncomment if you don't want to track CSV files)
