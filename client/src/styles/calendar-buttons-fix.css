@@ -1,0 +1,107 @@
+/* Calendar Button Fix CSS - Override any problematic styles */
+
+/* Force all calendar buttons to be visible and styled properly */
+.calendar-container .fc-button,
+.calendar-container .fc-button-primary,
+.calendar-container .fc-dayGridMonth-button,
+.calendar-container .fc-timeGridWeek-button,
+.calendar-container .fc-timeGridDay-button,
+.calendar-container .fc-listMonth-button,
+.calendar-container .fc-listWeek-button {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  border: 1px solid #2563eb !important;
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  min-height: 32px !important;
+  min-width: 60px !important;
+  margin: 0 2px !important;
+  cursor: pointer !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease !important;
+  text-align: center !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10 !important;
+  position: relative !important;
+  text-decoration: none !important;
+}
+
+/* Force button text to be visible */
+.calendar-container .fc-button *,
+.calendar-container .fc-button span,
+.calendar-container .fc-button-primary *,
+.calendar-container .fc-button-primary span,
+.calendar-container .fc-dayGridMonth-button *,
+.calendar-container .fc-timeGridWeek-button *,
+.calendar-container .fc-timeGridDay-button *,
+.calendar-container .fc-listMonth-button * {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  text-shadow: none !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Hover states */
+.calendar-container .fc-button:hover,
+.calendar-container .fc-button-primary:hover {
+  background-color: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+.calendar-container .fc-button:hover *,
+.calendar-container .fc-button-primary:hover * {
+  color: #ffffff !important;
+}
+
+/* Active/selected state */
+.calendar-container .fc-button-active {
+  background-color: #1e40af !important;
+  border-color: #1e40af !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.calendar-container .fc-button-active * {
+  color: #ffffff !important;
+}
+
+/* Remove any debug borders */
+.calendar-container .fc-toolbar,
+.calendar-container .fc-toolbar-chunk {
+  border: none !important;
+}
+
+/* Ensure toolbar chunks are properly displayed */
+.calendar-container .fc-toolbar-chunk {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+/* Button groups */
+.calendar-container .fc-button-group {
+  display: flex !important;
+  gap: 2px !important;
+}
+
+/* Ensure text is readable - additional specificity */
+.calendar-container .fc-button .fc-button-text,
+.calendar-container .fc-button span {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}

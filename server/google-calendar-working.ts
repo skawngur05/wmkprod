@@ -31,7 +31,7 @@ export class GoogleCalendarService {
     try {
       // In production, look for credentials file in the same directory as the script
       const credentialsPath = process.env.NODE_ENV === 'production' 
-        ? path.join(path.dirname(fileURLToPath(import.meta.url)), 'client_secret_1057574229248-gfrdb4give2mt8tpr6v09tl385reeafd.apps.googleusercontent.com.json')
+        ? path.join(process.cwd(), 'client_secret_1057574229248-gfrdb4give2mt8tpr6v09tl385reeafd.apps.googleusercontent.com.json')
         : path.join(process.cwd(), 'client_secret_1057574229248-gfrdb4give2mt8tpr6v09tl385reeafd.apps.googleusercontent.com.json');
       
       console.log('🔍 Looking for Google credentials at:', credentialsPath);
@@ -123,6 +123,51 @@ export class GoogleCalendarService {
     }
   }
 
+  private async refreshTokensIfNeeded() {
+    try {
+      if (!this.oauth2Client?.credentials?.refresh_token) {
+        console.warn('No refresh token available');
+        return false;
+      }
+
+      // Check if access token is expired or about to expire
+      const now = Date.now();
+      const expiryDate = this.oauth2Client.credentials.expiry_date;
+      
+      if (expiryDate && expiryDate <= now + 60000) { // Refresh if expires in next minute
+        console.log('🔄 Access token expired or expiring soon, refreshing...');
+        const { credentials } = await this.oauth2Client.refreshAccessToken();
+        this.oauth2Client.setCredentials(credentials);
+        this.saveTokens(credentials);
+        console.log('✅ Tokens refreshed successfully');
+        return true;
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error('❌ Failed to refresh tokens:', error.message);
+      if (error.message.includes('invalid_grant')) {
+        console.error('🔑 Refresh token is invalid. Re-authentication required.');
+        this.clearTokens();
+      }
+      return false;
+    }
+  }
+
+  clearTokens() {
+    try {
+      const tokensPath = path.join(process.cwd(), 'server', 'google-tokens.json');
+      if (fs.existsSync(tokensPath)) {
+        fs.unlinkSync(tokensPath);
+        console.log('🗑️ Cleared invalid tokens');
+      }
+      this.oauth2Client.setCredentials({});
+      this.calendar = null;
+    } catch (error) {
+      console.error('Failed to clear tokens:', error);
+    }
+  }
+
   isAuthenticated() {
     return !!(this.calendar && this.oauth2Client?.credentials?.access_token);
   }
@@ -136,12 +181,28 @@ export class GoogleCalendarService {
         };
       }
 
+      // Try to refresh tokens if needed
+      const refreshed = await this.refreshTokensIfNeeded();
+      if (!refreshed) {
+        return { 
+          success: false, 
+          message: 'Authentication expired. Please re-authenticate.' 
+        };
+      }
+
       const response = await this.calendar.calendarList.list();
       return { 
         success: true, 
         message: `Connected successfully. Found ${response.data.items?.length || 0} calendars.` 
       };
     } catch (error: any) {
+      if (error.message.includes('invalid_grant')) {
+        this.clearTokens();
+        return { 
+          success: false, 
+          message: 'Authentication expired. Please re-authenticate with Google Calendar.' 
+        };
+      }
       return { 
         success: false, 
         message: `Connection failed: ${error.message}` 
@@ -153,6 +214,13 @@ export class GoogleCalendarService {
     try {
       if (!this.isAuthenticated()) {
         console.warn('Not authenticated with Google Calendar');
+        return null;
+      }
+
+      // Try to refresh tokens if needed
+      const refreshed = await this.refreshTokensIfNeeded();
+      if (!refreshed) {
+        console.error('❌ Cannot create event: authentication expired');
         return null;
       }
 
@@ -317,6 +385,13 @@ export class GoogleCalendarService {
         return [];
       }
 
+      // Try to refresh tokens if needed
+      const refreshed = await this.refreshTokensIfNeeded();
+      if (!refreshed) {
+        console.error('❌ Cannot import events: authentication expired');
+        return [];
+      }
+
       const response = await this.calendar.events.list({
         calendarId: 'primary',
         timeMin: startDate || new Date().toISOString(),
@@ -347,7 +422,13 @@ export class GoogleCalendarService {
       console.log(`✅ Imported ${events.length} events from Google Calendar with colors`);
       return events;
     } catch (error: any) {
-      console.error('❌ Failed to import Google Calendar events:', error.message);
+      if (error.message.includes('invalid_grant')) {
+        console.error('❌ Invalid grant error - clearing tokens and requiring re-authentication');
+        this.clearTokens();
+        console.error('❌ Failed to import Google Calendar events: Authentication expired. Please re-authenticate.');
+      } else {
+        console.error('❌ Failed to import Google Calendar events:', error.message);
+      }
       return [];
     }
   }

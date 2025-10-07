@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { LEAD_ORIGINS, ASSIGNEES } from '@shared/schema';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { LEAD_ORIGINS } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,6 +24,7 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
     email: '',
     lead_origin: '',
     assigned_to: '',
+    project_type: 'Residential', // Default to Residential as required by schema
     project_amount: '',
     notes: '',
     pickup_date: '',
@@ -35,6 +36,16 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch active users for assignment
+  const { data: activeUsers = [] } = useQuery({
+    queryKey: ['/api/users/active'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/active');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    }
+  });
 
   const createLeadMutation = useMutation({
     mutationFn: async (leadData: any) => {
@@ -68,6 +79,7 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
       email: '',
       lead_origin: '',
       assigned_to: '',
+      project_type: 'Residential', // Default to Residential when resetting
       project_amount: '',
       notes: '',
       pickup_date: '',
@@ -84,7 +96,7 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
     console.log('Form data before validation:', formData);
     
     // Validate required fields
-    if (!formData.name || !formData.phone || !formData.lead_origin || !formData.assigned_to) {
+    if (!formData.name || !formData.phone || !formData.lead_origin || !formData.assigned_to || !formData.project_type) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
@@ -109,7 +121,8 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
       phone: formData.phone,
       email: formData.email || null,
       lead_origin: formData.lead_origin,
-      assigned_to: formData.assigned_to,
+      assigned_to: typeof formData.assigned_to === 'string' ? formData.assigned_to : '', // Ensure assigned_to is always a string
+      project_type: formData.project_type || 'Residential', // Ensure project_type is set and valid
       project_amount: formData.project_amount ? formData.project_amount : "0.00",
       notes: formData.notes || null,
       remarks: "New", // Fixed: capital N to match enum
@@ -205,9 +218,24 @@ export function AddLeadModal({ show, onHide }: AddLeadModalProps) {
                     data-testid="select-add-assigned"
                   >
                     <option value="">Select Team Member</option>
-                    {ASSIGNEES.map(assignee => (
-                      <option key={assignee} value={assignee}>{assignee}</option>
+                    {activeUsers.map((user: any) => (
+                      <option key={user.username} value={user.full_name || user.username}>
+                        {user.full_name || user.username}
+                      </option>
                     ))}
+                  </select>
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">Project Type *</label>
+                  <select
+                    className="form-select"
+                    value={formData.project_type}
+                    onChange={(e) => setFormData({...formData, project_type: e.target.value})}
+                    required
+                    data-testid="select-add-project-type"
+                  >
+                    <option value="Residential">Residential</option>
+                    <option value="Commercial">Commercial</option>
                   </select>
                 </div>
                 <div className="col-md-6 mb-3">

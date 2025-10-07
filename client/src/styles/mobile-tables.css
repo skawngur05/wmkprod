@@ -1,0 +1,96 @@
+/* Mobile Table Enhancements */
+
+/* Apply these classes to your tables for better mobile display */
+.mobile-responsive-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* On smaller screens, adjust table behavior */
+@media (max-width: 768px) {
+  /* For standard responsive tables */
+  .mobile-responsive-table {
+    display: block;
+    width: 100% !important;
+    max-width: 100vw !important;
+    font-size: 0.85rem;
+  }
+  
+  .mobile-responsive-table th {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  
+  .mobile-responsive-table td {
+    font-size: 0.75rem;
+    padding: 0.5rem !important;
+  }
+  
+  /* For tables that should stack vertically on mobile */
+  .mobile-stacked-table {
+    border: none;
+  }
+  
+  .mobile-stacked-table thead {
+    display: none;
+  }
+  
+  .mobile-stacked-table tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+  
+  .mobile-stacked-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f3f4f6;
+    padding: 0.65rem 1rem !important;
+    text-align: right;
+  }
+  
+  .mobile-stacked-table tbody td:last-child {
+    border-bottom: none;
+  }
+  
+  .mobile-stacked-table tbody td:before {
+    content: attr(data-label);
+    font-weight: 600;
+    text-align: left;
+    padding-right: 0.5rem;
+  }
+  
+  /* For tables that should horizontally scroll */
+  .mobile-scroll-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100vw;
+  }
+  
+  .mobile-scroll-table table {
+    width: auto;
+    min-width: 100%;
+  }
+  
+  /* For tables with minimal data that can be condensed */
+  .mobile-mini-table th,
+  .mobile-mini-table td {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.7rem !important;
+  }
+  
+  /* Remove unnecessary padding in mobile tables */
+  .mobile-table-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: auto !important;
+  }
+}

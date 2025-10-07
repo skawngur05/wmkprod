@@ -1,6 +1,58 @@
-node_modules
-dist
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+server/public/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
 .DS_Store
-server/public
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
 vite.config.ts.*
+
+# Compressed files
 *.tar.gz
+*.zip
+dist.zip
+
+# Google API credentials (keep secure)
+google-tokens.json
+client_secret_*.json
+
+# CSV import files (optional - uncomment if you don't want to track CSV files)
+# *.csv
+
+# SQL migration files (optional - uncomment if you don't want to track SQL files)
+# *.sql

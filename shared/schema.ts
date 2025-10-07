@@ -8,7 +8,7 @@ export const users = mysqlTable("users", {
   password: varchar("password", { length: 255 }).notNull(),
   full_name: varchar("full_name", { length: 100 }).notNull(),
   email: varchar("email", { length: 100 }).unique(),
-  role: mysqlEnum("role", ["installer", "sales_rep", "manager", "owner", "admin", "administrator"]).notNull().default("sales_rep"),
+  role: mysqlEnum("role", ["installer", "sales_rep", "commercial_sales", "manager", "owner", "admin", "administrator"]).notNull().default("sales_rep"),
   permissions: text("permissions"), // Changed to text to match MySQL longtext
   is_active: boolean("is_active").notNull().default(true),
   created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
@@ -33,11 +33,13 @@ export const leads = mysqlTable("leads", {
   name: varchar("name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 100 }),
-  lead_origin: mysqlEnum("lead_origin", ["Facebook", "Google Text", "Instagram", "Trade Show", "WhatsApp", "Commercial", "Referral", "Website"]).notNull(),
+  lead_origin: mysqlEnum("lead_origin", ["Facebook", "Google Text", "Instagram", "Trade Show", "WhatsApp", "Commercial", "Referral", "Website", "Cold Call"]).notNull(),
+  project_type: mysqlEnum("project_type", ["Residential", "Commercial"]).notNull(),
+  commercial_subcategory: varchar("commercial_subcategory", { length: 50 }),
   date_created: varchar("date_created", { length: 10 }).notNull(), // Store as YYYY-MM-DD string
   next_followup_date: varchar("next_followup_date", { length: 10 }), // Store as YYYY-MM-DD string
-  remarks: mysqlEnum("remarks", ["Not Interested", "Not Service Area", "Not Compatible", "Sold", "In Progress", "New"]).default("New"),
-  assigned_to: mysqlEnum("assigned_to", ["Kim", "Patrick", "Lina"]).notNull(),
+  remarks: mysqlEnum("remarks", ["Not Interested", "Not Service Area", "Not Compatible", "Sold", "In Progress", "New", "Friendly Partner", "Franchise Request"]).default("New"),
+  assigned_to: varchar("assigned_to", { length: 100 }).notNull(),
   notes: text("notes"),
   additional_notes: text("additional_notes"),
   project_amount: decimal("project_amount", { precision: 10, scale: 2 }).default("0.00"),
@@ -134,12 +136,13 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
     z.null()
   ]).optional(),
   selected_colors: z.array(z.string()).optional(),
+  commercial_subcategory: z.union([z.string(), z.null()]).optional(),
 });
 
 export const updateLeadSchema = insertLeadSchema.partial().extend({
   assigned_to: z.union([
-    z.enum(["Kim", "Patrick", "Lina"]),
-    z.string().refine(val => val === "", "Must be empty string or valid assignee").transform(() => "Kim" as const), // Default to Kim for empty strings
+    z.string().min(1, "Assigned to cannot be empty"), // Accept any non-empty string
+    z.string().refine(val => val === "", "Must be empty string or valid assignee"), // Allow empty string
   ]).optional(),
   next_followup_date: z.union([
     z.string().transform(str => {
@@ -216,6 +219,7 @@ export const updateLeadSchema = insertLeadSchema.partial().extend({
     z.null()
   ]).optional(),
   selected_colors: z.array(z.string()).optional(),
+  commercial_subcategory: z.union([z.string(), z.null()]).optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -233,20 +237,24 @@ export const LEAD_ORIGINS = [
   "WhatsApp",
   "Commercial",
   "Referral",
-  "Website"
+  "Website",
+  "Cold Call"
 ] as const;
 
 export const LEAD_STATUSES = [
   "New",
   "In Progress", 
   "Sold",
+  "Friendly Partner",
   "Not Interested",
   "Not Service Area",
-  "Not Compatible"
+  "Not Compatible",
+  "Franchise Request"
 ] as const;
 
-export const ASSIGNEES = ["Kim", "Patrick", "Lina"] as const;
 export const INSTALLERS = ["Angel", "Brian", "Luis"] as const;
+export const PROJECT_TYPES = ["Residential", "Commercial"] as const;
+export const COMMERCIAL_SUBCATEGORIES = ["ALL products", "Furnitures", "Walls", "Ceilings", "Flooring", "Signage"] as const;
 
 // Calendar Events schema
 export const calendarEvents = mysqlTable("calendar_events", {

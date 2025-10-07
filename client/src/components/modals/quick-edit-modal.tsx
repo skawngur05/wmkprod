@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Lead, Installer, LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES } from '@shared/schema';
+import { Lead, Installer, LEAD_ORIGINS, LEAD_STATUSES, PROJECT_TYPES, COMMERCIAL_SUBCATEGORIES } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useLeadFormChanges } from '@/hooks/use-form-changes';
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+import { X, User, Phone, Mail, MapPin, Calendar, DollarSign, Building2, Tag, FileText, Users, Palette } from 'lucide-react';
 
 interface QuickEditModalProps {
   lead: Lead | null;
@@ -44,6 +44,8 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     phone: '',
     email: '',
     lead_origin: '',
+    project_type: '',
+    commercial_subcategory: '',
     remarks: '',
     assigned_to: '',
     customer_address: '',
@@ -76,6 +78,16 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     queryFn: async () => {
       const response = await fetch('/api/wmk-colors');
       if (!response.ok) throw new Error('Failed to fetch WMK colors');
+      return response.json();
+    }
+  });
+
+  // Fetch active users for assignment
+  const { data: activeUsers = [] } = useQuery({
+    queryKey: ['/api/users/active'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/active');
+      if (!response.ok) throw new Error('Failed to fetch users');
       return response.json();
     }
   });
@@ -117,8 +129,10 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         phone: lead.phone || '',
         email: lead.email || '',
         lead_origin: lead.lead_origin || '',
+        project_type: (lead as any).project_type || 'Residential',
+        commercial_subcategory: (lead as any).commercial_subcategory || '',
         remarks: lead.remarks || '',
-        assigned_to: lead.assigned_to || '',
+        assigned_to: lead.assigned_to || '', // Use the actual assigned_to value
         customer_address: (lead as any).customer_address || '',
         project_amount: lead.project_amount ? lead.project_amount.toString() : '',
         next_followup_date: formatDateForInput(lead.next_followup_date),
@@ -183,10 +197,16 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         const month = String(dateValue.getMonth() + 1).padStart(2, '0');
         const day = String(dateValue.getDate()).padStart(2, '0');
         const result = `${year}-${month}-${day}`;
-        console.log(`🔧 PRODUCTION FIX: Converted Date object to string: ${result}`);
         return result;
       }
       return String(dateValue);
+    };
+
+    // Map assigned_to values to ensure consistency with user data
+    const mapAssignedTo = (value: string): string => {
+      if (!value || value === '') return '';
+      // Return the value as-is since we now accept any valid user
+      return value;
     };
 
     const updates = {
@@ -194,8 +214,10 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       phone: formData.phone,
       email: formData.email || null,
       lead_origin: formData.lead_origin,
+      project_type: formData.project_type || 'Residential', // Ensure project_type is never undefined
+      commercial_subcategory: formData.commercial_subcategory || null,
       remarks: formData.remarks,
-      assigned_to: formData.assigned_to,
+      assigned_to: mapAssignedTo(typeof formData.assigned_to === 'string' ? formData.assigned_to : ''), // Ensure it's a valid string
       customer_address: formData.customer_address || null,
       project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null,
       next_followup_date: ensureDateString(formData.next_followup_date),
@@ -208,11 +230,6 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       assigned_installer: formData.assigned_installer,
       selected_colors: formData.selected_colors
     };
-
-    // Debug logging for date updates
-    console.log('🐛 QuickEdit Debug - Original formData.next_followup_date:', formData.next_followup_date);
-    console.log('🐛 QuickEdit Debug - Processed next_followup_date:', updates.next_followup_date);
-    console.log('🐛 QuickEdit Debug - Full updates object:', updates);
 
     updateLeadMutation.mutate(updates);
   };
@@ -236,7 +253,8 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
             {/* Left Column */}
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="name" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <Label htmlFor="name" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <User className="h-3 w-3 text-blue-600" />
                   NAME <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -245,11 +263,15 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   data-testid="input-edit-name"
                   className="h-11 text-base"
+                  placeholder="Enter customer name"
                 />
               </div>
               
               <div className="space-y-1">
-                <Label htmlFor="email" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">EMAIL</Label>
+                <Label htmlFor="email" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <Mail className="h-3 w-3 text-green-600" />
+                  EMAIL
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -257,11 +279,19 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   data-testid="input-edit-email"
                   className="h-11 text-base"
+                  placeholder="Enter email address"
                 />
               </div>
               
               <div className="space-y-1">
-                <Label htmlFor="assigned_to" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">ASSIGNED TO</Label>
+                <Label htmlFor="assigned_to" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <Users className="h-3 w-3 text-purple-600" />
+                  ASSIGNED TO: <span className="text-blue-600 font-normal normal-case">
+                    {(lead?.assigned_to && lead.assigned_to !== 'undefined' && lead.assigned_to !== 'null') ? 
+                      lead.assigned_to.charAt(0).toUpperCase() + lead.assigned_to.slice(1) : 
+                      'No one assigned'}
+                  </span>
+                </Label>
                 <Select
                   value={formData.assigned_to}
                   onValueChange={(value) => setFormData({...formData, assigned_to: value})}
@@ -270,9 +300,9 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                     <SelectValue placeholder="Select assignee" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ASSIGNEES.map(assignee => (
-                      <SelectItem key={assignee} value={assignee}>
-                        {assignee.charAt(0).toUpperCase() + assignee.slice(1)}
+                    {activeUsers.map((user: any) => (
+                      <SelectItem key={user.username} value={user.full_name || user.username}>
+                        {(user.full_name || user.username).charAt(0).toUpperCase() + (user.full_name || user.username).slice(1)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -280,7 +310,10 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="lead_origin" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">LEAD ORIGIN</Label>
+                <Label htmlFor="lead_origin" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <Tag className="h-3 w-3 text-orange-600" />
+                  LEAD ORIGIN
+                </Label>
                 <Select
                   value={formData.lead_origin}
                   onValueChange={(value) => setFormData({...formData, lead_origin: value})}
@@ -297,12 +330,60 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="project_type" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <Building2 className="h-3 w-3 text-indigo-600" />
+                  PROJECT TYPE <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.project_type}
+                  onValueChange={(value) => setFormData({...formData, project_type: value})}
+                >
+                  <SelectTrigger data-testid="select-edit-project-type" className="h-11 text-base">
+                    <SelectValue placeholder="Select project type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROJECT_TYPES.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Commercial Subcategory - Only show when Commercial is selected */}
+              {formData.project_type === 'Commercial' && (
+                <div className="space-y-1">
+                  <Label htmlFor="commercial_subcategory" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                    <Building2 className="h-3 w-3 text-slate-600" />
+                    COMMERCIAL CATEGORY <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.commercial_subcategory}
+                    onValueChange={(value) => setFormData({...formData, commercial_subcategory: value})}
+                  >
+                    <SelectTrigger data-testid="select-edit-commercial-subcategory" className="h-11 text-base">
+                      <SelectValue placeholder="Select commercial category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMMERCIAL_SUBCATEGORIES.map(category => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               
               {/* Customer Address - Only show when status is sold */}
               {formData.remarks === 'Sold' && (
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <Label htmlFor="customer_address" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <Label htmlFor="customer_address" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                      <MapPin className="h-3 w-3 text-red-600" />
                       CUSTOMER ADDRESS FOR INSTALLATION
                     </Label>
                     <Textarea
@@ -310,14 +391,16 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                       value={formData.customer_address}
                       onChange={(e) => setFormData({...formData, customer_address: e.target.value})}
                       data-testid="textarea-edit-customer-address"
-                      className="text-base resize-none"
-                      rows={3}
-                      placeholder="Enter the complete installation address..."
+                      className="min-h-[60px] text-base resize-none"
+                      placeholder="Enter installation address"
                     />
                   </div>
                   
                   <div className="space-y-1">
-                    <Label htmlFor="installation_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">INSTALLATION DATE</Label>
+                    <Label htmlFor="installation_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                      <Calendar className="h-3 w-3 text-cyan-600" />
+                      INSTALLATION DATE
+                    </Label>
                     <Input
                       id="installation_date"
                       type="date"
@@ -334,7 +417,8 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
             {/* Right Column */}
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="phone" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <Label htmlFor="phone" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <Phone className="h-3 w-3 text-emerald-600" />
                   PHONE <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -344,11 +428,13 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
                   data-testid="input-edit-phone"
                   className="h-11 text-base"
+                  placeholder="Enter phone number"
                 />
               </div>
               
               <div className="space-y-1">
-                <Label htmlFor="status" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <Label htmlFor="status" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <Tag className="h-3 w-3 text-yellow-600" />
                   STATUS <span className="text-red-500">*</span>
                 </Label>
                 <Select
@@ -356,7 +442,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                   onValueChange={(value) => setFormData({...formData, remarks: value})}
                 >
                   <SelectTrigger data-testid="select-edit-status" className="h-11 text-base">
-                    <SelectValue />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
                     {LEAD_STATUSES.map(status => (
@@ -369,7 +455,10 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
               </div>
               
               <div className="space-y-1">
-                <Label htmlFor="project_amount" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">PROJECT AMOUNT</Label>
+                <Label htmlFor="project_amount" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <DollarSign className="h-3 w-3 text-green-600" />
+                  PROJECT AMOUNT
+                </Label>
                 <Input
                   id="project_amount"
                   type="number"
@@ -383,14 +472,15 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
               </div>
               
               <div className="space-y-1">
-                <Label htmlFor="next_followup_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">NEXT FOLLOW-UP DATE</Label>
+                <Label htmlFor="next_followup_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <Calendar className="h-3 w-3 text-blue-600" />
+                  NEXT FOLLOW-UP DATE
+                </Label>
                 <Input
                   id="next_followup_date"
                   type="date"
                   value={formData.next_followup_date}
                   onChange={(e) => {
-                    console.log('🐛 Date Input Debug - New value:', e.target.value);
-                    console.log('🐛 Date Input Debug - Previous value:', formData.next_followup_date);
                     setFormData({...formData, next_followup_date: e.target.value});
                   }}
                   data-testid="input-edit-followup-date"
@@ -400,7 +490,10 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
               
               {formData.remarks === 'Sold' && formData.deposit_paid && (
                 <div className="space-y-1">
-                  <Label htmlFor="pickup_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">PICKUP DATE</Label>
+                  <Label htmlFor="pickup_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                    <Calendar className="h-3 w-3 text-violet-600" />
+                    PICKUP DATE
+                  </Label>
                   <Input
                     id="pickup_date"
                     type="date"
@@ -414,7 +507,10 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
               
               {formData.remarks === 'Sold' && (
                 <div className="space-y-1">
-                  <Label htmlFor="installation_end_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">INSTALLATION END DATE</Label>
+                  <Label htmlFor="installation_end_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                    <Calendar className="h-3 w-3 text-amber-600" />
+                    INSTALLATION END DATE
+                  </Label>
                   <Input
                     id="installation_end_date"
                     type="date"
@@ -489,7 +585,8 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
 
               {/* Installer Selection - Clean Dropdown */}
               <div className="space-y-3 pt-4 border-t border-gray-200">
-                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <Users className="h-3 w-3 text-teal-600" />
                   ASSIGNED INSTALLERS
                 </Label>
                 <Select
@@ -541,7 +638,8 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
 
               {/* Color Selection - Clean Dropdown */}
               <div className="space-y-3 pt-4 border-t border-gray-200">
-                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                  <Palette className="h-3 w-3 text-pink-600" />
                   COLOR SELECTION (Typically 2 colors)
                 </Label>
                 <Select
@@ -595,7 +693,8 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
 
           {/* Notes History and New Note - Full Width at Bottom */}
           <div className="space-y-3 pt-4 border-t border-gray-200">
-            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+              <FileText className="h-3 w-3 text-slate-600" />
               NOTES HISTORY
             </Label>
             

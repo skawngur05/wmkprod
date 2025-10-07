@@ -20,7 +20,23 @@ import {
   LogOut,
   ChevronRight
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+// Custom hook to detect mobile devices
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  return isMobile;
+};
 
 // Map FontAwesome classes to Lucide icons
 const iconMap = {
@@ -43,17 +59,56 @@ const iconMap = {
 export function Sidebar() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isMobile = useIsMobile();
+  const [isCollapsed, setIsCollapsed] = useState(isMobile);
+
+  // Auto-collapse on mobile when screen size changes
+  useEffect(() => {
+    setIsCollapsed(isMobile);
+  }, [isMobile]);
+  
+  // Update body class based on sidebar state
+  useEffect(() => {
+    if (isCollapsed) {
+      document.body.classList.remove('sidebar-expanded');
+      document.body.classList.add('sidebar-collapsed');
+    } else {
+      document.body.classList.remove('sidebar-collapsed');
+      document.body.classList.add('sidebar-expanded');
+    }
+    
+    return () => {
+      document.body.classList.remove('sidebar-expanded', 'sidebar-collapsed');
+    };
+  }, [isCollapsed]);
 
   const isActive = (path: string) => location === path;
 
   // Get navigation items based on user permissions
   const navigation = getNavigationItems(user);
-  const coreItems = navigation?.core || [];
-  const adminItems = navigation?.admin || [];
+  const coreItems = navigation && 'core' in navigation ? navigation.core : [];
+  const adminItems = navigation && 'admin' in navigation ? navigation.admin : [];
 
   return (
-    <div className={`modern-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+    <div className="sidebar-container">
+      {isMobile && !isCollapsed && (
+        <div 
+          className="sidebar-overlay" 
+          onClick={() => setIsCollapsed(true)}
+          data-testid="sidebar-overlay"
+        />
+      )}
+      <div className={`modern-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+        {/* Toggle button positioned absolutely */}
+        <button 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="collapse-toggle"
+          data-testid="sidebar-toggle"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <ChevronRight className="transform transition-transform" size={16} />
+        </button>
+      
       {/* Header */}
       <div className="sidebar-header-modern">
         <Link href="/dashboard" className="sidebar-brand-modern" data-testid="sidebar-brand">
@@ -67,14 +122,6 @@ export function Sidebar() {
             </div>
           )}
         </Link>
-        
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="collapse-toggle"
-          data-testid="sidebar-toggle"
-        >
-          <ChevronRight className={`transform transition-transform ${isCollapsed ? 'rotate-0' : 'rotate-180'}`} />
-        </button>
       </div>
 
       {/* Navigation */}
@@ -89,6 +136,7 @@ export function Sidebar() {
                 href={item.path} 
                 className={`nav-item-modern ${isActive(item.path) ? 'active' : ''}`}
                 data-testid={item.testId}
+                onClick={() => isMobile && setIsCollapsed(true)}
               >
                 <div className="nav-item-content">
                   <IconComponent className="nav-icon" size={20} />
@@ -111,6 +159,7 @@ export function Sidebar() {
                   href={item.path} 
                   className={`nav-item-modern ${isActive(item.path) ? 'active' : ''}`}
                   data-testid={item.testId}
+                  onClick={() => isMobile && setIsCollapsed(true)}
                 >
                   <div className="nav-item-content">
                     <IconComponent className="nav-icon" size={20} />
@@ -163,5 +212,6 @@ export function Sidebar() {
         </button>
       </div>
     </div>
+  </div>
   );
 }

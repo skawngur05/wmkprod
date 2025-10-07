@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/contexts/auth-context';
 import { Lead, Installer } from '@shared/schema';
 import { formatDate } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QuickEditModal } from '@/components/modals/quick-edit-modal';
 import { RepairReportsModal } from '@/components/modals/repair-reports-modal';
 import { EditRepairRequestModal } from '@/components/modals/edit-repair-request-modal';
@@ -351,21 +352,49 @@ function InstallationCard({
 
 export default function Installations() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+
+  console.log('[Installations] Username for API:', user?.username);
   
-  const { data: installations, isLoading } = useQuery<Lead[]>({
-    queryKey: ['/api/installations'],
+  const { data: installations, isLoading, refetch: refetchInstallations } = useQuery<Lead[]>({
+    queryKey: ['/api/installations', user?.username],
     queryFn: async () => {
-      const response = await fetch('/api/installations');
+      const url = `/api/installations?username=${encodeURIComponent(user?.username || '')}`;
+      console.log('[Installations] Fetching from:', url);
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch installations');
       return response.json();
-    }
+    },
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
+
+  // Force refetch installations when component mounts to ensure real-time updates
+  useEffect(() => {
+    refetchInstallations();
+    
+    // Also refetch when the page becomes visible (user switches back to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refetchInstallations();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refetchInstallations]);
 
   // Fetch repair requests
   const { data: repairRequests, isLoading: isLoadingRepairs } = useQuery({
-    queryKey: ['/api/repair-requests'],
+    queryKey: ['/api/repair-requests', user?.username],
     queryFn: async () => {
-      const response = await fetch('/api/repair-requests');
+      const url = `/api/repair-requests?username=${encodeURIComponent(user?.username || '')}`;
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch repair requests');
       return response.json();
     }
@@ -373,9 +402,10 @@ export default function Installations() {
 
   // Fetch completed projects to check if installations are already completed
   const { data: completedProjectsData, isLoading: isLoadingCompleted } = useQuery({
-    queryKey: ['/api/completed-projects'],
+    queryKey: ['/api/completed-projects', user?.username],
     queryFn: async () => {
-      const response = await fetch('/api/completed-projects');
+      const url = `/api/completed-projects?username=${encodeURIComponent(user?.username || '')}`;
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch completed projects');
       return response.json();
     }
@@ -473,7 +503,7 @@ export default function Installations() {
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/installations', user?.username] });
       toast({ 
         title: 'Installation completed successfully', 
         description: 'The installation has been moved to completed projects.'
@@ -482,7 +512,7 @@ export default function Installations() {
       
       // Force a refresh after a short delay to ensure the new data is fetched
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/installations', user?.username] });
       }, 500);
     },
     onError: (error: Error) => {
@@ -1068,7 +1098,7 @@ export default function Installations() {
 
         {/* View Details Modal */}
         <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Eye className="h-5 w-5" />
@@ -1079,7 +1109,8 @@ export default function Installations() {
               </DialogDescription>
             </DialogHeader>
             {selectedInstallation && (
-              <div className="space-y-6">
+              <div className="flex-1 overflow-y-auto pr-2">
+                <div className="space-y-6">
                 {/* Customer Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
@@ -1234,6 +1265,7 @@ export default function Installations() {
                     </Button>
                   )}
                 </div>
+                </div>
               </div>
             )}
           </DialogContent>
@@ -1300,7 +1332,7 @@ export default function Installations() {
           show={editModalOpen}
           onHide={() => setEditModalOpen(false)}
           onSave={() => {
-            queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/installations', user?.username] });
             setEditModalOpen(false);
           }}
         />

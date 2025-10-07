@@ -27,6 +27,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    target: ['es2020', 'safari14'], // Support BigInt while maintaining Safari compatibility
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+        // Force unique filenames for cache busting
+        entryFileNames: `assets/[name]-[hash].js`,
+        chunkFileNames: `assets/[name]-[hash].js`,
+        assetFileNames: `assets/[name]-[hash].[ext]`
+      },
+    },
   },
   server: {
     fs: {

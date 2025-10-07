@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, memo, createElement } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Lead } from '@shared/schema';
+import { Lead, LEAD_STATUSES } from '@shared/schema';
 import { formatCurrency, formatDate, getStatusColor, getOriginColor } from '@/lib/auth';
+import { useAuth } from '@/contexts/auth-context';
 import { AddLeadModal } from '@/components/modals/add-lead-modal';
 import { QuickEditModal } from '@/components/modals/quick-edit-modal';
 import { QuickFollowupModal } from '@/components/modals/quick-followup-modal';
@@ -16,24 +17,242 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Download, Upload, Search, X, Phone, Mail, Calendar, Eye, Trash2, AlertTriangle, Clock, Check } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
-// Simple search input component
-const SearchInput = ({ value, onChange }: { value: string; onChange: (value: string) => void }) => {
+// Global persistent search element and state
+let globalSearchElement: HTMLDivElement | null = null;
+let globalSearchInput: HTMLInputElement | null = null;
+let globalDebounceTimeout: NodeJS.Timeout | null = null;
+
+// Create and mount the search element to a permanent location
+const initializePermanentSearchElement = () => {
+  // Clean up any existing element first
+  cleanupPermanentSearchElement();
+  
+  // Create the search container
+  const container = document.createElement('div');
+  container.id = 'permanent-search-container';
+  container.style.position = 'fixed';
+  container.style.top = '120px';
+  container.style.left = '20px';
+  container.style.zIndex = '1000';
+  container.style.backgroundColor = 'white';
+  container.style.padding = '12px';
+  container.style.border = '1px solid #d1d5db';
+  container.style.borderRadius = '8px';
+  container.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+  container.style.minWidth = '300px';
+  
+  const label = document.createElement('label');
+  label.className = 'text-sm font-medium text-gray-700 mb-2 block';
+  label.textContent = 'Search';
+  
+  const input = document.createElement('input');
+  input.id = 'permanent-search-input';
+  input.type = 'text';
+  input.placeholder = 'Search leads...';
+  input.className = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+  input.setAttribute('data-testid', 'input-search-leads');
+  input.autocomplete = 'off';
+  
+  const handleInputChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    const value = target.value;
+
+    console.log('🔍 Search input changed:', value);
+
+    // Clear existing timeout
+    if (globalDebounceTimeout) {
+      clearTimeout(globalDebounceTimeout);
+    }
+
+    // Set new timeout
+    globalDebounceTimeout = setTimeout(() => {
+      console.log('🔍 Dispatching global search event with:', value);
+      
+      const searchChangeEvent = new CustomEvent('globalSearchChange', { 
+        detail: value,
+        bubbles: true,
+        cancelable: true
+      });
+      
+      document.dispatchEvent(searchChangeEvent);
+    }, 300);
+  };
+  
+  input.addEventListener('input', handleInputChange);
+  
+  container.appendChild(label);
+  container.appendChild(input);
+  
+  // Mount to document body permanently
+  document.body.appendChild(container);
+  
+  globalSearchElement = container;
+  globalSearchInput = input;
+};
+
+// Clean up the permanent search element
+const cleanupPermanentSearchElement = () => {
+  if (globalSearchElement && globalSearchElement.parentNode) {
+    globalSearchElement.parentNode.removeChild(globalSearchElement);
+  }
+  if (globalDebounceTimeout) {
+    clearTimeout(globalDebounceTimeout);
+    globalDebounceTimeout = undefined;
+  }
+  globalSearchElement = null;
+  globalSearchInput = null;
+};
+
+// Hide/show the permanent search element
+const togglePermanentSearchVisibility = (visible: boolean) => {
+  if (globalSearchElement) {
+    globalSearchElement.style.display = visible ? 'block' : 'none';
+  }
+};
+
+// Position the permanent search element over the placeholder
+const positionPermanentSearchElement = (placeholderElement: HTMLElement) => {
+  if (!globalSearchElement) return;
+  
+  // Preserve focus before repositioning
+  const activeElement = document.activeElement;
+  const wasFocused = activeElement === globalSearchInput;
+  
+  const rect = placeholderElement.getBoundingClientRect();
+  globalSearchElement.style.left = `${rect.left + window.scrollX}px`;
+  globalSearchElement.style.top = `${rect.top + window.scrollY}px`;
+  globalSearchElement.style.width = `${rect.width}px`;
+  globalSearchElement.style.height = `${rect.height}px`;
+  
+  // Restore focus if it was on our input
+  if (wasFocused && globalSearchInput) {
+    globalSearchInput.focus();
+  }
+};
+
+// Timezone-safe date formatting function
+const UltraStableSearchInput = memo(() => {
+  console.log('� UltraStableSearchInput render');
+  const [searchValue, setSearchValue] = useState('');
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    console.log('� UltraStableSearchInput onChange:', value);
+    setSearchValue(value);
+
+    // Clear existing timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Set new timeout
+    debounceTimeoutRef.current = setTimeout(() => {
+      console.log('🔥 Calling global callback with:', value);
+      if (globalSearchCallback) {
+        globalSearchCallback(value);
+      }
+    }, 300);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    console.log('� UltraStableSearchInput mounted');
+    return () => {
+      console.log('� UltraStableSearchInput cleanup');
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="md:col-span-4">
       <label className="text-sm font-medium text-gray-700 mb-2 block">Search</label>
       <Input
+        ref={inputRef}
         type="text"
         placeholder="Search leads..."
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        value={searchValue}
+        onChange={handleInputChange}
         autoComplete="off"
         data-testid="input-search-leads"
         className="w-full"
+        onFocus={() => console.log('� UltraStableSearchInput FOCUSED')}
+        onBlur={() => console.log('� UltraStableSearchInput LOST FOCUS')}
       />
     </div>
   );
-};
+});
+
+UltraStableSearchInput.displayName = 'UltraStableSearchInput';
+
+// Focus-preserving search input component  
+const FocusPreservingSearchInput = memo(({ currentSearch }: { currentSearch: string }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [localValue, setLocalValue] = useState(currentSearch || '');
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalValue(value);
+
+    // Clear existing timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Set new timeout - dispatch custom event
+    debounceTimeoutRef.current = setTimeout(() => {
+      console.log('🔍 Dispatching search event:', value);
+      
+      const searchChangeEvent = new CustomEvent('globalSearchChange', { 
+        detail: value,
+        bubbles: true,
+        cancelable: true
+      });
+      
+      document.dispatchEvent(searchChangeEvent);
+    }, 300);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Sync localValue with props, but preserve focus
+  useEffect(() => {
+    if (currentSearch !== localValue) {
+      // Only update if the input is not currently focused (to avoid disrupting typing)
+      if (document.activeElement !== inputRef.current) {
+        setLocalValue(currentSearch || '');
+      }
+    }
+  }, [currentSearch, localValue]);
+
+  return (
+    <Input
+      ref={inputRef}
+      type="text"
+      placeholder="Search leads..."
+      value={localValue}
+      onChange={handleInputChange}
+      autoComplete="off"
+      data-testid="input-search-leads"
+      className="w-full"
+    />
+  );
+});
+
+FocusPreservingSearchInput.displayName = 'FocusPreservingSearchInput';
 
 // Timezone-safe date formatting function
 const formatDateTimezoneAware = (dateString: string, options: Intl.DateTimeFormatOptions) => {
@@ -65,13 +284,13 @@ const formatDateTimezoneAware = (dateString: string, options: Intl.DateTimeForma
 };
 
 export default function Leads() {
+  const { user } = useAuth();
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
     origin: 'all',
     assigned_to: 'all'
   });
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -84,6 +303,16 @@ export default function Leads() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+
+  // Fetch active users for filtering
+  const { data: activeUsers = [] } = useQuery({
+    queryKey: ['/api/users/active'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/active');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    }
+  });
 
   // Function to copy text to clipboard
   const copyToClipboard = async (text: string, type: 'phone' | 'email') => {
@@ -117,22 +346,47 @@ export default function Leads() {
     }
   }, []); // Only run on mount
 
-  // Debounce search input
+  // Listen for search changes from the StableSearchInput
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(filters.search);
-    }, 300);
+    const handleSearchChange = (event: CustomEvent) => {
+      const searchValue = event.detail;
+      console.log('� Received search change event:', searchValue);
+      setFilters(prev => ({ ...prev, search: searchValue }));
+      setCurrentPage(1);
+    };
 
-    return () => clearTimeout(timer);
-  }, [filters.search]);
+    window.addEventListener('searchChange', handleSearchChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('searchChange', handleSearchChange as EventListener);
+    };
+  }, []);
+
+  // Listen for global search changes from the permanent search element
+  useEffect(() => {
+    const handleGlobalSearchChange = (event: CustomEvent) => {
+      const searchValue = event.detail;
+      console.log('🌍 Received global search event:', searchValue);
+      setFilters(prev => ({ ...prev, search: searchValue }));
+      setCurrentPage(1);
+    };
+
+    document.addEventListener('globalSearchChange', handleGlobalSearchChange as EventListener);
+    
+    return () => {
+      document.removeEventListener('globalSearchChange', handleGlobalSearchChange as EventListener);
+    };
+  }, []);
 
   // Memoize the actual filters used for the query
-  const queryFilters = useMemo(() => ({
-    search: debouncedSearch,
-    status: filters.status,
-    origin: filters.origin,
-    assigned_to: filters.assigned_to
-  }), [debouncedSearch, filters.status, filters.origin, filters.assigned_to]);
+  const queryFilters = useMemo(() => {
+    return {
+      search: filters.search,
+      status: filters.status,
+      origin: filters.origin,
+      assigned_to: filters.assigned_to
+    };
+  }, [filters.search, filters.status, filters.origin, filters.assigned_to]);
 
   const { data: leadsResponse, isLoading, error, isError } = useQuery<{
     leads: Lead[];
@@ -141,7 +395,7 @@ export default function Leads() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ['leads-page', queryFilters, currentPage],
+    queryKey: ['leads-page', queryFilters, currentPage, user?.username],
     queryFn: async () => {
       // Build query parameters from filters and pagination
       const params = new URLSearchParams();
@@ -149,6 +403,9 @@ export default function Leads() {
       if (queryFilters.status && queryFilters.status !== 'all') params.append('status', queryFilters.status);
       if (queryFilters.origin && queryFilters.origin !== 'all') params.append('origin', queryFilters.origin);
       if (queryFilters.assigned_to && queryFilters.assigned_to !== 'all') params.append('assigned_to', queryFilters.assigned_to);
+      
+      // Add current user for role-based filtering
+      if (user?.username) params.append('username', user.username);
       
       // Add pagination parameters
       params.append('page', currentPage.toString());
@@ -183,16 +440,6 @@ export default function Leads() {
       setCurrentPage(1);
     }
   }, [filters.status, filters.origin, filters.assigned_to]);
-
-  // Simple search handler
-  const handleSearchChange = (value: string) => {
-    setFilters(prev => ({ ...prev, search: value }));
-  };
-
-  // Reset page when debounced search changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch]);
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (leadId: string) => {
@@ -366,10 +613,10 @@ export default function Leads() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              <SearchInput
-                value={filters.search}
-                onChange={handleSearchChange}
-              />
+              <div className="md:col-span-4">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Search</label>
+                <FocusPreservingSearchInput currentSearch={filters.search} />
+              </div>
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
                 <Select
@@ -381,11 +628,11 @@ export default function Leads() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="new">New</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="quoted">Quoted</SelectItem>
-                    <SelectItem value="Sold">Sold</SelectItem>
-                    <SelectItem value="not-interested">Not Interested</SelectItem>
+                    {LEAD_STATUSES.map(status => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -403,7 +650,7 @@ export default function Leads() {
                     <SelectItem value="facebook">Facebook</SelectItem>
                     <SelectItem value="google_text">Google Text</SelectItem>
                     <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="trade_show">Trade Show</SelectItem>
+                    <SelectItem value="Trade Show">Trade Show</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
                     <SelectItem value="website">Website</SelectItem>
                     <SelectItem value="commercial">Commercial</SelectItem>
@@ -422,9 +669,11 @@ export default function Leads() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Team</SelectItem>
-                    <SelectItem value="kim">Kim</SelectItem>
-                    <SelectItem value="patrick">Patrick</SelectItem>
-                    <SelectItem value="lina">Lina</SelectItem>
+                    {activeUsers.map((user: any) => (
+                      <SelectItem key={user.username} value={user.full_name || user.username}>
+                        {(user.full_name || user.username).charAt(0).toUpperCase() + (user.full_name || user.username).slice(1)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -453,8 +702,8 @@ export default function Leads() {
                       <TableHead className="font-semibold text-gray-900" style={{ width: '150px', minWidth: '150px' }}>Name</TableHead>
                       <TableHead className="font-semibold text-gray-900" style={{ width: '160px', minWidth: '160px' }}>Contact Info</TableHead>
                       <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Origin</TableHead>
+                      <TableHead className="font-semibold text-gray-900" style={{ width: '100px', minWidth: '100px' }}>Project Type</TableHead>
                       <TableHead className="font-semibold text-gray-900" style={{ width: '130px', minWidth: '130px' }}>Next Follow-up</TableHead>
-                      <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Assigned To</TableHead>
                       <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Status</TableHead>
                       <TableHead className="font-semibold text-gray-900" style={{ width: '130px', minWidth: '130px' }}>Project Amount</TableHead>
                       <TableHead className="font-semibold text-gray-900 sticky right-0 bg-gray-50 z-10" style={{ width: '100px', minWidth: '100px' }}>Actions</TableHead>
@@ -563,6 +812,29 @@ export default function Leads() {
                             );
                           })()}
                         </TableCell>
+                        <TableCell style={{ width: '100px', maxWidth: '100px' }}>
+                          {(() => {
+                            const projectType = lead.project_type || 'Residential';
+                            const bgColor = projectType === 'Commercial' ? '#3b82f6' : '#22c55e';
+                            const textColor = '#ffffff';
+                            
+                            return (
+                              <span 
+                                style={{ 
+                                  backgroundColor: bgColor,
+                                  color: textColor,
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '500',
+                                  borderRadius: '9999px',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {projectType === 'Commercial' ? 'Commercial' : 'Residential'}
+                              </span>
+                            );
+                          })()}
+                        </TableCell>
                         <TableCell style={{ width: '130px', maxWidth: '130px' }}>
                           {lead.next_followup_date ? (
                             <div style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }} className={
@@ -579,11 +851,6 @@ export default function Leads() {
                           ) : (
                             <span className="text-gray-500" style={{ fontSize: '0.75rem' }}>-</span>
                           )}
-                        </TableCell>
-                        <TableCell style={{ width: '120px', maxWidth: '120px' }}>
-                          <span className="text-gray-900 capitalize" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={lead.assigned_to || 'Unassigned'}>
-                            {lead.assigned_to || 'Unassigned'}
-                          </span>
                         </TableCell>
                         <TableCell>
                           {(() => {
@@ -698,7 +965,7 @@ export default function Leads() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12">
+                      <TableCell colSpan={8} className="text-center py-12">
                         <div className="text-gray-500">
                           <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                             <Search className="h-8 w-8 text-gray-400" />

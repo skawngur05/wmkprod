@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
 import { useLocation } from 'wouter';
 import { capitalizeFirst, formatCurrency, formatDate, getStatusColor, getOriginColor } from '@/lib/auth';
@@ -8,46 +8,128 @@ import { QuickEditModal } from '@/components/modals/quick-edit-modal';
 import { BusinessCalendar } from '@/components/calendar/BusinessCalendar';
 import { useToast } from '@/hooks/use-toast';
 
+// Safari compatibility check - improved detection
+const isSafari = () => {
+  try {
+    // More comprehensive Safari detection including mobile
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isSafariDesktop = /safari/.test(userAgent) && !/chrome/.test(userAgent) && !/chromium/.test(userAgent);
+    const isSafariMobile = /safari/.test(userAgent) && /mobile/.test(userAgent) && !/chrome/.test(userAgent);
+    const isWebKit = /webkit/.test(userAgent) && !/chrome/.test(userAgent);
+    
+    return isSafariDesktop || isSafariMobile || isWebKit;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Separate detection for mobile Safari specifically - ONLY returns true for iOS devices
+const isMobileSafariOnly = () => {
+  try {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isIOS = /iphone|ipod|ipad/.test(userAgent) || 
+                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isSafari = /safari/.test(userAgent) && !/chrome/.test(userAgent) && !/chromium/.test(userAgent);
+    
+    // Return true for ANY Safari on iOS, mobile or not
+    return isIOS && isSafari;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Mobile debug console for Safari
+const MobileDebugConsole = ({ logs }: { logs: string[] }) => {
+  // Empty implementation, no debugging needed
+  return null;
+};
+
+// Error boundary for Safari compatibility
+const SafeRender = ({ children, fallback }: { children: React.ReactNode; fallback?: React.ReactNode }) => {
+  const [hasError, setHasError] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<string>('');
+  
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Safari compatibility error:', event.error);
+      setErrorDetails(`Error: ${event.error?.message || 'Unknown error'} at ${event.filename}:${event.lineno}`);
+      setHasError(true);
+      // Prevent the error from propagating
+      event.preventDefault();
+    };
+    
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Safari promise rejection:', event.reason);
+      setErrorDetails(`Promise rejection: ${event.reason}`);
+      setHasError(true);
+      // Prevent the error from propagating
+      event.preventDefault();
+    };
+    
+    // Additional error catching for React errors
+    const handleReactError = (error: Error, errorInfo: any) => {
+      console.error('React error caught:', error, errorInfo);
+      setErrorDetails(`React error: ${error.message}`);
+      setHasError(true);
+    };
+    
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+  
+  if (hasError) {
+    return fallback || <div className="alert alert-danger">
+      <i className="fas fa-exclamation-triangle me-2"></i>
+      Content temporarily unavailable for this browser.
+      {isSafari() && <div className="mt-2 small">
+        <strong>Safari detected:</strong> Some features may not be fully compatible.
+      </div>}
+      {errorDetails && <div className="mt-2 small">
+        <strong>Error details:</strong> {errorDetails}
+      </div>}
+      <button className="btn btn-sm btn-outline-danger mt-2" onClick={() => window.location.reload()}>
+        Reload Page
+      </button>
+    </div>;
+  }
+  
+  return <>{children}</>;
+};
+
 interface DashboardStats {
   totalLeads: number;
   soldLeads: number;
+  soldToday: number;
   todayFollowups: number;
   newToday: number;
 }
 
 export default function Dashboard() {
+  const [debugLogs] = useState<string[]>([]);
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showQuickEdit, setShowQuickEdit] = useState(false);
   const [animationStep, setAnimationStep] = useState(0);
   const { toast } = useToast();
-
-  // Check for OAuth success/error in URL
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const authStatus = urlParams.get('auth');
-    
-    if (authStatus === 'success') {
-      toast({
-        title: "Google Calendar Connected!",
-        description: "Your Google Calendar has been successfully connected to the system.",
-      });
-      // Clean up the URL
-      window.history.replaceState({}, '', '/dashboard');
-    } else if (authStatus === 'error') {
-      toast({
-        title: "Connection Failed",
-        description: "Failed to connect to Google Calendar. Please try again.",
-        variant: "destructive",
-      });
-      // Clean up the URL
-      window.history.replaceState({}, '', '/dashboard');
-    }
-  }, [toast]);
-
+  const queryClient = useQueryClient();
+  
+  // More accurate detection of mobile Safari specifically (not desktop Safari)
+  const isMobileSafari = isMobileSafariOnly();
+  
   // Animation effect - stagger the appearance of different sections
   useEffect(() => {
+    // Skip animations on Safari to test if they're causing the issue
+    if (isMobileSafari) {
+      setAnimationStep(10); // Set to max to show all content immediately
+      return;
+    }
+    
     // Add a small delay if user just logged in (fresh page load)
     const isNewLogin = !sessionStorage.getItem('dashboard_visited');
     const initialDelay = isNewLogin ? 300 : 0;
@@ -69,32 +151,93 @@ export default function Dashboard() {
     };
   }, []);
 
-  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
-    queryKey: ['/api/dashboard/stats'],
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<DashboardStats>({
+    queryKey: ['/api/dashboard/stats', user?.username],
+    queryFn: async () => {
+      const url = `/api/dashboard/stats?username=${encodeURIComponent(user?.username || '')}`;
+      console.log('[Dashboard] Fetching stats from:', url);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch dashboard stats');
+      return response.json();
+    },
+    retry: 1,
+    retryDelay: 1000,
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data (updated from cacheTime)
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchInterval: 30000, // Refetch every 30 seconds
+    meta: {
+      errorMessage: 'Failed to load dashboard statistics'
+    }
   });
 
-  const { data: leadsResponse, isLoading: leadsLoading } = useQuery<{
+  // Force refetch stats when dashboard mounts to ensure real-time updates
+  useEffect(() => {
+    refetchStats();
+    
+    // Also refetch when the page becomes visible (user switches back to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refetchStats();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refetchStats]);
+
+  const { data: leadsResponse, isLoading: leadsLoading, error: leadsError } = useQuery<{
     leads: Lead[];
     total: number;
     page: number;
     totalPages: number;
   }>({
-    queryKey: ['/api/leads', 1, 10], // Get first page with 10 leads for dashboard
+    queryKey: ['/api/leads', 1, 10, user?.username], // Get first page with 10 leads for dashboard
     queryFn: async () => {
-      const response = await fetch('/api/leads?page=1&limit=10');
-      if (!response.ok) {
-        throw new Error('Failed to fetch leads');
+      try {
+        const params = new URLSearchParams();
+        params.append('page', '1');
+        params.append('limit', '10');
+        if (user?.username) params.append('username', user.username);
+        
+        const response = await fetch(`/api/leads?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        throw error;
       }
-      return response.json();
+    },
+    retry: 1,
+    retryDelay: 1000,
+    meta: {
+      errorMessage: 'Failed to load recent leads'
     }
   });
 
-  const { data: followupsData, isLoading: followupsLoading } = useQuery<{
+  const { data: followupsData, isLoading: followupsLoading, error: followupsError } = useQuery<{
     overdue: Lead[];
     dueToday: Lead[];
     upcoming: Lead[];
   }>({
-    queryKey: ['/api/followups'],
+    queryKey: ['/api/followups', user?.username],
+    queryFn: async () => {
+      const url = `/api/followups?username=${encodeURIComponent(user?.username || '')}`;
+      console.log('[Dashboard] Fetching followups from:', url);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch followups');
+      return response.json();
+    },
+    retry: 1,
+    retryDelay: 1000,
+    meta: {
+      errorMessage: 'Failed to load followup data'
+    }
   });
 
   const openQuickEdit = (lead: Lead) => {
@@ -140,7 +283,8 @@ export default function Dashboard() {
     );
   };
 
-  const recentLeads = leadsResponse?.leads?.slice(0, 3) || [];
+  // Get recent leads safely
+  const recentLeads = (leadsResponse && leadsResponse.leads && leadsResponse.leads.slice(0, 3)) || [];
   const todaysFollowups = followupsData ? [...followupsData.overdue, ...followupsData.dueToday] : [];
 
   if (statsLoading || leadsLoading || followupsLoading) {
@@ -156,13 +300,44 @@ export default function Dashboard() {
     );
   }
 
+  // Handle any API errors gracefully
+  if (statsError || leadsError || followupsError) {
+    return (
+      <div className="container-fluid py-4">
+        <div className="alert alert-warning">
+          <i className="fas fa-exclamation-triangle me-2"></i>
+          <strong>Dashboard temporarily unavailable</strong>
+          <p className="mb-2 mt-2">Some data could not be loaded. This may be due to:</p>
+          <ul className="mb-3">
+            <li>Network connectivity issues</li>
+            <li>Server maintenance</li>
+            {isSafari() && <li>Safari browser compatibility (try Chrome/Firefox)</li>}
+          </ul>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>
+            <i className="fas fa-refresh me-2"></i>Reload Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <>
+    <SafeRender fallback={
+      <div className="container-fluid py-4">
+        <div className="alert alert-warning">
+          <i className="fas fa-exclamation-triangle me-2"></i>
+          Dashboard temporarily unavailable. Please try refreshing the page or use Chrome/Firefox.
+          {isSafari() && <div className="mt-2 small">
+            <strong>Safari users:</strong> For the best experience, please use Chrome or Firefox, or update to the latest Safari version.
+          </div>}
+        </div>
+      </div>
+    }>
       <style>{`
         .fade-in-up {
-          opacity: 0;
-          transform: translateY(20px);
-          transition: all 0.6s ease-out;
+          opacity: ${isSafari() ? '1' : '0'};
+          transform: ${isSafari() ? 'translateY(0)' : 'translateY(20px)'};
+          transition: ${isSafari() ? 'none' : 'all 0.6s ease-out'};
         }
 
         .fade-in-up.visible {
@@ -171,18 +346,18 @@ export default function Dashboard() {
         }
 
         .stats-card {
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          transition: ${isSafari() ? 'none' : 'transform 0.3s ease, box-shadow 0.3s ease'};
         }
 
         .stats-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          transform: ${isSafari() ? 'none' : 'translateY(-2px)'};
+          box-shadow: ${isSafari() ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.15)'};
         }
 
         .dashboard-section {
-          opacity: 0;
-          transform: translateY(30px);
-          transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          opacity: ${isSafari() ? '1' : '0'};
+          transform: ${isSafari() ? 'translateY(0)' : 'translateY(30px)'};
+          transition: ${isSafari() ? 'none' : 'all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)'};
         }
 
         .dashboard-section.animate {
@@ -192,7 +367,7 @@ export default function Dashboard() {
 
         /* Smooth page entry animation */
         .container-fluid {
-          animation: pageEnter 0.6s ease-out;
+          animation: ${isSafari() ? 'none' : 'pageEnter 0.6s ease-out'};
         }
 
         @keyframes pageEnter {
@@ -410,6 +585,7 @@ export default function Dashboard() {
       `}</style>
       
       <div className="container-fluid py-4">
+        
         {/* Welcome Section */}
         <div className={`row mb-4 dashboard-section ${animationStep >= 1 ? 'animate' : ''}`}>
           <div className="col">
@@ -439,7 +615,7 @@ export default function Dashboard() {
                     Total Leads
                     <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
                   </h6>
-                  <h3 className="fw-bold text-primary">{stats?.totalLeads || 0}</h3>
+                  <h3 className="fw-bold text-primary">{(stats && stats.totalLeads) || 0}</h3>
                 </div>
                 <div className="text-primary">
                   <i className="fas fa-users fa-2x"></i>
@@ -455,16 +631,16 @@ export default function Dashboard() {
             data-testid="stat-sold-leads"
             onClick={() => handleStatsCardClick('sold-leads')}
             style={{ cursor: 'pointer' }}
-            title="Click to view sold leads"
+            title="Click to view leads sold today"
           >
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
                   <h6 className="card-title text-muted mb-1">
-                    Sold Leads
+                    Sold Today
                     <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
                   </h6>
-                  <h3 className="fw-bold text-success">{stats?.soldLeads || 0}</h3>
+                  <h3 className="fw-bold text-success">{(stats && stats.soldToday) || 0}</h3>
                 </div>
                 <div className="text-success">
                   <i className="fas fa-handshake fa-2x"></i>
@@ -489,7 +665,7 @@ export default function Dashboard() {
                     Today's Follow-ups
                     <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
                   </h6>
-                  <h3 className="fw-bold text-warning">{stats?.todayFollowups || 0}</h3>
+                  <h3 className="fw-bold text-warning">{(stats && stats.todayFollowups) || 0}</h3>
                 </div>
                 <div className="text-warning">
                   <i className="fas fa-calendar-day fa-2x"></i>
@@ -514,7 +690,7 @@ export default function Dashboard() {
                     New Today
                     <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
                   </h6>
-                  <h3 className="fw-bold text-info">{stats?.newToday || 0}</h3>
+                  <h3 className="fw-bold text-info">{(stats && stats.newToday) || 0}</h3>
                 </div>
                 <div className="text-info">
                   <i className="fas fa-plus-circle fa-2x"></i>
@@ -525,21 +701,38 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className={`row mb-4 dashboard-section ${animationStep >= 4 ? 'animate' : ''}`}>
-        {/* Business Calendar - Full Width */}
-        <div className="col-12">
-          <div className="card" data-testid="business-calendar">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">
-                <i className="fas fa-calendar-alt me-2"></i>Business Calendar
-              </h5>
-            </div>
-            <div className="card-body">
-              <BusinessCalendar />
+      {/* Business Calendar Section - Mobile Friendly Navigation */}
+      {!isMobileSafari && (
+        <div className={`row mb-4 dashboard-section ${animationStep >= 4 ? 'animate' : ''}`}>
+          <div className="col-12">
+            <div className="card" data-testid="business-calendar-section">
+              <div className="card-header d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">
+                  <i className="fas fa-calendar-alt me-2"></i>Business Calendar
+                </h5>
+              </div>
+              <div className="card-body">
+                {/* For mobile: Show calendar navigation button */}
+                {window.innerWidth < 768 ? (
+                  <div className="text-center py-3">
+                    <p className="mb-3">View your full business calendar to manage all upcoming events and appointments.</p>
+                    <button
+                      className="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center"
+                      onClick={() => setLocation('/calendar')}
+                    >
+                      <i className="fas fa-calendar-alt me-2"></i>
+                      Open Calendar View
+                    </button>
+                  </div>
+                ) : (
+                  /* For desktop: Show embedded mini calendar */
+                  <BusinessCalendar mode="mini" height="400px" />
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className={`row dashboard-section ${animationStep >= 3 ? 'animate' : ''}`}>
         {/* Today's Follow-ups */}
@@ -766,6 +959,8 @@ export default function Dashboard() {
         />
       )}
       </div>
-    </>
+      
+      {/* Removed MobileDebugConsole */}
+    </SafeRender>
   );
 }

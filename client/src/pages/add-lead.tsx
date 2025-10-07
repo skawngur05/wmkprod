@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { LEAD_ORIGINS, LEAD_STATUSES, ASSIGNEES, type Installer } from '@shared/schema';
+import { useAuth } from '@/contexts/auth-context';
+import { LEAD_ORIGINS, LEAD_STATUSES, PROJECT_TYPES, COMMERCIAL_SUBCATEGORIES, type Installer } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, User, Phone, Mail, Share2, Flag, Users, DollarSign, Calendar, FileText, Save, X, Loader2, HardHat } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, Share2, Flag, Users, DollarSign, Calendar, FileText, Save, X, Loader2, HardHat, Palette } from 'lucide-react';
 import { enrichFromDatabase, type InternalEnrichmentData } from '@/lib/internal-enrichment';
 import { EnrichmentModal } from '@/components/enrichment-modal';
 
@@ -42,13 +43,38 @@ export default function AddLead() {
     return `${year}-${month}-${day}`;
   };
 
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Fetch active users for assignment
+  const { data: activeUsers = [] } = useQuery({
+    queryKey: ['/api/users/active'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/active');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    }
+  });
+
+  // Determine default project type based on user role
+  const getDefaultProjectType = () => {
+    if (user?.role === 'commercial_sales') {
+      return 'Commercial';
+    }
+    return 'Residential';
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
     lead_origin: 'facebook',
+    project_type: getDefaultProjectType(),
+    commercial_subcategory: 'ALL products',
     remarks: 'New', // Fixed: capital N to match enum
-    assigned_to: 'Kim',
+    assigned_to: '', // Will be set when users load
     project_amount: '',
     next_followup_date: '',
     notes: '',
@@ -61,15 +87,31 @@ export default function AddLead() {
     date_created: getTodayDateString(), // Default to today without timezone conversion
     selected_colors: [] as string[]
   });
+
+  // Update project type when user changes (in case of role switching)
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      project_type: getDefaultProjectType()
+    }));
+  }, [user?.role]);
+
+  // Set default assigned_to when users are loaded
+  useEffect(() => {
+    if (activeUsers.length > 0 && !formData.assigned_to) {
+      // Default to the current user if they're in the list, otherwise first user
+      const defaultUser = activeUsers.find((u: any) => u.username === user?.username) || activeUsers[0];
+      setFormData(prev => ({
+        ...prev,
+        assigned_to: defaultUser?.full_name || defaultUser?.username || ''
+      }));
+    }
+  }, [activeUsers, user?.username, formData.assigned_to]);
   
   // Internal enrichment state
   const [enrichmentData, setEnrichmentData] = useState<InternalEnrichmentData | null>(null);
   const [isEnriching, setIsEnriching] = useState(false);
   const [showEnrichmentModal, setShowEnrichmentModal] = useState(false);
-  
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Fetch WMK colors
   const { data: wmkColors = [] } = useQuery({
@@ -103,7 +145,11 @@ export default function AddLead() {
       queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
-      setLocation('/leads');
+      
+      // Add a small delay to ensure the invalidation completes before navigation
+      setTimeout(() => {
+        setLocation('/leads');
+      }, 100);
     },
     onError: (error: any) => {
       toast({ 
@@ -167,12 +213,43 @@ export default function AddLead() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
+    if (!formData.name.trim()) {
+      toast({ 
+        title: "Validation Error", 
+        description: "Name is required.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!formData.project_type) {
+      toast({ 
+        title: "Validation Error", 
+        description: "Project Type is required.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate commercial subcategory if project type is Commercial
+    if (formData.project_type === 'Commercial' && !formData.commercial_subcategory) {
+      toast({ 
+        title: "Validation Error", 
+        description: "Commercial Category is required for Commercial projects.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       const leadData = {
         name: formData.name,
         phone: formData.phone,
         email: formData.email || null,
         lead_origin: formData.lead_origin,
+        project_type: formData.project_type,
+        commercial_subcategory: formData.project_type === 'Commercial' ? formData.commercial_subcategory : null,
         remarks: formData.remarks,
         assigned_to: formData.assigned_to,
         project_amount: formData.project_amount ? formData.project_amount : "0.00", // Keep as string for decimal
@@ -240,14 +317,14 @@ export default function AddLead() {
                 {/* Basic Information Section */}
                 <div>
                   <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
-                    <User className="h-5 w-5 text-blue-500" />
+                    <User className="h-5 w-5 text-blue-600" />
                     <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
                   </div>
                   
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="name" className="flex items-center gap-2 font-medium">
-                        <User className="h-4 w-4" />
+                        <User className="h-4 w-4 text-blue-600" />
                         Full Name *
                       </Label>
                       <Input
@@ -264,7 +341,7 @@ export default function AddLead() {
 
                     <div className="space-y-2">
                       <Label htmlFor="phone" className="flex items-center gap-2 font-medium">
-                        <Phone className="h-4 w-4" />
+                        <Phone className="h-4 w-4 text-emerald-600" />
                         Phone Number *
                       </Label>
                       <Input
@@ -281,7 +358,7 @@ export default function AddLead() {
 
                     <div className="space-y-2">
                       <Label htmlFor="email" className="flex items-center gap-2 font-medium">
-                        <Mail className="h-4 w-4" />
+                        <Mail className="h-4 w-4 text-green-600" />
                         Email Address
                         {isEnriching && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
                       </Label>
@@ -298,7 +375,7 @@ export default function AddLead() {
 
                     <div className="space-y-2">
                       <Label htmlFor="lead_origin" className="flex items-center gap-2 font-medium">
-                        <Share2 className="h-4 w-4" />
+                        <Share2 className="h-4 w-4 text-orange-600" />
                         Lead Origin *
                       </Label>
                       <Select
@@ -320,7 +397,7 @@ export default function AddLead() {
 
                     <div className="space-y-2">
                       <Label htmlFor="date_created" className="flex items-center gap-2 font-medium">
-                        <Calendar className="h-4 w-4" />
+                        <Calendar className="h-4 w-4 text-cyan-600" />
                         Date Created *
                       </Label>
                       <Input
@@ -342,14 +419,14 @@ export default function AddLead() {
                 {/* Lead Management Section */}
                 <div>
                   <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
-                    <Flag className="h-5 w-5 text-blue-500" />
+                    <Flag className="h-5 w-5 text-red-600" />
                     <h3 className="text-lg font-semibold text-gray-900">Lead Management</h3>
                   </div>
                   
-                  <div className="grid md:grid-cols-3 gap-6">
+                  <div className="grid md:grid-cols-4 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="status" className="flex items-center gap-2 font-medium">
-                        <Flag className="h-4 w-4" />
+                        <Flag className="h-4 w-4 text-yellow-600" />
                         Status
                       </Label>
                       <Select
@@ -371,7 +448,7 @@ export default function AddLead() {
 
                     <div className="space-y-2">
                       <Label htmlFor="assigned_to" className="flex items-center gap-2 font-medium">
-                        <Users className="h-4 w-4" />
+                        <Users className="h-4 w-4 text-purple-600" />
                         Assigned To
                       </Label>
                       <Select
@@ -382,9 +459,9 @@ export default function AddLead() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {ASSIGNEES.map(assignee => (
-                            <SelectItem key={assignee} value={assignee}>
-                              {assignee.charAt(0).toUpperCase() + assignee.slice(1)}
+                          {activeUsers.map((user: any) => (
+                            <SelectItem key={user.id} value={user.full_name || user.username}>
+                              {user.full_name || user.username}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -392,8 +469,66 @@ export default function AddLead() {
                     </div>
 
                     <div className="space-y-2">
+                      <Label htmlFor="project_type" className="flex items-center gap-2 font-medium">
+                        <HardHat className="h-4 w-4 text-indigo-600" />
+                        Project Type
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.project_type}
+                        onValueChange={(value) => handleInputChange('project_type', value)}
+                      >
+                        <SelectTrigger data-testid="select-project-type" className="h-11">
+                          <SelectValue placeholder="Select project type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROJECT_TYPES
+                            .filter(type => {
+                              // Commercial users can only create Commercial leads
+                              if (user?.role === 'commercial_sales') {
+                                return type === 'Commercial';
+                              }
+                              // All other users can create any type
+                              return true;
+                            })
+                            .map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Commercial Subcategory - Only shown when Commercial is selected */}
+                    {formData.project_type === 'Commercial' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="commercial_subcategory" className="flex items-center gap-2 font-medium">
+                          <HardHat className="h-4 w-4 text-slate-600" />
+                          Commercial Category
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.commercial_subcategory}
+                          onValueChange={(value) => handleInputChange('commercial_subcategory', value)}
+                        >
+                          <SelectTrigger data-testid="select-commercial-subcategory" className="h-11">
+                            <SelectValue placeholder="Select commercial category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {COMMERCIAL_SUBCATEGORIES.map(category => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
                       <Label htmlFor="project_amount" className="flex items-center gap-2 font-medium">
-                        <DollarSign className="h-4 w-4" />
+                        <DollarSign className="h-4 w-4 text-green-600" />
                         Project Amount
                       </Label>
                       <Input
@@ -415,7 +550,7 @@ export default function AddLead() {
                 {formData.remarks === 'Sold' && (
                   <div>
                     <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
-                      <HardHat className="h-5 w-5 text-blue-500" />
+                      <HardHat className="h-5 w-5 text-teal-600" />
                       <h3 className="text-lg font-semibold text-gray-900">Installation & Payment Details</h3>
                     </div>
                     
@@ -423,7 +558,7 @@ export default function AddLead() {
                       {formData.deposit_paid && (
                         <div className="space-y-2">
                           <Label htmlFor="pickup_date" className="flex items-center gap-2 font-medium">
-                            <Calendar className="h-4 w-4" />
+                            <Calendar className="h-4 w-4 text-violet-600" />
                             Pickup Date
                           </Label>
                           <Input
@@ -439,7 +574,7 @@ export default function AddLead() {
                       
                       <div className="space-y-2">
                         <Label htmlFor="installation_date" className="flex items-center gap-2 font-medium">
-                          <Calendar className="h-4 w-4" />
+                          <Calendar className="h-4 w-4 text-blue-600" />
                           Installation Start Date
                         </Label>
                         <Input
@@ -454,7 +589,7 @@ export default function AddLead() {
                       
                       <div className="space-y-2">
                         <Label htmlFor="installation_end_date" className="flex items-center gap-2 font-medium">
-                          <Calendar className="h-4 w-4" />
+                          <Calendar className="h-4 w-4 text-amber-600" />
                           Installation End Date
                         </Label>
                         <Input
@@ -472,7 +607,7 @@ export default function AddLead() {
                     <div className="grid md:grid-cols-1 gap-6">
                       <div className="space-y-3">
                         <Label className="flex items-center gap-2 font-medium">
-                          <Users className="h-4 w-4" />
+                          <Users className="h-4 w-4 text-teal-600" />
                           Assigned Installers
                         </Label>
                         <Select
@@ -582,7 +717,8 @@ export default function AddLead() {
 
                       {/* Color Selection Section */}
                       <div className="md:col-span-2 space-y-3 pt-4 border-t border-gray-200">
-                        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                          <Palette className="h-4 w-4 text-pink-600" />
                           COLOR SELECTION (Typically 2 colors)
                         </Label>
                         <Select
@@ -638,14 +774,14 @@ export default function AddLead() {
                 {/* Additional Information Section */}
                 <div>
                   <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
-                    <Calendar className="h-5 w-5 text-blue-500" />
+                    <Calendar className="h-5 w-5 text-rose-600" />
                     <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
                   </div>
                   
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="next_followup_date" className="flex items-center gap-2 font-medium">
-                        <Calendar className="h-4 w-4" />
+                        <Calendar className="h-4 w-4 text-blue-600" />
                         Next Follow-up Date
                       </Label>
                       <Input
@@ -660,7 +796,7 @@ export default function AddLead() {
 
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="notes" className="flex items-center gap-2 font-medium">
-                        <FileText className="h-4 w-4" />
+                        <FileText className="h-4 w-4 text-slate-600" />
                         Initial Notes
                       </Label>
                       <Textarea

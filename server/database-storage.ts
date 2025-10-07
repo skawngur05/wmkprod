@@ -37,6 +37,22 @@ export class DatabaseStorage implements IStorage {
     if (lead && (lead as any).selected_colors) {
       (lead as any).selected_colors = this.parseSelectedColors((lead as any).selected_colors);
     }
+    
+    // Fix null/undefined values being converted to strings
+    if (lead) {
+      // Handle assigned_to specifically
+      if (lead.assigned_to === null || lead.assigned_to === undefined || lead.assigned_to === 'null' || lead.assigned_to === 'undefined') {
+        (lead as any).assigned_to = null;
+      }
+      
+      // Handle other nullable fields
+      ['email', 'notes', 'next_followup_date', 'installation_date', 'assigned_installer', 'commercial_subcategory'].forEach(field => {
+        if ((lead as any)[field] === null || (lead as any)[field] === undefined || (lead as any)[field] === 'null' || (lead as any)[field] === 'undefined') {
+          (lead as any)[field] = null;
+        }
+      });
+    }
+    
     return lead;
   }
 
@@ -116,6 +132,7 @@ export class DatabaseStorage implements IStorage {
     status?: string;
     origin?: string;
     assigned_to?: string;
+    project_type?: string;
   }): Promise<{ leads: Lead[], total: number, page: number, limit: number, totalPages: number }> {
     const offset = (page - 1) * limit;
     
@@ -140,6 +157,10 @@ export class DatabaseStorage implements IStorage {
     
     if (filters?.assigned_to && filters.assigned_to !== 'all') {
       whereConditions.push(eq(leads.assigned_to, filters.assigned_to as any));
+    }
+    
+    if (filters?.project_type) {
+      whereConditions.push(eq(leads.project_type, filters.project_type as any));
     }
 
     // Combine all where conditions
@@ -184,10 +205,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLead(insertLead: InsertLead): Promise<Lead> {
-    // Ensure date_created is set if not provided
+    // Ensure date_created is set if not provided, format as YYYY-MM-DD string
+    const today = new Date();
+    const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
     const leadData: any = {
       ...insertLead,
-      date_created: insertLead.date_created || new Date()
+      date_created: insertLead.date_created || todayString
     };
     
     // Handle selected_colors array to JSON string conversion
@@ -390,8 +414,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent> {
-    const [result] = await db.insert(calendarEvents).values(event);
-    const eventId = result.insertId;
+    const result = await db.insert(calendarEvents).values(event);
+    
+    // Get the inserted ID - might be in different location depending on Drizzle version
+    let eventId;
+    if (Array.isArray(result) && result[0]?.insertId) {
+      eventId = result[0].insertId;
+    } else if (result.insertId) {
+      eventId = result.insertId;
+    } else {
+      console.error('❌ Could not get insertId from result:', result);
+      throw new Error('Failed to get insert ID');
+    }
+    
     const createdEvent = await this.getCalendarEvent(eventId.toString());
     return createdEvent!;
   }
@@ -426,6 +461,11 @@ export class DatabaseStorage implements IStorage {
       console.error("Error deleting calendar event:", error);
       return false;
     }
+  }
+
+  async getCalendarEventByGoogleId(googleEventId: string): Promise<CalendarEvent | undefined> {
+    const result = await db.select().from(calendarEvents).where(eq(calendarEvents.google_event_id, googleEventId));
+    return result[0];
   }
 
   // Admin settings methods

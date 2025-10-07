@@ -1,0 +1,68 @@
+/* Calendar page specific styles */
+.mobile-calendar-page {
+  padding: 0.5rem;
+  padding-bottom: 5rem; /* Space for mobile navigation */
+}
+
+.mobile-calendar-page .card {
+  margin: 0 -0.5rem; /* Extend card to edges on mobile */
+}
+
+.mobile-calendar-page .fc-header-toolbar {
+  padding: 0 0.5rem;
+}
+
+/* Optimize toolbar for mobile */
+.mobile-calendar-page .fc-toolbar.fc-header-toolbar {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem !important;
+}
+
+.mobile-calendar-page .fc-toolbar-chunk {
+  margin-bottom: 0.25rem;
+}
+
+/* Make buttons more touch-friendly */
+.mobile-calendar-page .fc .fc-button {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.75rem;
+  min-height: 2rem;
+}
+
+/* Smaller event dots and text for mobile */
+.mobile-calendar-page .fc-daygrid-dot-event .fc-event-title {
+  font-size: 0.7rem;
+}
+
+/* List view optimizations for mobile */
+.mobile-calendar-page .fc-list-day-cushion {
+  padding: 0.5rem !important;
+}
+
+.mobile-calendar-page .fc-list-event-time,
+.mobile-calendar-page .fc-list-event-title {
+  padding: 0.5rem !important;
+  font-size: 0.8rem !important;
+}
+
+/* Better scrolling on mobile */
+.mobile-calendar-page .fc-scroller {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-calendar-page .fc-event {
+    padding: 0.3rem;
+  }
+  
+  .mobile-calendar-page .fc-daygrid-day {
+    min-height: 3rem; /* Taller days for touch */
+  }
+  
+  .mobile-calendar-page .fc-daygrid-day-number {
+    padding: 0.5rem;
+  }
+}

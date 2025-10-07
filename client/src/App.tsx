@@ -4,8 +4,14 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
+import { MobileProvider, useMobile } from "@/contexts/mobile-context";
 import { Sidebar } from "@/components/layout/sidebar";
+import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { hasPermission } from "@/lib/permissions";
+import React, { useState, useEffect, lazy, Suspense } from "react";
+
+// Lazy load the mobile dashboard for better performance
+const MobileDashboard = lazy(() => import("@/pages/mobile-dashboard-new"));
 
 // Utility function
 const capitalizeFirst = (str: string): string => {
@@ -20,6 +26,7 @@ import Followups from "@/pages/followups";
 import SampleBooklets from "@/pages/sample-booklets";
 import Installations from "@/pages/installations";
 import Reports from "@/pages/reports";
+import CalendarPage from "@/pages/calendar";
 import AdminDashboard from "@/pages/admin-dashboard";
 import UserManagement from "@/pages/user-management";
 import InstallersManagement from "@/pages/admin/installers-management";
@@ -78,31 +85,115 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   const isDashboard = location === '/dashboard';
+  
+  // Import the useMobile hook
+  const { isMobile } = useMobile();
 
   return (
     <div className="app-layout">
-      <Sidebar />
-      <main className="main-content">
+      {/* Only show sidebar on desktop */}
+      {!isMobile && <Sidebar />}
+      
+      {/* Main content with adjusted padding for mobile */}
+      <main className={`main-content ${isMobile ? 'mobile-content' : ''}`}>
         {isDashboard && (
           <div className="content-header">
             <div className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0 text-dark">Welcome back, {user ? capitalizeFirst(user.username) : 'User'}</h5>
               <div className="user-menu">
-                <span className="text-muted">{new Date().toLocaleDateString()}</span>
               </div>
             </div>
           </div>
         )}
-        <div className="p-4">
+        <div className={`${isMobile ? 'p-2 pb-24' : 'p-4'}`}>
           {children}
         </div>
       </main>
+      
+      {/* Mobile Navigation - only visible on mobile */}
+      {isMobile && <MobileNavigation />}
     </div>
   );
 }
 
 function AppRouter() {
   const { user } = useAuth();
+  const { isMobile } = useMobile();
+  
+  // Function to determine if we should show the mobile dashboard
+  const shouldUseMobileDashboard = () => {
+    try {
+      const ua = navigator.userAgent.toLowerCase();
+      
+      // Improved detection for Safari on iOS
+      const isIOS = /iphone|ipod|ipad/.test(ua) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      
+      // Safari detection
+      const isSafari = /safari/.test(ua) && !/chrome/.test(ua) && !/chromium/.test(ua);
+      
+      // Mobile Safari specific detection
+      const isMobileSafari = isSafari && (isIOS || /mobile/.test(ua));
+      
+      // Extra check for iOS devices with potential WebKit issues
+      const hasWebKitIssues = /iphone|ipod|ipad/.test(ua) && /version\/1[56]/.test(ua);
+      
+      // Log for debugging in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Mobile detection:", { 
+          isIOS, 
+          isSafari, 
+          isMobileSafari, 
+          hasWebKitIssues,
+          userAgent: ua,
+          isMobileContext: isMobile
+        });
+      }
+      
+      // ONLY use the ultra-simplified mobile dashboard for devices with 
+      // known severe compatibility issues (older iOS Safari versions)
+      if (hasWebKitIssues) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Using ultra-simplified mobile dashboard for older iOS Safari");
+        }
+        return true;
+      }
+      
+      // For all other devices, including modern Safari on iOS, 
+      // use the regular dashboard with conditional components
+      return false;
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error in mobile detection:", error);
+      }
+      // Default to desktop experience if detection fails
+      return false;
+    }
+  };
+  
+  // Log mobile detection for debugging in development only
+  useEffect(() => {
+    const ua = navigator.userAgent.toLowerCase();
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log("User agent:", ua);
+      console.log("Is mobile (from context):", isMobile);
+    }
+    
+    // Additional detection for Safari mobile specifically
+    const isSafari = /safari/.test(ua) && !/chrome/.test(ua) && !/chromium/.test(ua);
+    const isIOS = /iphone|ipad|ipod/.test(ua);
+    const isMobileSafari = isSafari && (isIOS || /mobile/.test(ua));
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Is mobile Safari specifically:", isMobileSafari);
+    }
+    
+    // Force mobile dashboard for Safari mobile
+    if (isMobileSafari && process.env.NODE_ENV === 'development') {
+      console.log("Forcing mobile dashboard for Safari mobile");
+      // Do nothing here, we'll handle this in the route
+    }
+  }, [isMobile]);
 
   return (
     <Switch>
@@ -112,7 +203,18 @@ function AppRouter() {
       
       <Route path="/dashboard">
         <ProtectedRoute>
-          <Dashboard />
+          {shouldUseMobileDashboard() ? (
+            <Suspense fallback={<div className="p-4 text-center">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading mobile dashboard...</span>
+              </div>
+              <p className="mt-2">Loading mobile dashboard...</p>
+            </div>}>
+              <MobileDashboard />
+            </Suspense>
+          ) : (
+            <Dashboard />
+          )}
         </ProtectedRoute>
       </Route>
       
@@ -190,6 +292,12 @@ function AppRouter() {
         </ProtectedRoute>
       </Route>
       
+      <Route path="/calendar">
+        <ProtectedRoute>
+          <CalendarPage />
+        </ProtectedRoute>
+      </Route>
+      
       <Route path="/reports">
         <ProtectedRoute>
           <Reports />
@@ -210,8 +318,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <Toaster />
-          <AppRouter />
+          <MobileProvider>
+            <Toaster />
+            <AppRouter />
+          </MobileProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

@@ -26,6 +26,7 @@ export const ROUTE_PERMISSIONS: Record<string, string> = {
   '/sample-booklets': PERMISSIONS.SAMPLE_BOOKLETS,
   '/installations': PERMISSIONS.INSTALLATIONS,
   '/reports': PERMISSIONS.REPORTS,
+  '/calendar': PERMISSIONS.DASHBOARD, // Calendar uses dashboard permission
   '/admin': PERMISSIONS.ADMIN_PANEL,
   '/admin/users': PERMISSIONS.USER_MANAGEMENT,
   '/user-management': PERMISSIONS.USER_MANAGEMENT,
@@ -53,8 +54,8 @@ export function hasPermission(user: User | null, route: string): boolean {
   // If no specific permission is required, allow access
   if (!requiredPermission) return true;
   
-  // Special case: if owner has leads permission, they also get add_lead access
-  if (user.role === 'owner' && requiredPermission === PERMISSIONS.ADD_LEAD) {
+  // Special case: if owner or commercial_sales has leads permission, they also get add_lead access
+  if ((user.role === 'owner' || user.role === 'commercial_sales') && requiredPermission === PERMISSIONS.ADD_LEAD) {
     return Array.isArray(user.permissions) && user.permissions.includes(PERMISSIONS.LEADS);
   }
   

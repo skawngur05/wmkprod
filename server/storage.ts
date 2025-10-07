@@ -20,6 +20,7 @@ export interface IStorage {
     status?: string;
     origin?: string;
     assigned_to?: string;
+    project_type?: string;
   }): Promise<{ leads: Lead[], total: number, page: number, limit: number, totalPages: number }>;
   getLead(id: string): Promise<Lead | undefined>;
   getLeadByEmail(email: string): Promise<Lead | undefined>;
@@ -77,6 +78,7 @@ export interface IStorage {
   createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
   updateCalendarEvent(id: string, updates: UpdateCalendarEvent): Promise<CalendarEvent | undefined>;
   deleteCalendarEvent(id: string): Promise<boolean>;
+  getCalendarEventByGoogleId(googleEventId: string): Promise<CalendarEvent | undefined>;
 
   // Completed Projects operations
   getCompletedProjects(): Promise<any[]>;
@@ -167,6 +169,15 @@ export class MemStorage implements IStorage {
         is_active: true,
         created_at: new Date("2024-01-01"),
         last_login: new Date("2024-01-11")
+      },
+      { 
+        username: "commercial", 
+        password: "commercial123", 
+        role: "commercial_sales",
+        permissions: ["dashboard", "leads", "followups", "installations", "sample_booklets", "reports"],
+        is_active: true,
+        created_at: new Date("2024-01-01"),
+        last_login: new Date("2024-01-10")
       }
     ];
 
@@ -201,11 +212,20 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
+    
+    // Set default permissions based on role
+    let defaultPermissions: string[] = [];
+    if (insertUser.role === 'commercial_sales') {
+      defaultPermissions = ["dashboard", "leads", "followups", "installations", "sample_booklets", "reports"];
+    } else if (insertUser.role === 'sales_rep') {
+      defaultPermissions = ["dashboard", "leads", "followups", "sample_booklets"];
+    }
+    
     const user: User = { 
       ...insertUser, 
       id,
       role: insertUser.role || "sales_rep",
-      permissions: insertUser.permissions || [],
+      permissions: insertUser.permissions || defaultPermissions,
       is_active: insertUser.is_active ?? true,
       created_at: insertUser.created_at || new Date(),
       last_login: insertUser.last_login || null
@@ -238,6 +258,7 @@ export class MemStorage implements IStorage {
     status?: string;
     origin?: string;
     assigned_to?: string;
+    project_type?: string;
   }): Promise<{ leads: Lead[], total: number, page: number, limit: number, totalPages: number }> {
     let filteredLeads = Array.from(this.leads.values());
 
@@ -252,7 +273,10 @@ export class MemStorage implements IStorage {
     }
 
     if (filters?.status && filters.status !== 'all') {
+      console.log('🔍 Filtering by status:', filters.status);
+      const beforeFilter = filteredLeads.length;
       filteredLeads = filteredLeads.filter(lead => lead.remarks === filters.status);
+      console.log(`🔍 Filtered from ${beforeFilter} to ${filteredLeads.length} leads with status '${filters.status}'`);
     }
 
     if (filters?.origin && filters.origin !== 'all') {
@@ -261,6 +285,23 @@ export class MemStorage implements IStorage {
 
     if (filters?.assigned_to && filters.assigned_to !== 'all') {
       filteredLeads = filteredLeads.filter(lead => lead.assigned_to === filters.assigned_to);
+    }
+
+    if (filters?.project_type) {
+      console.log(`🔍 Filtering by project_type: '${filters.project_type}'`);
+      const beforeFilter = filteredLeads.length;
+      filteredLeads = filteredLeads.filter(lead => lead.project_type === filters.project_type);
+      console.log(`🔍 Project type filter: ${beforeFilter} leads -> ${filteredLeads.length} leads`);
+      
+      // Debug: Show some sample leads and their project types
+      if (beforeFilter > 0) {
+        const sampleLeads = Array.from(this.leads.values()).slice(0, 5);
+        console.log('🔍 Sample leads project_type values:', sampleLeads.map(l => ({ 
+          id: l.id, 
+          name: l.name, 
+          project_type: l.project_type || 'NULL/UNDEFINED' 
+        })));
+      }
     }
 
     // Sort by date created
@@ -299,6 +340,10 @@ export class MemStorage implements IStorage {
 
   async createLead(insertLead: InsertLead): Promise<Lead> {
     const id = randomUUID();
+    // Ensure date_created is set if not provided, format as YYYY-MM-DD string
+    const today = new Date();
+    const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
     const lead: Lead = { 
       ...insertLead, 
       id,
@@ -309,7 +354,8 @@ export class MemStorage implements IStorage {
       additional_notes: insertLead.additional_notes || null,
       installation_date: insertLead.installation_date || null,
       assigned_installer: insertLead.assigned_installer || null,
-      date_created: insertLead.date_created || new Date()
+      commercial_subcategory: insertLead.commercial_subcategory || null,
+      date_created: insertLead.date_created || todayString
     };
     this.leads.set(id, lead);
     return lead;

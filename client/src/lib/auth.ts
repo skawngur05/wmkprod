@@ -49,7 +49,9 @@ export function getStatusColor(status: string): string {
     'Sold': 'success',          // Green - ONLY for sold
     'Not Interested': 'secondary',
     'Not Service Area': 'danger',
-    'Not Compatible': 'danger'
+    'Not Compatible': 'danger',
+    'Friendly Partner': 'info',
+    'Franchise Request': 'info' // Light blue
   };
   return statusColors[status] || 'secondary';
 }

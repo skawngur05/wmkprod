@@ -47,6 +47,7 @@ import { Redirect } from 'wouter';
 const ROLE_HIERARCHY = {
   'installer': 1,
   'sales_rep': 2,
+  'commercial_sales': 2.5,
   'manager': 3,
   'owner': 4,
   'admin': 5,
@@ -57,6 +58,7 @@ const ROLE_HIERARCHY = {
 const AVAILABLE_PERMISSIONS = [
   { id: 'dashboard', label: 'Dashboard', description: 'View main dashboard and statistics', minRole: 1 },
   { id: 'leads', label: 'Leads Management', description: 'View, create, edit and manage leads', minRole: 2 },
+  { id: 'leads-commercial-only', label: 'Commercial Leads Only', description: 'Restrict to only commercial projects (overrides general leads access)', minRole: 2.5 },
   { id: 'followups', label: 'Follow-ups', description: 'View and manage follow-up tasks', minRole: 2 },
   { id: 'installations', label: 'Installations', description: 'View and manage installation schedules', minRole: 1 },
   { id: 'installers', label: 'Installers Management', description: 'Manage installer personnel and assignments', minRole: 3 },
@@ -228,9 +230,16 @@ export default function UserManagement() {
   const handleRoleChange = (role: string, isEditing = false) => {
     const roleLevel = ROLE_HIERARCHY[role as keyof typeof ROLE_HIERARCHY];
     // Auto-assign permissions based on role hierarchy
-    const defaultPermissions = AVAILABLE_PERMISSIONS
+    let defaultPermissions = AVAILABLE_PERMISSIONS
       .filter(p => roleLevel >= p.minRole)
       .map(p => p.id);
+
+    // Special handling for commercial_sales role
+    if (role === 'commercial_sales') {
+      // Remove general leads permission and add commercial-only permission
+      defaultPermissions = defaultPermissions.filter(p => p !== 'leads');
+      defaultPermissions.push('leads-commercial-only');
+    }
 
     if (isEditing && editingUser) {
       setEditingUser({ ...editingUser, role, permissions: defaultPermissions });
@@ -348,6 +357,7 @@ export default function UserManagement() {
                     <SelectContent>
                       <SelectItem value="installer">Installer</SelectItem>
                       <SelectItem value="sales_rep">Sales Representative</SelectItem>
+                      <SelectItem value="commercial_sales">Commercial Sales</SelectItem>
                       <SelectItem value="manager">Manager</SelectItem>
                       {/* Owners and administrators can create owner accounts */}
                       {(user?.role === 'owner' || user?.role === 'admin' || user?.role === 'administrator') && (
@@ -476,6 +486,7 @@ export default function UserManagement() {
                       {tableUser.role === 'admin' && <><Shield className="h-3 w-3 mr-1" />Administrator</>}
                       {tableUser.role === 'owner' && <><Key className="h-3 w-3 mr-1" />Owner</>}
                       {tableUser.role === 'manager' && <><Settings className="h-3 w-3 mr-1" />Manager</>}
+                      {tableUser.role === 'commercial_sales' && <><User className="h-3 w-3 mr-1" />Commercial Sales</>}
                       {tableUser.role === 'sales_rep' && <><User className="h-3 w-3 mr-1" />Sales Rep</>}
                       {tableUser.role === 'installer' && <><User className="h-3 w-3 mr-1" />Installer</>}
                     </Badge>
@@ -678,6 +689,7 @@ export default function UserManagement() {
                     <SelectContent>
                       <SelectItem value="installer">Installer</SelectItem>
                       <SelectItem value="sales_rep">Sales Representative</SelectItem>
+                      <SelectItem value="commercial_sales">Commercial Sales</SelectItem>
                       <SelectItem value="manager">Manager</SelectItem>
                       {/* Owners and administrators can edit roles to owner */}
                       {(user?.role === 'owner' || user?.role === 'admin' || user?.role === 'administrator') && (

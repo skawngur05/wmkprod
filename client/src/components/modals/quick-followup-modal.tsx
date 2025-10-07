@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Lead, ASSIGNEES } from '@shared/schema';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { Lead } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -47,6 +47,16 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch active users for assignment
+  const { data: activeUsers = [] } = useQuery({
+    queryKey: ['/api/users/active'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/active');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    }
+  });
+
   const updateLeadMutation = useMutation({
     mutationFn: async (updates: any) => {
       if (!lead) throw new Error('No lead selected');
@@ -87,7 +97,7 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
   useEffect(() => {
     if (lead) {
       setNextFollowupDate(formatDateForInput(lead.next_followup_date));
-      setAssignedTo(lead.assigned_to || '');
+      setAssignedTo(lead.assigned_to || ''); // Use the actual assigned_to value
     }
   }, [lead]);
 
@@ -126,10 +136,18 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
       ? `${existingNotes}\n${timestampedNote}`
       : timestampedNote;
 
+    // Ensure assigned_to is a valid string
+    const mapAssignedTo = (value: string): string => {
+      if (!value || value === '') return '';
+      // Return the value as-is since we now accept any valid user
+      return value;
+    };
+
     const updates = {
       next_followup_date: nextFollowupDate && nextFollowupDate.trim() ? String(nextFollowupDate.trim()) : null,
-      assigned_to: assignedTo || null,
-      notes: updatedNotes || null
+      assigned_to: mapAssignedTo(typeof assignedTo === 'string' ? assignedTo : ''),  // Ensure it's a valid string
+      notes: updatedNotes || null,
+      project_type: (lead?.project_type) || 'Residential' // Ensure project_type is always provided
     };
 
     updateLeadMutation.mutate(updates);
@@ -216,16 +234,20 @@ export function QuickFollowupModal({ lead, show, onHide }: QuickFollowupModalPro
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <User className="h-4 w-4 text-purple-600" />
-                Assign To Team Member
+                ASSIGN TO: <span className="text-blue-600 font-normal normal-case">
+                  {(lead?.assigned_to && lead.assigned_to !== 'undefined' && lead.assigned_to !== 'null') ? 
+                    lead.assigned_to.charAt(0).toUpperCase() + lead.assigned_to.slice(1) : 
+                    'No one assigned'}
+                </span>
               </Label>
               <Select value={assignedTo} onValueChange={setAssignedTo}>
                 <SelectTrigger className="h-11" data-testid="select-assigned-to">
                   <SelectValue placeholder="Select team member..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {ASSIGNEES.map(member => (
-                    <SelectItem key={member} value={member}>
-                      {member.charAt(0).toUpperCase() + member.slice(1)}
+                  {activeUsers.map((user: any) => (
+                    <SelectItem key={user.username} value={user.full_name || user.username}>
+                      {(user.full_name || user.username).charAt(0).toUpperCase() + (user.full_name || user.username).slice(1)}
                     </SelectItem>
                   ))}
                 </SelectContent>

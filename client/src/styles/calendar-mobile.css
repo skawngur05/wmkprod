@@ -1,0 +1,176 @@
+/* Mobile optimizations for calendar */
+.fc-toolbar.fc-header-toolbar {
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem !important;
+}
+
+@media (min-width: 640px) {
+  .fc-toolbar.fc-header-toolbar {
+    flex-direction: row;
+    gap: 1rem;
+    margin-bottom: 1.25rem !important;
+  }
+}
+
+.fc-toolbar-chunk {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .fc-toolbar-chunk {
+    justify-content: flex-start;
+    margin-bottom: 0;
+  }
+
+  .fc-toolbar-chunk:last-child {
+    justify-content: flex-end;
+  }
+}
+
+/* Better buttons on mobile */
+.fc .fc-button {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  height: auto;
+}
+
+@media (min-width: 640px) {
+  .fc .fc-button {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+  }
+}
+
+/* Smaller event dots and text for mobile */
+.fc-daygrid-dot-event .fc-event-title {
+  font-size: 0.75rem;
+}
+
+.fc-daygrid-day-events {
+  margin-top: 0.25rem;
+}
+
+/* Better list views for mobile */
+.fc-list-event {
+  padding: 0.5rem 0.5rem !important;
+}
+
+.fc-list-event-title, 
+.fc-list-event-time {
+  font-size: 0.8rem !important;
+}
+
+/* More compact calendar cells on mobile */
+.fc-daygrid-day-top {
+  justify-content: center;
+  margin-bottom: 0.15rem;
+}
+
+.fc-daygrid-day-top .fc-daygrid-day-number {
+  font-size: 0.75rem;
+  padding: 0.25rem;
+}
+
+@media (min-width: 640px) {
+  .fc-daygrid-day-top {
+    justify-content: flex-start;
+  }
+  
+  .fc-daygrid-day-top .fc-daygrid-day-number {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Mini calendar specific styles */
+.mini-calendar .fc-toolbar-chunk:nth-child(2) {
+  margin-bottom: 0.25rem;
+}
+
+.mini-calendar .fc-toolbar-title {
+  font-size: 1rem;
+}
+
+.mini-calendar .fc-button {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.mini-calendar .fc-list-event-dot {
+  margin-right: 0.3rem;
+}
+
+.mini-calendar .fc-list-event-time {
+  width: 4.5rem;
+}
+
+.mini-calendar .fc-list-empty {
+  font-size: 0.8rem;
+  padding: 1rem;
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  .fc-event {
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .fc-daygrid-day-top .fc-daygrid-day-number {
+    padding: 0.5rem;
+  }
+  
+  .fc-button {
+    min-height: 2.25rem;
+    min-width: 2.25rem;
+  }
+}
+
+/* Loading indicator */
+.calendar-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+/* Better responsive layout for event cards */
+.event-card-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.event-card-mobile .event-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.event-card-mobile .event-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.event-card-mobile .event-info-icon {
+  color: #6b7280;
+  width: 1rem;
+  height: 1rem;
+}
+
+.event-card-mobile .event-info-text {
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -40,10 +40,32 @@ serveStatic = (app: express.Express) => {
     );
   }
 
-  app.use(express.static(distPath));
+  // Add cache-busting headers for static files
+  app.use(express.static(distPath, {
+    setHeaders: (res, path) => {
+      // Set cache headers based on file type
+      if (path.endsWith('.html')) {
+        // Don't cache HTML files
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      } else if (path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
+        // In production: Cache static assets for 1 hour but allow revalidation
+        // In development: More aggressive cache busting
+        const cacheControl = process.env.NODE_ENV === 'production' 
+          ? 'public, max-age=3600, must-revalidate'
+          : 'no-cache, must-revalidate';
+        res.setHeader('Cache-Control', cacheControl);
+      }
+    }
+  }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
+    // Add cache-busting headers to the main HTML file
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 };
@@ -65,6 +87,17 @@ async function loadViteInDevelopment() {
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Development cache-busting middleware
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    // Add cache-busting headers for all responses in development
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
+}
 
 // Debugging middleware (after body parsing)
 app.use((req, res, next) => {

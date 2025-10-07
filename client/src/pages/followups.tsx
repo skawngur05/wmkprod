@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Lead, LEAD_STATUSES, ASSIGNEES } from '@shared/schema';
+import { useAuth } from '@/contexts/auth-context';
+import { Lead, LEAD_STATUSES } from '@shared/schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,14 +15,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { QuickFollowupModal } from '@/components/modals/quick-followup-modal';
-import { Phone, Mail, Calendar, User, DollarSign, Clock, Eye, AlertCircle, CheckCircle, TrendingUp, Edit, Copy, X } from 'lucide-react';
+import { ProjectTypeBadge } from '@/components/project-type-badge';
+import { Phone, Mail, Calendar, User, DollarSign, Clock, Eye, AlertCircle, CheckCircle, TrendingUp, Edit, Copy, X, UserPlus, Target, HardHat } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface FollowupsData {
   overdue: Lead[];
   dueToday: Lead[];
   upcoming: Lead[];
   upcomingCount?: number; // Total count for stats
+  newLeadsToday?: Lead[]; // Array of leads added today
+  soldToday?: Lead[]; // Array of leads sold today
 }
 
 // Helper function to format date for form input using local system time
@@ -42,7 +47,7 @@ const formatDateForInput = (dateValue: string | Date | null) => {
 };
 
 // Quick Edit Form Component
-function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lead; onClose: () => void; wmkColors: any[]; installersData: any[] }) {
+function QuickEditForm({ lead, onClose, wmkColors, installersData, activeUsers, user }: { lead: Lead; onClose: () => void; wmkColors: any[]; installersData: any[]; activeUsers: any[]; user: any }) {
   const [formData, setFormData] = useState({
     next_followup_date: formatDateForInput(lead.next_followup_date),
     remarks: lead.remarks,
@@ -78,13 +83,24 @@ function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lea
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate multiple query patterns to ensure all lead-related data refreshes
-      queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/followups', user?.username] });
+      queryClient.invalidateQueries({ queryKey: ['/api/installations', user?.username] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leads', user?.username] });
       queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
-      toast({ title: 'Lead updated successfully' });
+      
+      // Show success toast
+      const wasFollowupDateChanged = lead.next_followup_date?.toString() !== formData.next_followup_date;
+      if (wasFollowupDateChanged) {
+        toast({ 
+          title: 'Follow-up date updated', 
+          description: 'Lead card will be repositioned in the appropriate section'
+        });
+      } else {
+        toast({ title: 'Lead updated successfully' });
+      }
+      
       onClose();
     },
     onError: (error: Error) => {
@@ -250,12 +266,9 @@ function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lea
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="New">New</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Sold">Sold</SelectItem>
-                <SelectItem value="Not Interested">Not Interested</SelectItem>
-                <SelectItem value="Not Service Area">Not Service Area</SelectItem>
-                <SelectItem value="Not Compatible">Not Compatible</SelectItem>
+                {LEAD_STATUSES.map(status => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -272,9 +285,11 @@ function QuickEditForm({ lead, onClose, wmkColors, installersData }: { lead: Lea
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Kim">Kim</SelectItem>
-                <SelectItem value="Patrick">Patrick</SelectItem>
-                <SelectItem value="Lina">Lina</SelectItem>
+                {activeUsers.map((user: any) => (
+                  <SelectItem key={user.username} value={user.full_name || user.username}>
+                    {(user.full_name || user.username).charAt(0).toUpperCase() + (user.full_name || user.username).slice(1)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -590,9 +605,11 @@ const getStatusBadge = (status: string) => {
     'New': 'bg-blue-100 text-blue-800',
     'In Progress': 'bg-yellow-100 text-yellow-800', 
     'Sold': 'bg-green-100 text-green-800',
+    'Friendly Partner': 'bg-purple-100 text-purple-800',
     'Not Interested': 'bg-gray-100 text-gray-800',
     'Not Service Area': 'bg-orange-100 text-orange-800',
-    'Not Compatible': 'bg-red-100 text-red-800'
+    'Not Compatible': 'bg-red-100 text-red-800',
+    'Franchise Request': 'bg-blue-100 text-blue-800'
   };
 
   return (
@@ -673,10 +690,28 @@ function FollowupsTable({
 
   return (
     <div className="space-y-4">
-      {leads.map((lead) => (
-        <Card key={lead.id} className={`${getCardStyling(status)} cursor-pointer`} onClick={() => onQuickEdit(lead)}>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+      <AnimatePresence initial={false} mode="popLayout">
+        {leads.map((lead, index) => (
+          <motion.div 
+            key={`${lead.id}-${lead.next_followup_date}`}
+            layout
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ 
+              type: "spring",
+              stiffness: 400,
+              damping: 40,
+              mass: 1,
+              delay: index * 0.03
+            }}
+          >
+            <Card 
+              className={`${getCardStyling(status)} cursor-pointer transform transition-all duration-300 hover:-translate-y-1 hover:shadow-md`} 
+              onClick={() => onQuickEdit(lead)}
+            >
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
               
               {/* Lead Info - 3 columns */}
               <div className="md:col-span-3">
@@ -686,9 +721,13 @@ function FollowupsTable({
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 text-lg">{lead.name}</h3>
-                    <p className="text-sm text-gray-600 capitalize">
-                      {lead.lead_origin.replace('-', ' ')}
-                    </p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm text-gray-600 capitalize">
+                        {lead.lead_origin.replace('-', ' ')}
+                      </p>
+                      <span className="text-gray-300">•</span>
+                      <ProjectTypeBadge lead={lead} />
+                    </div>
                     <p className="text-sm text-gray-700 font-medium mt-1">
                       Created: {lead.date_created ? formatDate(lead.date_created) : 'N/A'}
                     </p>
@@ -868,21 +907,68 @@ function FollowupsTable({
 
           </CardContent>
         </Card>
-      ))}
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
 
 export default function Followups() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   
-  const { data: followupsData, isLoading } = useQuery<FollowupsData>({
-    queryKey: ['/api/followups'],
+  // Debug logging to see what username is being used
+  console.log('[Followups] Current user:', user);
+  console.log('[Followups] Username for API:', user?.username);
+  
+  const { data: followupsData, isLoading, refetch: refetchFollowups } = useQuery<FollowupsData>({
+    queryKey: ['/api/followups', user?.username],
+    queryFn: () => {
+      const url = `/api/followups?username=${encodeURIComponent(user?.username || '')}`;
+      console.log('[Followups] Making API call to:', url);
+      return fetch(url, {
+        cache: 'no-cache'
+      }).then(res => res.json());
+    },
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
   
   const { data: installations = [] } = useQuery<Lead[]>({
-    queryKey: ['/api/installations'],
+    queryKey: ['/api/installations', user?.username],
+    queryFn: () => {
+      const url = `/api/installations?username=${encodeURIComponent(user?.username || '')}`;
+      console.log('[Followups] Making installations API call to:', url);
+      return fetch(url, {
+        cache: 'no-cache'
+      }).then(res => res.json());
+    },
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
+
+  // Force refetch followups when component mounts to ensure real-time updates
+  useEffect(() => {
+    refetchFollowups();
+    
+    // Also refetch when the page becomes visible (user switches back to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refetchFollowups();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refetchFollowups]);
   
   // Fetch WMK colors
   const { data: wmkColors = [] } = useQuery({
@@ -890,6 +976,16 @@ export default function Followups() {
     queryFn: async () => {
       const response = await fetch('/api/wmk-colors');
       if (!response.ok) throw new Error('Failed to fetch WMK colors');
+      return response.json();
+    }
+  });
+
+  // Fetch active users for assignment
+  const { data: activeUsers = [] } = useQuery({
+    queryKey: ['/api/users/active'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/active');
+      if (!response.ok) throw new Error('Failed to fetch users');
       return response.json();
     }
   });
@@ -908,6 +1004,8 @@ export default function Followups() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedFollowupLead, setSelectedFollowupLead] = useState<Lead | null>(null);
   const [showQuickFollowup, setShowQuickFollowup] = useState(false);
+  const [showNewLeadsModal, setShowNewLeadsModal] = useState(false);
+  const [showSoldTodayModal, setShowSoldTodayModal] = useState(false);
   
   const { toast } = useToast();
   
@@ -927,9 +1025,9 @@ export default function Followups() {
     },
     onSuccess: () => {
       // Invalidate multiple query patterns to ensure all lead-related data refreshes
-      queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/installations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/followups', user?.username] });
+      queryClient.invalidateQueries({ queryKey: ['/api/installations', user?.username] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leads', user?.username] });
       queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
       toast({ title: 'Lead updated successfully' });
       setIsEditModalOpen(false);
@@ -955,7 +1053,7 @@ export default function Followups() {
     );
   }
 
-  const { overdue = [], dueToday = [], upcoming = [], upcomingCount } = followupsData || {};
+  const { overdue = [], dueToday = [], upcoming = [], upcomingCount, newLeadsToday = [], soldToday = [] } = followupsData || {};
   
   // Custom filter function to determine if a lead needs follow-up
   const needsFollowup = (lead: Lead) => {
@@ -1030,6 +1128,14 @@ export default function Followups() {
         // Navigate to installations page
         setLocation('/installations');
         break;
+      case 'new-leads':
+        // Show new leads modal
+        setShowNewLeadsModal(true);
+        break;
+      case 'sold-today':
+        // Show sold today modal
+        setShowSoldTodayModal(true);
+        break;
       default:
         break;
     }
@@ -1056,20 +1162,189 @@ export default function Followups() {
           <p className="text-gray-600">Stay on top of your leads and never miss a follow-up</p>
         </div>
 
+        {/* New Leads Today Modal */}
+        <Dialog open={showNewLeadsModal} onOpenChange={setShowNewLeadsModal}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-purple-600" />
+                New Leads Added Today ({newLeadsToday.length})
+              </DialogTitle>
+              <DialogDescription>
+                Leads that were created today
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4">
+              {newLeadsToday.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No new leads today</p>
+                  <p className="text-sm">Check back later or add a new lead!</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {newLeadsToday.map((lead, index) => (
+                    <Card 
+                      key={lead.id} 
+                      className="cursor-pointer transform transition-all duration-300 hover:-translate-y-1 hover:shadow-md animate-fadeIn" 
+                      style={{ animationDelay: `${index * 100}ms` }}
+                      onClick={() => handleQuickEdit(lead)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{lead.name}</h3>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm text-gray-600 capitalize">
+                                {lead.lead_origin.replace('-', ' ')}
+                              </p>
+                              <span className="text-gray-300">•</span>
+                              <div className="flex items-center gap-1">
+                                <HardHat className="h-3 w-3 text-gray-600" />
+                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                  lead.project_type === 'Commercial' 
+                                    ? 'bg-blue-100 text-blue-700' 
+                                    : 'bg-green-100 text-green-700'
+                                }`}>
+                                  {lead.project_type === 'Commercial' ? 'Com' : 'Res'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Phone className="h-4 w-4" />
+                              {lead.phone || 'N/A'}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                              <Mail className="h-4 w-4" />
+                              {lead.email || 'N/A'}
+                            </div>
+                          </div>
+                          <div>
+                            <Badge 
+                              variant={lead.remarks === 'New' ? 'default' : 
+                                      lead.remarks === 'In Progress' ? 'secondary' : 
+                                      lead.remarks === 'Sold' ? 'default' : 'outline'}
+                              className={
+                                lead.remarks === 'New' ? 'bg-blue-100 text-blue-800' :
+                                lead.remarks === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
+                                lead.remarks === 'Sold' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                              }
+                            >
+                              {lead.remarks}
+                            </Badge>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600">Created</p>
+                            <p className="font-medium">{formatDate(lead.date_created)}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Sold Today Modal */}
+        <Dialog open={showSoldTodayModal} onOpenChange={setShowSoldTodayModal}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-emerald-600" />
+                Leads Sold Today ({soldToday.length})
+              </DialogTitle>
+              <DialogDescription>
+                Leads that were marked as sold today
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4">
+              {soldToday.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No leads sold today</p>
+                  <p className="text-sm">Keep following up to close more deals!</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {soldToday.map((lead, index) => (
+                    <Card 
+                      key={lead.id} 
+                      className="cursor-pointer transform transition-all duration-300 hover:-translate-y-1 hover:shadow-md animate-fadeIn" 
+                      style={{ animationDelay: `${index * 100}ms` }}
+                      onClick={() => handleQuickEdit(lead)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{lead.name}</h3>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm text-gray-600 capitalize">
+                                {lead.lead_origin.replace('-', ' ')}
+                              </p>
+                              <span className="text-gray-300">•</span>
+                              <div className="flex items-center gap-1">
+                                <HardHat className="h-3 w-3 text-gray-600" />
+                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                  lead.project_type === 'Commercial' 
+                                    ? 'bg-blue-100 text-blue-700' 
+                                    : 'bg-green-100 text-green-700'
+                                }`}>
+                                  {lead.project_type === 'Commercial' ? 'Com' : 'Res'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Phone className="h-4 w-4" />
+                              {lead.phone || 'N/A'}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                              <Mail className="h-4 w-4" />
+                              {lead.email || 'N/A'}
+                            </div>
+                          </div>
+                          <div>
+                            <Badge className="bg-green-100 text-green-800">
+                              Sold
+                            </Badge>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Created: {formatDate(lead.date_created)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600">Sold</p>
+                            <p className="font-medium">{formatDate(lead.updated_at?.split('T')[0] || '')}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Overview Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 overflow-x-auto">
           <Card 
-            className="border-red-200 shadow-red-100 clickable-card" 
+            className="border-red-200 shadow-red-100 clickable-card min-w-[150px]" 
             onClick={() => handleStatsCardClick('overdue')}
             style={{ cursor: 'pointer' }}
             title="Click to scroll to overdue follow-ups"
           >
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <AlertCircle className="h-8 w-8 text-red-500 mr-3" />
+                <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-500 mr-2 sm:mr-3" />
                 <div>
-                  <p className="text-2xl font-bold text-red-600">{activeOverdue.length}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xl sm:text-2xl font-bold text-red-600">{activeOverdue.length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">
                     Overdue
                     <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
                   </p>
@@ -1084,12 +1359,12 @@ export default function Followups() {
             style={{ cursor: 'pointer' }}
             title="Click to scroll to today's follow-ups"
           >
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <Clock className="h-8 w-8 text-yellow-500 mr-3" />
+                <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 mr-2 sm:mr-3" />
                 <div>
-                  <p className="text-2xl font-bold text-yellow-600">{activeDueToday.length}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xl sm:text-2xl font-bold text-yellow-600">{activeDueToday.length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">
                     Due Today
                     <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
                   </p>
@@ -1104,13 +1379,53 @@ export default function Followups() {
             style={{ cursor: 'pointer' }}
             title="Click to scroll to upcoming follow-ups"
           >
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <Calendar className="h-8 w-8 text-blue-500 mr-3" />
+                <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 mr-2 sm:mr-3" />
                 <div>
-                  <p className="text-2xl font-bold text-blue-600">{upcomingWeek.length}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xl sm:text-2xl font-bold text-blue-600">{upcomingWeek.length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">
                     This Week
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="border-purple-200 shadow-purple-100 clickable-card" 
+            onClick={() => handleStatsCardClick('new-leads')}
+            style={{ cursor: 'pointer' }}
+            title="Click to go to leads page and view today's new leads"
+          >
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center">
+                <UserPlus className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 mr-2 sm:mr-3" />
+                <div>
+                  <p className="text-xl sm:text-2xl font-bold text-purple-600">{newLeadsToday.length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    New Today
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="border-emerald-200 shadow-emerald-100 clickable-card" 
+            onClick={() => handleStatsCardClick('sold-today')}
+            style={{ cursor: 'pointer' }}
+            title="Click to go to leads page and view today's sold leads"
+          >
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center">
+                <Target className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-500 mr-2 sm:mr-3" />
+                <div>
+                  <p className="text-xl sm:text-2xl font-bold text-emerald-600">{soldToday.length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    Sold Today
                     <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
                   </p>
                 </div>
@@ -1124,12 +1439,12 @@ export default function Followups() {
             style={{ cursor: 'pointer' }}
             title="Click to go to installations page"
           >
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
+                <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 mr-2 sm:mr-3" />
                 <div>
-                  <p className="text-2xl font-bold text-green-600">{scheduledInstallations.length}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xl sm:text-2xl font-bold text-green-600">{scheduledInstallations.length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">
                     Installations
                     <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.6rem', opacity: 0.6 }}></i>
                   </p>
@@ -1141,7 +1456,13 @@ export default function Followups() {
 
         {/* Overdue Follow-ups */}
         {activeOverdue.length > 0 && (
-          <div className="mb-8" id="overdue-section">
+          <motion.div 
+            className="mb-8" 
+            id="overdue-section"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="h-6 w-6 text-red-500" />
               <h2 className="text-xl font-semibold text-gray-900">Overdue Follow-ups</h2>
@@ -1154,12 +1475,18 @@ export default function Followups() {
               status="overdue"
               wmkColorsData={wmkColors}
             />
-          </div>
+          </motion.div>
         )}
 
         {/* Due Today */}
         {activeDueToday.length > 0 && (
-          <div className="mb-8" id="due-today-section">
+          <motion.div 
+            className="mb-8" 
+            id="due-today-section"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
             <div className="flex items-center gap-3 mb-4">
               <Clock className="h-6 w-6 text-yellow-500" />
               <h2 className="text-xl font-semibold text-gray-900">Due Today</h2>
@@ -1172,12 +1499,18 @@ export default function Followups() {
               status="due-today"
               wmkColorsData={wmkColors}
             />
-          </div>
+          </motion.div>
         )}
 
         {/* Upcoming This Week */}
         {upcomingWeek.length > 0 && (
-          <div className="mb-8" id="upcoming-section">
+          <motion.div 
+            className="mb-8" 
+            id="upcoming-section"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
             <div className="flex items-center gap-3 mb-4">
               <Calendar className="h-6 w-6 text-blue-500" />
               <h2 className="text-xl font-semibold text-gray-900">Upcoming This Week</h2>
@@ -1190,12 +1523,17 @@ export default function Followups() {
               status="upcoming"
               wmkColorsData={wmkColors}
             />
-          </div>
+          </motion.div>
         )}
 
         {/* Scheduled Installations */}
         {scheduledInstallations.length > 0 && (
-          <div className="mb-8">
+          <motion.div 
+            className="mb-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
             <div className="flex items-center gap-3 mb-4">
               <CheckCircle className="h-6 w-6 text-green-500" />
               <h2 className="text-xl font-semibold text-gray-900">Scheduled Installations</h2>
@@ -1207,7 +1545,7 @@ export default function Followups() {
               onQuickFollowup={openQuickFollowup}
               wmkColorsData={wmkColors}
             />
-          </div>
+          </motion.div>
         )}
 
         {/* Empty State */}
@@ -1237,6 +1575,8 @@ export default function Followups() {
                 onClose={() => setIsEditModalOpen(false)} 
                 wmkColors={wmkColors}
                 installersData={installersData}
+                activeUsers={activeUsers}
+                user={user}
               />
             )}
           </DialogContent>

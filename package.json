@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "set NODE_ENV=development && tsx server/index.ts",
-    "build": "vite build",
+    "build": "vite build && node update-service-worker.mjs",
+    "build:simple": "vite build",
     "start": "set NODE_ENV=production && node dist/index.js",
     "start:prod": "node app.js",
     "check": "tsc",

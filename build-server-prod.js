@@ -47,6 +47,19 @@ try {
     format: 'esm'
   });
   
+  // Copy Google Calendar credentials to the right locations
+  const credentialsFileName = 'client_secret_1057574229248-gfrdb4give2mt8tpr6v09tl385reeafd.apps.googleusercontent.com.json';
+  const sourcePath = join(__dirname, credentialsFileName);
+  const distPath = join(__dirname, 'dist', credentialsFileName);
+  
+  if (fs.existsSync(sourcePath)) {
+    console.log('📋 Copying Google Calendar credentials...');
+    fs.copyFileSync(sourcePath, distPath);
+    console.log('✅ Credentials copied to dist folder');
+  } else {
+    console.warn('⚠️  Google Calendar credentials not found - calendar features may not work');
+  }
+  
   console.log('Production server built successfully!');
   console.log(`Output: ${join(__dirname, 'dist/index.js')}`);
 } catch (error) {

@@ -3,8 +3,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CalendarEvent, Lead, InsertCalendarEvent, UpdateCalendarEvent, EVENT_TYPES, ASSIGNEES } from '@shared/schema';
-import { useState, useEffect } from 'react';
+import { CalendarEvent, Lead, InsertCalendarEvent, UpdateCalendarEvent, EVENT_TYPES } from '@shared/schema';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarDays, User, MapPin, FileText, Plus, Edit, Trash2, Calendar } from 'lucide-react';
+import { CalendarDays, User, MapPin, FileText, Plus, Edit, Trash2, Calendar, RefreshCw, Link } from 'lucide-react';
+import '@/styles/calendar-mobile.css';
+
+interface BusinessCalendarProps {
+  mode?: 'full' | 'mini';
+  height?: string;
+}
 
 // US Holiday utility functions
 const getUSHolidays = (year: number) => {
@@ -166,6 +172,20 @@ const formatDateTimeLocal = (date: Date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
 
+// Helper function to get event color based on type
+const getEventColor = (type: string) => {
+  const eventTypeColors: Record<string, string> = {
+    'call': '#3B82F6',
+    'email': '#10B981',
+    'meeting': '#F59E0B',
+    'follow-up': '#EF4444',
+    'appointment': '#8B5CF6',
+    'us-holiday': '#EC4899',
+    'google-calendar': '#4285F4'
+  };
+  return eventTypeColors[type] || '#6B7280';
+};
+
 interface CalendarEventDisplay {
   id: string;
   title: string;
@@ -181,11 +201,23 @@ interface CalendarEventDisplay {
   };
 }
 
-export function BusinessCalendar() {
+export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCalendarProps) {
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [addEventModalOpen, setAddEventModalOpen] = useState(false);
   const [editEventModalOpen, setEditEventModalOpen] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
+  
+  // Initialize mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   // Helper function to get default start time (next hour)
   const getDefaultStartTime = (): Date => {
     const now = new Date();
@@ -210,6 +242,7 @@ export function BusinessCalendar() {
 
   // Google Calendar auth state
   const [isGoogleAuthed, setIsGoogleAuthed] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Check Google Calendar auth status
   const { data: authStatus } = useQuery({
@@ -223,10 +256,24 @@ export function BusinessCalendar() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch active users for assignment
+  const { data: activeUsers = [] } = useQuery({
+    queryKey: ['/api/users/active'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/active');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    }
+  });
+
   // Update authentication state when data changes
   useEffect(() => {
     if (authStatus?.authenticated !== undefined) {
       setIsGoogleAuthed(authStatus.authenticated);
+      // Clear auth error if authentication is successful
+      if (authStatus.authenticated) {
+        setAuthError(null);
+      }
     }
   }, [authStatus]);
 
@@ -291,7 +338,18 @@ export function BusinessCalendar() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      if (!response.ok) throw new Error('Failed to sync from Google Calendar');
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        
+        // Handle authentication errors specifically
+        if (response.status === 401 || errorData?.requiresAuth) {
+          throw new Error('Authentication expired. Please re-authenticate with Google Calendar.');
+        }
+        
+        throw new Error(errorData?.details || 'Failed to sync from Google Calendar');
+      }
+      
       const result = await response.json();
       console.log('📡 Sync API response:', result);
       return result;
@@ -306,11 +364,30 @@ export function BusinessCalendar() {
       // Refresh the calendar events
       queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('❌ Sync error:', error);
+      
+      // Check if error is related to authentication
+      if (error.message?.includes('invalid_grant') || 
+          error.message?.includes('Authentication expired') ||
+          error.message?.includes('unauthorized') ||
+          error.message?.includes('invalid_token') ||
+          error.message?.includes('re-authenticate')) {
+        setAuthError('Google Calendar authentication has expired. Please reconnect.');
+        setIsGoogleAuthed(false);
+        
+        // Clear tokens on server
+        fetch('/api/calendar/auth/clear', { method: 'POST' })
+          .then(() => console.log('🗑️ Cleared expired tokens'))
+          .catch(err => console.error('Failed to clear tokens:', err));
+        
+        // Refresh auth status
+        queryClient.invalidateQueries({ queryKey: ['/api/calendar/auth/status'] });
+      }
+      
       toast({
         title: 'Sync Failed',
-        description: 'Failed to sync events from Google Calendar',
+        description: error.message || 'Failed to sync events from Google Calendar',
         variant: 'destructive'
       });
     }
@@ -341,7 +418,7 @@ export function BusinessCalendar() {
       // Automatically sync events after successful connection
       setTimeout(() => {
         console.log('🔄 Triggering automatic sync...');
-        syncFromGoogle.mutate();
+        syncFromGoogle.mutate('');
       }, 1000); // Small delay to ensure auth status is updated
     },
     onError: (error) => {
@@ -362,8 +439,20 @@ export function BusinessCalendar() {
   });
 
   // Fetch calendar events from the API
-  const { data: events = [], isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
+  const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
     queryKey: ['/api/calendar/events'],
+    queryFn: async () => {
+      const response = await fetch('/api/calendar/events', {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch events');
+      return response.json();
+    },
+    staleTime: 0, // Always consider data stale
+    refetchOnWindowFocus: true, // Refetch when window gains focus
   });
 
   // Mutations for CRUD operations
@@ -428,12 +517,12 @@ export function BusinessCalendar() {
     },
   });
 
-  if (installationsLoading || eventsLoading) {
+  if (installationsLoading || isLoading) {
     return (
-      <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+      <div className="flex justify-center items-center" style={{ height: '400px' }}>
         <div className="text-center">
-          <i className="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
-          <p className="text-muted">Loading calendar...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-gray-600">Loading calendar...</p>
         </div>
       </div>
     );
@@ -447,7 +536,7 @@ export function BusinessCalendar() {
       title: `Installation: ${lead.name}`,
       start: formatDateTimeLocal(new Date(lead.installation_date!)),
       allDay: false,
-      color: '#10B981', // Green for installations
+      color: '#16a34a', // Green for installations (matching legend)
       extendedProps: {
         type: 'installation',
         description: `Project: ${lead.project_amount ? `$${lead.project_amount}` : 'N/A'}`,
@@ -467,7 +556,7 @@ export function BusinessCalendar() {
       title: `Pickup: ${lead.name}`,
       start: formatDateTimeLocal(new Date(lead.pickup_date!)),
       allDay: false,
-      color: '#3B82F6', // Blue for pickups
+      color: '#0ea5e9', // Sky blue for pickups (matching meeting color in legend)
       extendedProps: {
         type: 'pickup',
         description: `Project: ${lead.project_amount ? `$${lead.project_amount}` : 'N/A'}`,
@@ -487,22 +576,28 @@ export function BusinessCalendar() {
     if (event.type === 'imported' && event.color) {
       color = event.color;
     } else {
-      // Use type-based colors for other events
+      // Use type-based colors for other events - matching the legend
       switch (event.type) {
+        case 'installation':
+          color = '#16a34a'; // Green (Installation)
+          break;
         case 'pickup':
-          color = '#3B82F6'; // Blue
+          color = '#0ea5e9'; // Sky blue (Meeting/Pickup)
           break;
         case 'leave':
-          color = '#EF4444'; // Red
+          color = '#ea580c'; // Orange (Follow-up/Leave)
           break;
         case 'trade-show':
-          color = '#8B5CF6'; // Purple
+          color = '#4f46e5'; // Indigo (Appointment/Trade Show)
           break;
         case 'showroom-visit':
-          color = '#F59E0B'; // Amber
+          color = '#4f46e5'; // Indigo (Appointment/Showroom Visit)
           break;
         case 'holiday':
-          color = '#EC4899'; // Pink
+          color = '#ec4899'; // Pink (Holiday)
+          break;
+        default:
+          color = '#4f46e5'; // Default to appointment color (Indigo)
           break;
       }
     }
@@ -532,7 +627,7 @@ export function BusinessCalendar() {
     ...getUSHolidays(currentYear + 1)
   ];
 
-  const allEvents = [...installationEvents, ...pickupEvents, ...otherEvents, ...usHolidays];
+  const allEventsForCalendar = [...otherEvents, ...pickupEvents, ...usHolidays];
 
   // Helper function to format date for datetime-local input
   const formatDateTimeForInput = (date: Date | string | null | undefined): string => {
@@ -617,190 +712,251 @@ export function BusinessCalendar() {
   };
 
   return (
-    <div className="calendar-container">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Business Calendar</h3>
+    <div className={`calendar-container relative ${mode === 'mini' ? 'mini-calendar' : ''}`}>
+      {/* Loading overlay */}
+      {(isLoading || createEventMutation.isPending || updateEventMutation.isPending || deleteEventMutation.isPending) && (
+        <div className="calendar-loading">
+          <div className="calendar-loading-spinner" />
+        </div>
+      )}
+      
+      {/* Toolbar with responsive design */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
         <div className="flex items-center gap-2">
-          {!isGoogleAuthed ? (
+          <h3 className={`font-semibold ${mode === 'mini' ? 'text-base' : 'text-lg'}`}>Business Calendar</h3>
+          {isGoogleAuthed && (
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 gap-1">
+              <Link className="h-3 w-3" />
+              Google Synced
+            </Badge>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {!isGoogleAuthed || authError ? (
             <Button 
               onClick={handleGoogleAuth} 
               variant="outline" 
-              className="flex items-center gap-2"
+              className={`flex items-center gap-2 text-xs sm:text-sm ${authError ? 'border-red-300 text-red-600 hover:bg-red-50' : ''}`}
+              size="sm"
             >
-              <Calendar className="h-4 w-4" />
-              Connect Google Calendar
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+              {authError ? 'Reconnect Google' : 'Connect Google'}
             </Button>
           ) : (
             <>
               <Button 
                 onClick={() => {
                   console.log('Manual Sync Test button clicked');
-                  syncFromGoogle.mutate();
+                  setAuthError(null); // Clear any previous auth errors
+                  syncFromGoogle.mutate('');
                 }} 
                 variant="outline" 
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 text-xs sm:text-sm"
+                size="sm"
                 disabled={syncFromGoogle.isPending}
               >
-                <Calendar className="h-4 w-4" />
-                {syncFromGoogle.isPending ? 'Syncing...' : 'Manual Sync Test'}
-              </Button>
-              <Button 
-                onClick={() => {
-                  console.log('Force Refresh button clicked');
-                  syncFromGoogle.mutate('?force=true');
-                }} 
-                variant="outline" 
-                className="flex items-center gap-2 bg-orange-50 hover:bg-orange-100"
-                disabled={syncFromGoogle.isPending}
-              >
-                <Calendar className="h-4 w-4" />
-                {syncFromGoogle.isPending ? 'Refreshing...' : 'Force Refresh'}
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${syncFromGoogle.isPending ? 'animate-spin' : ''}`} />
+                {syncFromGoogle.isPending ? 'Syncing...' : 'Sync with Google'}
               </Button>
             </>
           )}
-          <Button onClick={handleAddEvent} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
+          <Button 
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
+              toast({ title: 'Calendar Refreshed', description: 'Calendar events have been updated.' });
+            }}
+            variant="outline" 
+            className="flex items-center gap-2 text-xs sm:text-sm"
+            size="sm"
+          >
+            <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
+            Refresh Calendar
+          </Button>
+          <Button 
+            onClick={() => {
+              resetForm();
+              setAddEventModalOpen(true);
+            }}
+            className="flex items-center gap-2 text-xs sm:text-sm"
+            size="sm"
+          >
+            <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
             Add Event
           </Button>
         </div>
       </div>
       
+      {/* Calendar Legend - only show in full mode */}
+      {mode === 'full' && (
+        <div className="calendar-legend mb-4 p-3 bg-gray-50 rounded-md border border-gray-100">
+          <div className="text-sm font-medium mb-2 text-gray-700">Event Types:</div>
+          <div className="flex flex-wrap gap-3">
+            <div className="legend-item">
+              <div className="legend-color" style={{ backgroundColor: '#3B82F6' }}></div>
+              <span>Call</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-color" style={{ backgroundColor: '#10B981' }}></div>
+              <span>Email</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-color" style={{ backgroundColor: '#F59E0B' }}></div>
+              <span>Meeting</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-color" style={{ backgroundColor: '#EF4444' }}></div>
+              <span>Follow-up</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-color" style={{ backgroundColor: '#8B5CF6' }}></div>
+              <span>Appointment</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-color" style={{ backgroundColor: '#EC4899' }}></div>
+              <span>Holiday</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Authentication Error Alert */}
+      {authError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <div className="flex items-center gap-2">
+            <div className="text-red-600">
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="text-sm text-red-700">{authError}</div>
+          </div>
+        </div>
+      )}
+      
+      {/* Loading overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="mt-2 text-sm text-gray-600">Loading calendar...</p>
+          </div>
+        </div>
+      )}
+      
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
+        initialView="timeGridWeek"
         headerToolbar={{
           left: 'prev,next today',
           center: 'title',
           right: 'dayGridMonth,timeGridWeek,timeGridDay'
         }}
-        events={allEvents}
+        events={allEventsForCalendar}
         eventClick={handleEventClick}
-        height="500px"
-        eventDisplay="block"
-        dayMaxEvents={3}
-        moreLinkClick="popover"
-        weekends={true}
-        businessHours={{
-          daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
-          startTime: '08:00',
-          endTime: '17:00',
-        }}
-        slotMinTime="07:00"
-        slotMaxTime="19:00"
-        nowIndicator={true}
+        height="600px"
+        editable={true}
         selectable={true}
-        selectMirror={true}
-        eventTimeFormat={{
-          hour: 'numeric',
-          minute: '2-digit',
-          meridiem: 'short'
-        }}
+        nowIndicator={true}
       />
-      
-      {/* Legend */}
-      <div className="mt-3">
-        <div className="row">
-          <div className="col-12">
-            <small className="text-muted fw-bold">Event Legend:</small>
-            <div className="d-flex flex-wrap gap-3 mt-2">
-              <div className="d-flex align-items-center">
-                <div className="me-2" style={{ width: '12px', height: '12px', backgroundColor: '#10B981', borderRadius: '2px' }}></div>
-                <small>Installations</small>
-              </div>
-              <div className="d-flex align-items-center">
-                <div className="me-2" style={{ width: '12px', height: '12px', backgroundColor: '#3B82F6', borderRadius: '2px' }}></div>
-                <small>Pickups</small>
-              </div>
-              <div className="d-flex align-items-center">
-                <div className="me-2" style={{ width: '12px', height: '12px', backgroundColor: '#EF4444', borderRadius: '2px' }}></div>
-                <small>Leave</small>
-              </div>
-              <div className="d-flex align-items-center">
-                <div className="me-2" style={{ width: '12px', height: '12px', backgroundColor: '#8B5CF6', borderRadius: '2px' }}></div>
-                <small>Trade Shows</small>
-              </div>
-              <div className="d-flex align-items-center">
-                <div className="me-2" style={{ width: '12px', height: '12px', backgroundColor: '#F59E0B', borderRadius: '2px' }}></div>
-                <small>Showroom Visits</small>
-              </div>
-              <div className="d-flex align-items-center">
-                <div className="me-2" style={{ width: '12px', height: '12px', backgroundColor: '#EC4899', borderRadius: '2px' }}></div>
-                <small>Holidays</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Event Details Modal */}
       <Dialog open={eventModalOpen} onOpenChange={setEventModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="calendar-dialog-content">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5" />
               Event Details
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               View event information and manage event actions.
             </DialogDescription>
           </DialogHeader>
           {selectedEvent && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-lg">{selectedEvent.title}</h3>
-                <Badge variant="outline" className="mt-1">
-                  {selectedEvent.extendedProps.type.replace('-', ' ').toUpperCase()}
-                </Badge>
+            <div className="calendar-event-details">
+              <div className="flex flex-col gap-1 bg-slate-50 p-3 rounded-md mb-3">
+                <h3 className="font-semibold text-base sm:text-lg border-b pb-2 mb-1">{selectedEvent.title}</h3>
+                <div className="flex justify-between items-center">
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs" 
+                    style={{
+                      backgroundColor: `${selectedEvent.backgroundColor}25`,
+                      color: selectedEvent.backgroundColor,
+                      borderColor: `${selectedEvent.backgroundColor}50`
+                    }}
+                  >
+                    {selectedEvent.extendedProps.type.replace('-', ' ')}
+                  </Badge>
+                  <span className="text-xs text-gray-500">
+                    {selectedEvent.extendedProps.isEditable !== false ? 'Editable' : 'System Event'}
+                  </span>
+                </div>
               </div>
               
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    {selectedEvent.start.toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                    {selectedEvent.start.toTimeString() !== selectedEvent.start.toDateString() && 
-                      ` at ${selectedEvent.start.toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit'
-                      })}`
-                    }
-                  </span>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 bg-white p-2 rounded-md border border-gray-100 shadow-sm">
+                  <CalendarDays className="h-4 w-4 text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">
+                      {selectedEvent.start.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </span>
+                    {selectedEvent.start.toTimeString() !== selectedEvent.start.toDateString() && (
+                      <span className="text-xs text-gray-500">
+                        {selectedEvent.start.toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        })}
+                        {selectedEvent.end && ` - ${selectedEvent.end.toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        })}`}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {selectedEvent.extendedProps.assignedTo && (
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Assigned to: {selectedEvent.extendedProps.assignedTo}</span>
+                  <div className="flex items-center gap-2 bg-white p-2 rounded-md border border-gray-100 shadow-sm">
+                    <User className="h-4 w-4 text-blue-500" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-500">Assigned To</span>
+                      <span className="text-sm font-medium">{selectedEvent.extendedProps.assignedTo}</span>
+                    </div>
                   </div>
                 )}
 
                 {selectedEvent.extendedProps.location && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{selectedEvent.extendedProps.location}</span>
+                  <div className="flex items-center gap-2 bg-white p-2 rounded-md border border-gray-100 shadow-sm">
+                    <MapPin className="h-4 w-4 text-amber-500" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-500">Location</span>
+                      <span className="text-sm">{selectedEvent.extendedProps.location}</span>
+                    </div>
                   </div>
                 )}
 
                 {selectedEvent.extendedProps.description && (
-                  <div className="flex items-start gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <span className="text-sm">{selectedEvent.extendedProps.description}</span>
+                  <div className="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FileText className="h-4 w-4 text-emerald-500" />
+                      <span className="text-xs text-gray-500">Description</span>
+                    </div>
+                    <p className="text-sm whitespace-pre-line pl-6">{selectedEvent.extendedProps.description}</p>
                   </div>
                 )}
               </div>
 
               {/* Action Buttons - Only show for editable events */}
-              {selectedEvent?.extendedProps?.isEditable && (
-                <div className="flex gap-2 pt-4 border-t">
+              {selectedEvent?.extendedProps?.isEditable !== false && (
+                <div className="flex gap-2 pt-4 mt-4 border-t">
                   <Button 
                     onClick={handleEditEvent} 
                     variant="outline" 
-                    className="flex items-center gap-2"
+                    className="flex-1 flex items-center justify-center gap-2"
                   >
                     <Edit className="h-4 w-4" />
                     Edit
@@ -808,7 +964,7 @@ export function BusinessCalendar() {
                   <Button 
                     onClick={handleDeleteEvent} 
                     variant="destructive" 
-                    className="flex items-center gap-2"
+                    className="flex-1 flex items-center justify-center gap-2"
                   >
                     <Trash2 className="h-4 w-4" />
                     Delete
@@ -900,9 +1056,9 @@ export function BusinessCalendar() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {ASSIGNEES.map((assignee) => (
-                    <SelectItem key={assignee} value={assignee}>
-                      {assignee}
+                  {activeUsers.map((user: any) => (
+                    <SelectItem key={user.username} value={user.full_name || user.username}>
+                      {user.full_name || user.username}
                     </SelectItem>
                   ))}
                 </SelectContent>

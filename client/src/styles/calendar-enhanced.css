@@ -1,0 +1,302 @@
+/* Enhanced Calendar Styles */
+.calendar-container {
+  width: 100%;
+  overflow-x: hidden;
+  max-width: 100%;
+  padding-bottom: 1rem;
+  font-family: var(--font-sans);
+  border-radius: var(--radius);
+  background-color: white;
+}
+
+/* Calendar Header Improvements */
+.calendar-container .fc-header-toolbar {
+  position: relative;
+  padding: 0.5rem 0;
+  margin-bottom: 1.25rem !important;
+}
+
+/* Enhanced title appearance */
+.calendar-container .fc-toolbar-title {
+  font-weight: 600;
+  font-size: 1.25rem;
+  color: hsl(var(--foreground));
+  letter-spacing: -0.025em;
+}
+
+/* Explicitly show all navigation buttons in the toolbar */
+.calendar-container .fc-toolbar-chunk .fc-button {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  margin-left: 2px !important;
+  margin-right: 2px !important;
+  min-width: 60px !important;
+  height: auto !important;
+  min-height: 2rem !important;
+  padding: 0.25rem 0.75rem !important;
+  font-size: 0.875rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Explicitly target view buttons */
+.calendar-container .fc-dayGridMonth-button,
+.calendar-container .fc-timeGridWeek-button, 
+.calendar-container .fc-timeGridDay-button,
+.calendar-container .fc-listMonth-button,
+.calendar-container .fc-listWeek-button {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 5 !important;
+  position: relative !important;
+  background-color: #2563eb !important;
+  color: #fff !important;
+  border-radius: 6px !important;
+  border: 1px solid #2563eb !important;
+  font-weight: 600 !important;
+}
+
+/* Ensure the button group is properly displayed */
+.calendar-container .fc-button-group {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 5 !important;
+}
+
+/* Debugging - highlight toolbar and button containers */
+.calendar-container .fc-toolbar {
+  padding: 8px !important;
+  margin-bottom: 16px !important;
+}
+
+.calendar-container .fc-toolbar-chunk {
+  padding: 4px !important;
+  min-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Fix right toolbar chunk where view buttons usually are */
+.calendar-container .fc-toolbar-chunk:last-child {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 5 !important;
+  min-width: 200px !important; /* Ensure there's space for buttons */
+}
+
+/* Improved buttons styling */
+.calendar-container .fc-button-primary {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.calendar-container .fc-button-primary:hover {
+  background-color: #1742a0 !important;
+  border-color: #1742a0 !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+
+.calendar-container .fc-button-primary:active {
+  transform: translateY(0);
+}
+
+.calendar-container .fc-button-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Today button highlight */
+.calendar-container .fc-today-button {
+  font-weight: 600 !important;
+}
+
+/* State buttons */
+.calendar-container .fc-button-active {
+  background-color: hsl(var(--primary)/0.9) !important;
+  border-color: hsl(var(--primary)/0.9) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Month/Week/Day view buttons */
+.calendar-container .fc-viewButton-button {
+  text-transform: capitalize;
+}
+
+/* Table Header Improvements */
+.calendar-container .fc-col-header {
+  background-color: hsl(var(--muted)/0.5);
+  border-radius: var(--radius);
+}
+
+.calendar-container .fc-col-header-cell {
+  padding: 0.75rem 0;
+}
+
+.calendar-container .fc-col-header-cell-cushion {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  text-decoration: none !important;
+  padding: 0.5rem;
+}
+
+/* Cell styling improvements */
+.calendar-container .fc-daygrid-day {
+  transition: background-color 0.15s ease;
+}
+
+.calendar-container .fc-daygrid-day:hover {
+  background-color: hsl(var(--muted)/0.3);
+}
+
+/* Today highlighting */
+.calendar-container .fc-day-today {
+  background-color: hsl(var(--primary)/0.05) !important;
+}
+
+.calendar-container .fc-day-today .fc-daygrid-day-number {
+  background-color: hsl(var(--primary));
+  color: white;
+  font-weight: 600;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+/* Event styling improvements */
+.calendar-container .fc-event {
+  border-radius: var(--radius);
+  border-width: 0;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.calendar-container .fc-event:hover {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.calendar-container .fc-event-main {
+  padding: 0.25rem 0;
+}
+
+.calendar-container .fc-event-time {
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.calendar-container .fc-event-title {
+  font-weight: 500;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+/* More events indicator */
+.calendar-container .fc-daygrid-more-link {
+  color: hsl(var(--primary));
+  font-weight: 500;
+  background: hsl(var(--primary)/0.1);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  margin: 0.15rem 0.5rem;
+}
+
+/* Mini calendar specific styles */
+.mini-calendar .fc-toolbar-title {
+  font-size: 1.1rem;
+}
+
+.mini-calendar .fc-col-header-cell-cushion {
+  font-size: 0.8rem;
+}
+
+.mini-calendar .fc-daygrid-day-number {
+  font-size: 0.8rem;
+  padding: 0.25rem !important;
+}
+
+.mini-calendar .fc-event {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+}
+
+/* Modern loading spinner */
+.calendar-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+}
+
+.calendar-loading-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid hsl(var(--primary)/0.2);
+  border-top: 3px solid hsl(var(--primary));
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .calendar-container .fc-toolbar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .calendar-container .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+    margin: 0.25rem 0;
+  }
+  
+  .calendar-container .fc-toolbar-title {
+    font-size: 1.1rem;
+    text-align: center;
+  }
+  
+  .calendar-container .fc-button {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.5rem;
+  }
+}
+
+/* Tablet and larger */
+@media (min-width: 768px) {
+  .calendar-container .fc-toolbar {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  
+  .calendar-container .fc-toolbar-chunk:last-child {
+    margin-left: auto;
+  }
+}

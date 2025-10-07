@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -81,11 +82,41 @@ interface YearsData {
   availableYears: number[];
 }
 
+interface SoldProjectsData {
+  soldProjects: Array<{
+    id: number;
+    name: string;
+    phone: string;
+    email: string;
+    leadOrigin: string;
+    assignedTo: string;
+    projectAmount: number;
+    createdDate: string;
+    soldDate: string;
+    soldMonth: number;
+    soldYear: number;
+    monthName: string;
+  }>;
+  summary: {
+    totalProjects: number;
+    totalRevenue: number;
+    averageDealSize: number;
+    teamStats: Record<string, { count: number; revenue: number }>;
+  };
+  filterInfo: {
+    year: number | null;
+    month: number | null;
+    period: string;
+  };
+}
+
 export default function Reports() {
+  const { user } = useAuth();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
-  const [reportType, setReportType] = useState<string>('analytics');
+  // Set default report type based on user role
+  const [reportType, setReportType] = useState<string>(user?.role === 'commercial_sales' ? 'commercial' : 'analytics');
   const [animationStep, setAnimationStep] = useState(0);
 
   // Animation effect - stagger the appearance of different sections
@@ -140,6 +171,39 @@ export default function Reports() {
     enabled: reportType === 'installers'
   });
 
+  const { data: soldProjectsData, isLoading: isLoadingSoldProjects } = useQuery<SoldProjectsData>({
+    queryKey: ['sold-projects', selectedYear, selectedMonth],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedYear) params.append('year', selectedYear);
+      if (selectedMonth && selectedMonth !== 'all') params.append('month', selectedMonth);
+      
+      const response = await fetch(`/api/reports/sold-projects?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch sold projects data');
+      return response.json();
+    },
+    enabled: reportType === 'sold-projects'
+  });
+
+  // Commercial-specific analytics query - available to commercial_sales, admin, and owner
+  const { data: commercialAnalyticsData, isLoading: isLoadingCommercialAnalytics } = useQuery<AnalyticsData>({
+    queryKey: ['commercial-analytics', selectedYear, selectedMonth, user?.username],
+    queryFn: async () => {
+      console.log(`[DEBUG] Commercial Analytics Query - User: ${user?.username}, Role: ${user?.role}, Report Type: ${reportType}`);
+      const params = new URLSearchParams();
+      if (selectedYear) params.append('year', selectedYear);
+      if (selectedMonth && selectedMonth !== 'all') params.append('month', selectedMonth);
+      if (user?.username) params.append('username', user.username);
+      
+      const response = await fetch(`/api/reports/commercial-analytics?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch commercial analytics');
+      return response.json();
+    },
+    enabled: reportType === 'commercial' && ['commercial_sales', 'admin', 'owner'].includes(user?.role || '')
+  });
+
+  console.log(`[DEBUG] Commercial Analytics Query Enabled: ${reportType === 'commercial' && ['commercial_sales', 'admin', 'owner'].includes(user?.role || '')}, Report Type: ${reportType}, User Role: ${user?.role}`);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { 
       style: 'currency', 
@@ -183,7 +247,10 @@ export default function Reports() {
     { value: '12', label: 'December' }
   ];
 
-  const isLoading = reportType === 'analytics' || reportType === 'lead-origin-pie' ? isLoadingAnalytics : isLoadingInstallers;
+  const isLoading = reportType === 'analytics' || reportType === 'lead-origin-pie' ? isLoadingAnalytics : 
+                     reportType === 'commercial' ? isLoadingCommercialAnalytics :
+                     reportType === 'installers' ? isLoadingInstallers : 
+                     reportType === 'sold-projects' ? isLoadingSoldProjects : false;
 
   if (isLoading) {
     return (
@@ -191,7 +258,7 @@ export default function Reports() {
         <div className="flex justify-center items-center min-h-[50vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading {reportType === 'analytics' ? 'analytics' : reportType === 'installers' ? 'installer' : 'lead origin pie chart'} data...</p>
+            <p className="text-gray-600">Loading {reportType === 'analytics' ? 'analytics' : reportType === 'installers' ? 'installer' : reportType === 'sold-projects' ? 'sold projects' : 'lead origin pie chart'} data...</p>
           </div>
         </div>
       </div>
@@ -213,6 +280,16 @@ export default function Reports() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <p className="text-gray-600">No installer data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (reportType === 'sold-projects' && !soldProjectsData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-gray-600">No sold projects data available</p>
         </div>
       </div>
     );
@@ -258,7 +335,7 @@ export default function Reports() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900" data-testid="reports-title">
-              Reports & Analytics MVP
+              Reports & Analytics
             </h1>
             <p className="text-gray-600 mt-2">
               Business intelligence with data-driven insights
@@ -276,9 +353,27 @@ export default function Reports() {
                   <SelectValue placeholder="Select report type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="analytics">Lead Analytics</SelectItem>
-                  <SelectItem value="installers">Installer Reports</SelectItem>
-                  <SelectItem value="lead-origin-pie">Lead Origin Pie Chart</SelectItem>
+                  {user?.role === 'commercial_sales' ? (
+                    // Commercial users only see commercial analytics
+                    <SelectItem value="commercial">Commercial Analytics</SelectItem>
+                  ) : ['admin', 'owner'].includes(user?.role || '') ? (
+                    // Admin and owner users see all reports including commercial
+                    <>
+                      <SelectItem value="analytics">Lead Analytics</SelectItem>
+                      <SelectItem value="commercial">Commercial Analytics</SelectItem>
+                      <SelectItem value="installers">Installer Reports</SelectItem>
+                      <SelectItem value="sold-projects">Sold Projects for Month</SelectItem>
+                      <SelectItem value="lead-origin-pie">Lead Origin Pie Chart</SelectItem>
+                    </>
+                  ) : (
+                    // All other users see regular reports (excluding commercial)
+                    <>
+                      <SelectItem value="analytics">Lead Analytics</SelectItem>
+                      <SelectItem value="installers">Installer Reports</SelectItem>
+                      <SelectItem value="sold-projects">Sold Projects for Month</SelectItem>
+                      <SelectItem value="lead-origin-pie">Lead Origin Pie Chart</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -336,8 +431,16 @@ export default function Reports() {
                 (analyticsData.filterInfo.period === 'all-time' ? 'All Time' : 
                   (selectedMonth && selectedMonth !== 'all') ? `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : selectedYear
                 ) :
+              reportType === 'commercial' && commercialAnalyticsData ?
+                (commercialAnalyticsData.filterInfo.period === 'all-time' ? 'All Time' : 
+                  (selectedMonth && selectedMonth !== 'all') ? `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : selectedYear
+                ) :
               reportType === 'installers' && installerData ?
                 (installerData.filterInfo.period === 'all-time' ? 'All Time' : 
+                  (selectedMonth && selectedMonth !== 'all') ? `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : selectedYear
+                ) :
+              reportType === 'sold-projects' && soldProjectsData ?
+                (soldProjectsData.filterInfo.period === 'all-time' ? 'All Time' : 
                   (selectedMonth && selectedMonth !== 'all') ? `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : selectedYear
                 ) :
                 'No Data'
@@ -947,6 +1050,356 @@ export default function Reports() {
               </CardContent>
             </Card>
           </div>
+        </>
+      )}
+
+      {/* Sold Projects Report */}
+      {reportType === 'sold-projects' && soldProjectsData && (
+        <>
+          {/* Summary Cards */}
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 dashboard-section ${animationStep >= 2 ? 'animate' : ''}`}>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Total Projects Sold</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-600">{soldProjectsData.summary.totalProjects}</div>
+                <p className="text-gray-500 text-sm mt-1">In selected period</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-600">{formatCurrency(soldProjectsData.summary.totalRevenue)}</div>
+                <p className="text-gray-500 text-sm mt-1">From sold projects</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Average Deal Size</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-purple-600">{formatCurrency(soldProjectsData.summary.averageDealSize)}</div>
+                <p className="text-gray-500 text-sm mt-1">Per sold project</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Best Origin Lead Conversion</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  if (!analyticsData?.leadOriginPerformance) return <div className="text-lg text-gray-400">No data</div>;
+                  
+                  const bestConverter = [...analyticsData.leadOriginPerformance]
+                    .filter(origin => origin.totalLeads >= 5) // Only consider origins with at least 5 leads
+                    .sort((a, b) => b.conversionRate - a.conversionRate)[0];
+                  
+                  return bestConverter ? (
+                    <div>
+                      <div className="text-3xl font-bold text-blue-600">{bestConverter.origin}</div>
+                      <p className="text-gray-500 text-sm mt-1">{bestConverter.conversionRate.toFixed(1)}% conversion</p>
+                    </div>
+                  ) : (
+                    <div className="text-lg text-gray-400">No data</div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sold Projects Table */}
+          <div className={`dashboard-section ${animationStep >= 3 ? 'animate' : ''}`}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Sold Projects Details</CardTitle>
+                <p className="text-gray-600 text-sm">Complete list of projects sold in the selected period</p>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 font-medium text-gray-700">Customer</th>
+                        <th className="text-left py-3 font-medium text-gray-700">Contact</th>
+                        <th className="text-left py-3 font-medium text-gray-700">Source</th>
+                        <th className="text-center py-3 font-medium text-gray-700">Assigned To</th>
+                        <th className="text-center py-3 font-medium text-gray-700">Creation Date</th>
+                        <th className="text-center py-3 font-medium text-gray-700">Sold Date</th>
+                        <th className="text-right py-3 font-medium text-gray-700">Project Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {soldProjectsData.soldProjects.map((project) => (
+                        <tr key={project.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3">
+                            <div className="font-medium text-gray-900">{project.name}</div>
+                          </td>
+                          <td className="py-3">
+                            <div className="text-sm">
+                              <div className="text-gray-900">{project.phone}</div>
+                              {project.email && (
+                                <div className="text-gray-600">{project.email}</div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3">
+                            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                              {formatOriginName(project.leadOrigin)}
+                            </span>
+                          </td>
+                          <td className="text-center py-3">
+                            <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                              {project.assignedTo}
+                            </span>
+                          </td>
+                          <td className="text-center py-3">
+                            <div className="text-sm">
+                              <div className="font-medium text-gray-600">{project.createdDate}</div>
+                            </div>
+                          </td>
+                          <td className="text-center py-3">
+                            <div className="text-sm">
+                              <div className="font-medium text-green-600">{project.soldDate}</div>
+                              <div className="text-xs text-gray-500">{project.monthName}</div>
+                            </div>
+                          </td>
+                          <td className="text-right py-3 font-semibold text-green-600">
+                            {formatCurrency(project.projectAmount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {soldProjectsData.soldProjects.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No projects were sold in the selected period</p>
+                    <p className="text-sm mt-2">Try selecting a different year or month</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* Commercial Analytics - Visible to commercial, admin, and owner users */}
+      {reportType === 'commercial' && ['commercial_sales', 'admin', 'owner'].includes(user?.role || '') && (
+        <>
+          {/* Loading State */}
+          {isLoadingCommercialAnalytics ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600">Loading commercial analytics...</span>
+            </div>
+          ) : commercialAnalyticsData ? (
+            <>
+              {/* Executive Dashboard - Summary Cards */}
+              <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 dashboard-section ${animationStep >= 2 ? 'animate' : ''}`}>
+                <Card data-testid="metric-total-commercial-leads">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Total Commercial Leads</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-blue-600">{commercialAnalyticsData.executiveDashboard.totalLeads.toLocaleString()}</div>
+                    <p className="text-gray-500 text-sm mt-1">Commercial projects tracked</p>
+                  </CardContent>
+                </Card>
+                
+                <Card data-testid="metric-commercial-conversion">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Commercial Conversion</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600">
+                      {formatPercentage(commercialAnalyticsData.executiveDashboard.conversionRate)}
+                    </div>
+                    <p className="text-gray-500 text-sm mt-1">
+                      {commercialAnalyticsData.executiveDashboard.soldLeads} of {commercialAnalyticsData.executiveDashboard.totalLeads} leads
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card data-testid="metric-commercial-revenue">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Commercial Revenue</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-purple-600">
+                      {formatCurrency(commercialAnalyticsData.executiveDashboard.totalRevenue)}
+                    </div>
+                    <p className="text-gray-500 text-sm mt-1">Total commercial revenue</p>
+                  </CardContent>
+                </Card>
+                
+                <Card data-testid="metric-commercial-deal-size">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Avg Commercial Deal</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-orange-600">
+                      {formatCurrency(commercialAnalyticsData.executiveDashboard.averageDealSize)}
+                    </div>
+                    <p className="text-gray-500 text-sm mt-1">Revenue per sold lead</p>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 dashboard-section ${animationStep >= 3 ? 'animate' : ''}`}>
+                {/* Commercial Lead Origin Performance */}
+                <Card data-testid="commercial-lead-origin-performance">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-semibold">Commercial Lead Sources</CardTitle>
+                    <p className="text-gray-600 text-sm">Commercial marketing ROI tracking</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {commercialAnalyticsData.leadOriginPerformance.slice(0, 8).map((origin) => (
+                        <div key={origin.origin} className="border-b pb-4 last:border-b-0 last:pb-0">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-medium text-gray-900 capitalize">{origin.origin}</h4>
+                            <Badge variant={origin.conversionRate >= 25 ? "default" : "secondary"}>
+                              {formatPercentage(origin.conversionRate)}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-500">Leads: </span>
+                              <span className="font-semibold">{origin.totalLeads}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Sold: </span>
+                              <span className="font-semibold text-green-600">{origin.soldLeads}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Revenue: </span>
+                              <span className="font-semibold text-purple-600">{formatCurrency(origin.totalRevenue)}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Avg Deal: </span>
+                              <span className="font-semibold">{formatCurrency(origin.averageDealSize)}</span>
+                            </div>
+                          </div>
+                          <div className="mt-2">
+                            <Progress value={origin.conversionRate} className="h-2" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Commercial Monthly Performance */}
+                <Card data-testid="commercial-monthly-performance">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-semibold">Monthly Commercial Performance</CardTitle>
+                    <p className="text-gray-600 text-sm">Commercial growth trends</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {commercialAnalyticsData.monthlyBreakdown.map((month) => (
+                        <div key={month.month} className="border-b pb-4 last:border-b-0 last:pb-0">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-medium text-gray-900">{month.monthName}</h4>
+                            <Badge variant={month.conversionRate >= 25 ? "default" : "secondary"}>
+                              {formatPercentage(month.conversionRate)}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-500">Leads: </span>
+                              <span className="font-semibold">{month.totalLeads}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Sold: </span>
+                              <span className="font-semibold text-green-600">{month.soldLeads}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Revenue: </span>
+                              <span className="font-semibold text-purple-600">{formatCurrency(month.totalRevenue)}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Avg Deal: </span>
+                              <span className="font-semibold">{formatCurrency(month.averageDealSize)}</span>
+                            </div>
+                          </div>
+                          <div className="mt-2">
+                            <Progress value={month.conversionRate} className="h-2" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Commercial Lead Origin Pie Chart */}
+              <div className={`mb-8 dashboard-section ${animationStep >= 4 ? 'animate' : ''}`}>
+                <Card data-testid="commercial-lead-origin-pie">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-semibold">Commercial Lead Distribution</CardTitle>
+                    <p className="text-gray-600 text-sm">Visual breakdown of commercial lead sources</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-96">
+                      <ChartContainer
+                        config={{
+                          leads: {
+                            label: "Leads",
+                            color: "hsl(var(--chart-1))",
+                          },
+                        }}
+                        className="h-full w-full"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={commercialAnalyticsData.leadOriginPerformance.map((origin, index) => ({
+                                name: formatOriginName(origin.origin),
+                                value: origin.totalLeads,
+                                fill: `hsl(${(index * 137.5) % 360}, 70%, 50%)`
+                              }))}
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={120}
+                              dataKey="value"
+                              label={({ name, value, percent }) => 
+                                `${name}: ${value} (${(percent * 100).toFixed(1)}%)`
+                              }
+                            >
+                              {commercialAnalyticsData.leadOriginPerformance.map((_, index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={`hsl(${(index * 137.5) % 360}, 70%, 50%)`} 
+                                />
+                              ))}
+                            </Pie>
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                            <ChartLegend content={<ChartLegendContent />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-gray-500 mb-4">
+                <TrendingUp className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                <p className="text-lg font-medium">No Commercial Data Available</p>
+                <p className="text-sm mt-2">No commercial data found for the selected period</p>
+                <p className="text-sm">Try selecting a different year or month</p>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -10,7 +10,7 @@ import { GoogleCalendarService } from "./google-calendar-working";
 
 // Create instance
 const googleCalendarService = new GoogleCalendarService();
-import { eq, like, or, desc, and } from 'drizzle-orm';
+import { eq, like, or, desc, and, sql } from 'drizzle-orm';
 import { db } from './db';
 import path from "path";
 import fs from "fs";
@@ -96,6 +96,45 @@ const loginSchema = z.object({
   username: z.string(),
   password: z.string(),
 });
+
+// Helper function to get sold date from activity logs
+async function getSoldDateFromActivityLogs(leadId: string): Promise<string | null> {
+  try {
+    console.log(`🔍 [SOLD DATE] Checking lead ${leadId} for sold date`);
+    
+    const activities = await storage.getActivityLogs({
+      entity_type: 'Lead',
+      limit: 1000
+    });
+    
+    // Filter activities for this specific lead and sort by date (newest first)
+    const leadActivities = activities
+      .filter((activity: any) => activity.entity_id.toString() === leadId.toString())
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    console.log(`🔍 [SOLD DATE] Found ${leadActivities.length} activities for lead ${leadId}`);
+    
+    // Since we know this lead is currently marked as "Sold", 
+    // the most recent activity that changed "remarks" should be when it was marked as sold
+    const remarksChangeActivity = leadActivities.find((activity: any) => 
+      activity.action === 'UPDATE_LEAD' && 
+      activity.details && 
+      activity.details.includes('remarks')
+    );
+    
+    if (remarksChangeActivity) {
+      const soldDate = remarksChangeActivity.created_at.toISOString().split('T')[0];
+      console.log(`✅ [SOLD DATE] Using remarks change date for lead ${leadId}: ${soldDate}`);
+      return soldDate;
+    }
+    
+    console.log(`❌ [SOLD DATE] No remarks change activity found for lead ${leadId}`);
+    return null;
+  } catch (error) {
+    console.error(`❌ [SOLD DATE] Error getting sold date for lead ${leadId}:`, error);
+    return null;
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -342,20 +381,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard stats
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
-      const allLeads = await storage.getLeads();
+      const { username } = req.query;
+      console.log(`[DEBUG] Dashboard Stats API received username: '${username}'`);
+
+      let allLeads = await storage.getLeads();
+
+      // Apply role-based filtering if username is provided
+      if (username) {
+        const user = await storage.getUserByUsername(username as string);
+        console.log(`[DEBUG] Dashboard Stats - Found user:`, user ? { username: user.username, role: user.role } : 'null');
+
+        if (user && user.role === 'commercial_sales') {
+          console.log(`[DEBUG] Dashboard Stats - Applied Commercial filter for commercial_sales user`);
+          allLeads = allLeads.filter(lead => lead.project_type === 'Commercial');
+        }
+      }
+
       const today = new Date();
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()); // Start of today
+      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1); // Start of tomorrow
+      
+      // Format today's date as YYYY-MM-DD for string comparison
+      const todayString = today.toISOString().split('T')[0];
+      
+      // Define today's date components for comparison
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth();
+      const todayDate = today.getDate();
       
       const totalLeads = allLeads.length;
       const soldLeads = allLeads.filter(lead => lead.remarks === "Sold").length;
-      const todayFollowups = (await storage.getLeadsWithFollowupsDue(today)).length;
-      const newToday = (await storage.getLeadsCreatedAfter(weekAgo)).length;
+      
+      // IMPROVED: Prevent counting already-sold leads that just had follow-up dates updated
+      // Only count leads that were actually marked as "Sold" today, not just updated today
+      let soldToday = 0;
+      
+      try {
+        // Get all UPDATE_LEAD activities from today
+        const todayUpdateActivities = await storage.getActivityLogs({
+          action: 'UPDATE_LEAD',
+          days: 0, // Only today
+          limit: 1000
+        });
+        
+        // Filter for activities that actually changed the status to "Sold"
+        const leadsSoldToday = todayUpdateActivities.filter(activity => {
+          const details = activity.details || '';
+          return details.includes('remarks') && 
+                 activity.created_at && 
+                 new Date(activity.created_at).toISOString().split('T')[0] === todayString;
+        });
+        
+        // Get the lead IDs that had status changes today
+        const soldTodayLeadIds = leadsSoldToday.map(activity => activity.entity_id);
+        
+        // Count leads that are currently "Sold" AND had their status updated today
+        soldToday = allLeads.filter(lead => {
+          return lead.remarks === 'Sold' && soldTodayLeadIds.includes(lead.id.toString());
+        }).length;
+        
+      } catch (error) {
+        // CONSERVATIVE FALLBACK: Only count leads created today AND marked as sold
+        // This avoids counting any existing sold leads that were just updated
+        soldToday = allLeads.filter(lead => {
+          return lead.remarks === 'Sold' && lead.date_created === todayString;
+        }).length;
+      }
+      
+      const soldLeadsCreatedToday = allLeads.filter(lead => {
+        return lead.remarks === 'Sold' && lead.date_created === todayString;
+      });
+      
+      if (soldLeadsCreatedToday.length > 0) {
+        console.log(`[DEBUG] Leads created and sold today:`, soldLeadsCreatedToday.map(lead => ({
+          id: lead.id,
+          name: lead.name,
+          date_created: lead.date_created,
+          updated_at: lead.updated_at
+        })));
+      }
+      
+      // Filter leads that have overdue or today's followup dates (excluding inactive statuses)
+      // This matches what the dashboard displays: overdue + due today
+      const todayFollowups = allLeads.filter(lead => {
+        if (!lead.next_followup_date) return false;
+        // Exclude inactive/closed lead statuses
+        if (lead.remarks === 'Not Interested' || 
+            lead.remarks === 'Not Service Area' || 
+            lead.remarks === 'Not Compatible' ||
+            lead.remarks === 'Friendly Partner') {
+          return false;
+        }
+        
+        // Parse the follow-up date and compare with today
+        const [year, month, day] = lead.next_followup_date.split('-').map(Number);
+        
+        // Include both overdue (before today) and due today
+        return year < todayYear || 
+               (year === todayYear && month - 1 < todayMonth) ||
+               (year === todayYear && month - 1 === todayMonth && day <= todayDate);
+      }).length;
+      
+      // Fix: Get leads created TODAY only, not last week
+      const newToday = allLeads.filter(lead => {
+        if (!lead.date_created) return false;
+        return lead.date_created === todayString;
+      }).length;
 
       res.json({
         totalLeads,
         soldLeads,
+        soldToday,
         todayFollowups,
         newToday
+      });
+      
+      // Debug logging
+      console.log(`[DEBUG] Dashboard Stats for ${todayString}:`, {
+        totalLeads,
+        soldLeads,
+        soldToday,
+        todayFollowups,
+        newToday,
+        todayString
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
@@ -365,18 +513,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Lead endpoints
   app.get("/api/leads", async (req, res) => {
     try {
-      const { status, origin, assigned_to, search, page, limit } = req.query;
+      const { status, origin, assigned_to, search, page, limit, username } = req.query;
+      
+      console.log('🔍 Received filters in API:', { status, origin, assigned_to, search, page, limit, username });
+      
+      // Debug: Check if we have any Friendly Partner leads when that filter is requested
+      if (status === 'Friendly Partner') {
+        const allLeads = await storage.getLeads();
+        const friendlyPartnerLeads = allLeads.filter(lead => lead.remarks === 'Friendly Partner');
+        console.log(`🔍 Total leads in database: ${allLeads.length}`);
+        console.log(`🔍 Friendly Partner leads found: ${friendlyPartnerLeads.length}`);
+        if (friendlyPartnerLeads.length > 0) {
+          console.log('🔍 Sample Friendly Partner leads:', friendlyPartnerLeads.slice(0, 3).map(l => ({ id: l.id, name: l.name, remarks: l.remarks })));
+        }
+      }
       
       // Parse pagination parameters
       const pageNum = parseInt(page as string) || 1;
       const limitNum = parseInt(limit as string) || 20;
+      
+      // Check user role and apply commercial-only filter if needed
+      let projectTypeFilter: string | undefined;
+      if (username) {
+        try {
+          const user = await storage.getUserByUsername(username as string);
+          console.log(`🔍 User lookup for ${username}:`, user ? { username: user.username, role: user.role } : 'USER NOT FOUND');
+          
+          if (user && user.role === 'commercial_sales') {
+            // Commercial sales users can only see Commercial projects
+            projectTypeFilter = 'Commercial';
+            console.log(`🔍 Commercial sales user ${username} - filtering to Commercial projects only`);
+          } else if (user) {
+            console.log(`🔍 User ${username} has role '${user.role}' - no project type filtering applied`);
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          // Continue without filtering if user lookup fails
+        }
+      }
       
       // Prepare filters
       const filters = {
         search: search as string,
         status: status as string,
         origin: origin as string,
-        assigned_to: assigned_to as string
+        assigned_to: assigned_to as string,
+        project_type: projectTypeFilter
       };
       
       // Use the new paginated method
@@ -442,10 +624,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Validating lead data with schema...");
       const leadData = insertLeadSchema.parse(req.body);
       console.log("Lead data validated successfully:", leadData);
+      console.log("🔍 Date created value:", leadData.date_created, "Type:", typeof leadData.date_created);
       
       console.log("Creating lead in database...");
       const lead = await storage.createLead(leadData);
       console.log("Lead created successfully:", lead);
+      console.log("🔍 Final lead date_created:", lead.date_created, "Type:", typeof lead.date_created);
 
       // Log activity
       await storage.logActivity(
@@ -485,19 +669,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updates = updateLeadSchema.parse(preprocessedBody);
       console.log('==============================');
       
+      // Get the original lead to compare what actually changed
+      const originalLead = await storage.getLead(req.params.id);
+      if (!originalLead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      
       const lead = await storage.updateLead(req.params.id, updates);
       
       if (!lead) {
         return res.status(404).json({ message: "Lead not found" });
       }
 
-      // Log activity
+      // Only log fields that actually changed values
+      const actualChanges = Object.keys(updates).filter(key => {
+        const oldValue = originalLead[key as keyof typeof originalLead];
+        const newValue = updates[key as keyof typeof updates];
+        
+        // Handle null/undefined comparisons
+        if (oldValue == null && newValue == null) return false;
+        if (oldValue == null || newValue == null) return true;
+        
+        return String(oldValue) !== String(newValue);
+      });
+
+      // Log activity with only actual changes
       await storage.logActivity(
         '1', // TODO: Get actual user ID from session/auth
         'UPDATE_LEAD',
         'LEAD',
         req.params.id,
-        `Updated lead: ${lead.name} - Changes: ${Object.keys(updates).join(', ')}`
+        `Updated lead: ${lead.name} - Changes: ${actualChanges.join(', ')}`
       );
       
       res.json(lead);
@@ -539,18 +741,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Follow-up endpoints
   app.get("/api/followups", async (req, res) => {
     try {
+      const username = req.query.username as string;
+      console.log(`[DEBUG] Followups API received username: '${username}'`);
+      
+      let projectTypeFilter: string | null = null;
+      
+      // Apply role-based filtering
+      if (username) {
+        const user = await storage.getUserByUsername(username);
+        console.log(`[DEBUG] Found user:`, user ? { username: user.username, role: user.role } : 'null');
+        if (user && user.role === 'commercial_sales') {
+          projectTypeFilter = 'Commercial';
+          console.log(`[DEBUG] Applied Commercial filter for commercial_sales user`);
+        }
+      }
+      
       const now = new Date();
       const todayYear = now.getFullYear();
       const todayMonth = now.getMonth();
       const todayDate = now.getDate();
       
+      // Also get today as string for consistent date comparison
+      const todayString = now.toISOString().split('T')[0]; // Format: "2025-09-21"
+      
       const allLeads = await storage.getLeads();
       
-      // Filter out leads with "Not Interested" status from follow-ups
-      const activeLeads = allLeads.filter(lead => 
+      // Apply project type filtering if needed
+      const filteredLeads = projectTypeFilter 
+        ? allLeads.filter(lead => lead.project_type === projectTypeFilter)
+        : allLeads;
+      
+      // Filter out leads with inactive/closed statuses from follow-ups
+      const activeLeads = filteredLeads.filter(lead => 
         lead.remarks !== 'Not Interested' && 
         lead.remarks !== 'Not Service Area' && 
-        lead.remarks !== 'Not Compatible'
+        lead.remarks !== 'Not Compatible' &&
+        lead.remarks !== 'Friendly Partner'
       );
       
       const overdue = activeLeads.filter(lead => {
@@ -583,11 +809,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Return all upcoming leads so frontend can properly calculate weekly stats
       // Frontend will handle table display limiting
+      
+      // Calculate new leads added today - using same logic as dashboard stats
+      const newLeadsToday = filteredLeads.filter(lead => {
+        if (!lead.date_created) return false;
+        return lead.date_created === todayString;
+      });
+      
+      // Calculate leads sold today using the same improved logic as dashboard
+      let soldToday;
+      
+      try {
+        // Use activity logs to detect actual status changes to "Sold" today
+        const todayUpdateActivities = await storage.getActivityLogs({
+          action: 'UPDATE_LEAD',
+          days: 0,
+          limit: 1000
+        });
+        
+        const leadsSoldToday = todayUpdateActivities.filter(activity => {
+          const details = activity.details || '';
+          return details.includes('remarks') && 
+                 activity.created_at && 
+                 new Date(activity.created_at).toISOString().split('T')[0] === todayString;
+        });
+        
+        const soldTodayLeadIds = leadsSoldToday.map(activity => activity.entity_id);
+        soldToday = filteredLeads.filter(lead => {
+          return lead.remarks === 'Sold' && soldTodayLeadIds.includes(lead.id.toString());
+        });
+        
+      } catch (error) {
+        // CONSERVATIVE FALLBACK: Only count leads created today AND sold
+        // This prevents counting existing sold leads that were just updated
+        soldToday = filteredLeads.filter(lead => {
+          return lead.remarks === 'Sold' && lead.date_created === todayString;
+        });
+      }
+
+      // Auto-update leads that are still "New" but created before today to "In Progress"
+      const leadsToUpdate = filteredLeads.filter(lead => {
+        if (!lead.date_created || lead.remarks !== 'New') return false;
+        // Parse date string and compare date components only
+        const [year, month, day] = lead.date_created.split('-').map(Number);
+        // If created before today and still "New", should be updated to "In Progress"
+        return year < todayYear || 
+               (year === todayYear && month - 1 < todayMonth) ||
+               (year === todayYear && month - 1 === todayMonth && day < todayDate);
+      });
+
+      // Update leads from "New" to "In Progress" if they're older than today
+      for (const lead of leadsToUpdate) {
+        try {
+          await storage.updateLead(lead.id.toString(), { remarks: 'In Progress' });
+        } catch (error) {
+          console.error(`Failed to auto-update lead ${lead.id} from New to In Progress:`, error);
+        }
+      }
+      
       res.json({
         overdue,
         dueToday,
         upcoming: allUpcoming, // Return all upcoming leads
-        upcomingCount: allUpcoming.length // Total count for reference
+        upcomingCount: allUpcoming.length, // Total count for reference
+        newLeadsToday: newLeadsToday, // Return full lead objects
+        soldToday: soldToday // Return full lead objects
+      });
+      
+      // Debug logging for followups endpoint
+      console.log(`[DEBUG] Followups endpoint for ${todayString}:`, {
+        overdueCount: overdue.length,
+        dueTodayCount: dueToday.length,
+        upcomingCount: allUpcoming.length,
+        totalPending: overdue.length + dueToday.length
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch follow-ups" });
@@ -597,11 +891,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Installation endpoints
   app.get("/api/installations", async (req, res) => {
     try {
+      const username = req.query.username as string;
+      console.log(`[DEBUG] Installations API received username: '${username}'`);
+      
+      let projectTypeFilter: string | null = null;
+      
+      // Apply role-based filtering
+      if (username) {
+        const user = await storage.getUserByUsername(username);
+        console.log(`[DEBUG] Installations - Found user:`, user ? { username: user.username, role: user.role } : 'null');
+        if (user && user.role === 'commercial_sales') {
+          projectTypeFilter = 'Commercial';
+          console.log(`[DEBUG] Installations - Applied Commercial filter for commercial_sales user`);
+        }
+      }
+      
       const allLeads = await storage.getLeads();
-      const installations = allLeads.filter(lead => 
+      
+      // Apply project type filtering if needed
+      const filteredLeads = projectTypeFilter 
+        ? allLeads.filter(lead => lead.project_type === projectTypeFilter)
+        : allLeads;
+      
+      // Get completed projects to exclude them from upcoming installations
+      let completedProjectLeadIds = new Set<number>();
+      try {
+        const completedProjects = await storage.getCompletedProjects();
+        completedProjectLeadIds = new Set(completedProjects.map(project => project.lead_id));
+      } catch (error) {
+        console.log('Completed projects table not available, showing all installations');
+      }
+      
+      const installations = filteredLeads.filter(lead => 
         lead.remarks === "Sold" && 
-        lead.installation_date
-        // Keep all installations, including completed ones - let frontend categorize them
+        lead.installation_date &&
+        !completedProjectLeadIds.has(lead.id) // Exclude completed installations
       );
 
       res.json(installations);
@@ -766,7 +1090,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get completed projects endpoint
   app.get("/api/completed-projects", async (req, res) => {
     try {
-      const completedProjects = await storage.getCompletedProjects();
+      const { username } = req.query;
+      console.log(`[DEBUG] Completed Projects API received username: '${username}'`);
+
+      let completedProjects = await storage.getCompletedProjects();
+
+      // Apply role-based filtering if username is provided
+      if (username) {
+        const user = await storage.getUserByUsername(username as string);
+        console.log(`[DEBUG] Completed Projects - Found user:`, user ? { username: user.username, role: user.role } : 'null');
+
+        if (user && user.role === 'commercial_sales') {
+          console.log(`[DEBUG] Completed Projects - Applied Commercial filter for commercial_sales user`);
+          completedProjects = completedProjects.filter((project: any) => project.project_type === 'Commercial');
+        }
+      }
+
       res.json(completedProjects);
     } catch (error) {
       console.error("Error fetching completed projects:", error);
@@ -1112,14 +1451,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const leadYear = new Date(lead.date_created).getFullYear();
           return leadYear === targetYear;
         });
+
+        // Get sold dates for all sold leads from activity logs
+        const soldLeads = yearLeads.filter(lead => lead.remarks === 'Sold');
+        const soldDatesMap = new Map<string, string>();
+        
+        for (const lead of soldLeads) {
+          const soldDate = await getSoldDateFromActivityLogs(lead.id.toString());
+          if (soldDate) {
+            soldDatesMap.set(lead.id.toString(), soldDate);
+          }
+        }
         
         monthlyBreakdown = Array.from({ length: 12 }, (_, monthIndex) => {
+          // Count total leads by creation date (as before)
           const monthLeads = yearLeads.filter(lead => {
             const leadMonth = new Date(lead.date_created).getMonth();
             return leadMonth === monthIndex;
           });
           
-          const monthSoldLeads = monthLeads.filter(lead => lead.remarks === 'Sold');
+          // Count sold leads by sold date (NEW LOGIC)
+          const monthSoldLeads = soldLeads.filter(lead => {
+            const soldDate = soldDatesMap.get(lead.id.toString());
+            if (!soldDate) return false; // Skip if we can't find sold date
+            
+            const soldDateObj = new Date(soldDate);
+            return soldDateObj.getFullYear() === targetYear && 
+                   soldDateObj.getMonth() === monthIndex;
+          });
+          
           const monthRevenue = monthSoldLeads.reduce((sum, lead) => {
             return sum + (parseFloat(lead.project_amount || '0'));
           }, 0);
@@ -1168,6 +1528,280 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ availableYears: years });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch available years" });
+    }
+  });
+
+  // Debug endpoint to check activity logs format
+  app.get("/api/debug/activity-logs/:leadId", async (req, res) => {
+    try {
+      const leadId = parseInt(req.params.leadId);
+      const activities = await storage.getActivityLogs({
+        entity_type: 'Lead',
+      });
+      
+      // Filter for this specific lead
+      const leadActivities = activities.filter((a: any) => a.entity_id === leadId);
+      
+      res.json({
+        leadId,
+        totalActivities: activities.length,
+        leadSpecificActivities: leadActivities.length,
+        activities: leadActivities.map(a => ({
+          id: a.id,
+          entity_id: a.entity_id,
+          action: a.action,
+          details: a.details,
+          created_at: a.created_at
+        }))
+      });
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+      res.status(500).json({ error: 'Failed to fetch activity logs' });
+    }
+  });
+
+  // Sold Projects for Month Report API
+  app.get("/api/reports/sold-projects", async (req, res) => {
+    try {
+      const { year, month } = req.query;
+      
+      // Month mapping for display
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      
+      // Get all leads
+      const allLeads = await storage.getLeads();
+      
+      // Filter for sold leads
+      const soldLeads = allLeads.filter(lead => lead.remarks === 'Sold');
+      
+      console.log(`🔍 [SOLD REPORT] Processing ${soldLeads.length} sold leads`);
+      
+      // Get sold dates for all sold leads from activity logs
+      const soldProjectsWithDates = [];
+      
+      for (const lead of soldLeads) {
+        const soldDate = await getSoldDateFromActivityLogs(lead.id.toString());
+        if (soldDate) {
+          const soldDateObj = new Date(soldDate);
+          const soldYear = soldDateObj.getFullYear();
+          const soldMonth = soldDateObj.getMonth() + 1; // Convert to 1-based month
+          
+          // Apply filters if provided
+          let include = true;
+          if (year && soldYear !== parseInt(year as string)) include = false;
+          if (month && soldMonth !== parseInt(month as string)) include = false;
+          
+          if (include) {
+            soldProjectsWithDates.push({
+              id: lead.id,
+              name: lead.name,
+              phone: lead.phone,
+              email: lead.email,
+              leadOrigin: lead.lead_origin,
+              assignedTo: lead.assigned_to,
+              projectAmount: parseFloat(lead.project_amount || '0'),
+              createdDate: lead.date_created,
+              soldDate: soldDate,
+              soldMonth: soldMonth,
+              soldYear: soldYear,
+              monthName: monthNames[soldMonth - 1]
+            });
+          }
+        }
+      }
+      
+      // Sort by sold date (most recent first)
+      soldProjectsWithDates.sort((a, b) => new Date(b.soldDate).getTime() - new Date(a.soldDate).getTime());
+      
+      // Calculate summary statistics
+      const totalProjects = soldProjectsWithDates.length;
+      const totalRevenue = soldProjectsWithDates.reduce((sum, project) => sum + project.projectAmount, 0);
+      const averageDealSize = totalProjects > 0 ? totalRevenue / totalProjects : 0;
+      
+      // Group by team member
+      const teamStats = soldProjectsWithDates.reduce((acc, project) => {
+        const member = project.assignedTo || 'unassigned';
+        if (!acc[member]) {
+          acc[member] = { count: 0, revenue: 0 };
+        }
+        acc[member].count += 1;
+        acc[member].revenue += project.projectAmount;
+        return acc;
+      }, {} as Record<string, { count: number; revenue: number }>);
+      
+      console.log(`✅ [SOLD REPORT] Found ${totalProjects} sold projects for the period`);
+      
+      res.json({
+        soldProjects: soldProjectsWithDates,
+        summary: {
+          totalProjects,
+          totalRevenue,
+          averageDealSize,
+          teamStats
+        },
+        filterInfo: {
+          year: year ? parseInt(year as string) : null,
+          month: month ? parseInt(month as string) : null,
+          period: !year && !month ? 'all-time' : year && month ? `${monthNames[(parseInt(month as string) - 1)]} ${year}` : year
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching sold projects report:', error);
+      res.status(500).json({ message: "Failed to fetch sold projects report" });
+    }
+  });
+
+  // Commercial Analytics API - Only returns commercial leads data
+  app.get("/api/reports/commercial-analytics", async (req, res) => {
+    try {
+      const { year, month, username } = req.query;
+      console.log(`[DEBUG] Commercial Analytics API received username: '${username}'`);
+
+      let allLeads = await storage.getLeads();
+
+      // Apply role-based filtering if username is provided
+      if (username) {
+        const user = await storage.getUserByUsername(username as string);
+        console.log(`[DEBUG] Commercial Analytics - Found user:`, user ? { username: user.username, role: user.role } : 'null');
+
+        if (user && user.role === 'commercial_sales') {
+          console.log(`[DEBUG] Commercial Analytics - Applied Commercial filter for commercial_sales user`);
+          allLeads = allLeads.filter(lead => lead.project_type === 'Commercial');
+        } else if (user && ['admin', 'owner'].includes(user.role)) {
+          console.log(`[DEBUG] Commercial Analytics - Admin/Owner user can see all Commercial data`);
+          allLeads = allLeads.filter(lead => lead.project_type === 'Commercial');
+        }
+        console.log(`[DEBUG] Commercial Analytics - After filtering: ${allLeads.length} leads found`);
+      }
+
+      // Filter leads by year and optionally by month
+      let filteredLeads = allLeads.filter(lead => {
+        const createdDate = new Date(lead.date_created);
+        const leadYear = createdDate.getFullYear();
+        
+        if (year && leadYear !== parseInt(year as string)) {
+          return false;
+        }
+        
+        if (month) {
+          const leadMonth = createdDate.getMonth() + 1; // JS months are 0-indexed
+          if (leadMonth !== parseInt(month as string)) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
+
+      const totalLeads = filteredLeads.length;
+      const soldLeads = filteredLeads.filter(lead => lead.remarks === 'Sold').length;
+      const conversionRate = totalLeads > 0 ? (soldLeads / totalLeads) * 100 : 0;
+
+      // Calculate revenue and average deal size
+      const soldLeadsWithAmount = filteredLeads.filter(lead => 
+        lead.remarks === 'Sold' && lead.project_amount && parseFloat(lead.project_amount) > 0
+      );
+      const totalRevenue = soldLeadsWithAmount.reduce((sum, lead) => 
+        sum + parseFloat(lead.project_amount || '0'), 0
+      );
+      const averageDealSize = soldLeadsWithAmount.length > 0 ? totalRevenue / soldLeadsWithAmount.length : 0;
+
+      // Lead origin performance
+      const originStats = {};
+      filteredLeads.forEach(lead => {
+        const origin = lead.lead_origin || 'unknown';
+        if (!originStats[origin]) {
+          originStats[origin] = {
+            totalLeads: 0,
+            soldLeads: 0,
+            totalRevenue: 0,
+            soldLeadsWithAmount: []
+          };
+        }
+        originStats[origin].totalLeads++;
+        if (lead.remarks === 'Sold') {
+          originStats[origin].soldLeads++;
+          if (lead.project_amount && parseFloat(lead.project_amount) > 0) {
+            originStats[origin].totalRevenue += parseFloat(lead.project_amount);
+            originStats[origin].soldLeadsWithAmount.push(lead);
+          }
+        }
+      });
+
+      const leadOriginPerformance = Object.entries(originStats).map(([origin, stats]: [string, any]) => ({
+        origin,
+        totalLeads: stats.totalLeads,
+        soldLeads: stats.soldLeads,
+        conversionRate: stats.totalLeads > 0 ? (stats.soldLeads / stats.totalLeads) * 100 : 0,
+        totalRevenue: stats.totalRevenue,
+        averageDealSize: stats.soldLeadsWithAmount.length > 0 ? stats.totalRevenue / stats.soldLeadsWithAmount.length : 0
+      }));
+
+      // Monthly breakdown
+      const monthlyStats = {};
+      filteredLeads.forEach(lead => {
+        const createdDate = new Date(lead.date_created);
+        const monthKey = createdDate.getMonth() + 1; // 1-12
+        const monthName = createdDate.toLocaleDateString('en-US', { month: 'long' });
+        
+        if (!monthlyStats[monthKey]) {
+          monthlyStats[monthKey] = {
+            month: monthKey,
+            monthName,
+            totalLeads: 0,
+            soldLeads: 0,
+            totalRevenue: 0,
+            soldLeadsWithAmount: []
+          };
+        }
+        
+        monthlyStats[monthKey].totalLeads++;
+        if (lead.remarks === 'Sold') {
+          monthlyStats[monthKey].soldLeads++;
+          if (lead.project_amount && parseFloat(lead.project_amount) > 0) {
+            monthlyStats[monthKey].totalRevenue += parseFloat(lead.project_amount);
+            monthlyStats[monthKey].soldLeadsWithAmount.push(lead);
+          }
+        }
+      });
+
+      const monthlyBreakdown = Object.values(monthlyStats).map((stats: any) => ({
+        month: stats.month,
+        monthName: stats.monthName,
+        totalLeads: stats.totalLeads,
+        soldLeads: stats.soldLeads,
+        conversionRate: stats.totalLeads > 0 ? (stats.soldLeads / stats.totalLeads) * 100 : 0,
+        totalRevenue: stats.totalRevenue,
+        averageDealSize: stats.soldLeadsWithAmount.length > 0 ? stats.totalRevenue / stats.soldLeadsWithAmount.length : 0
+      }));
+
+      // Sort monthly breakdown by month
+      monthlyBreakdown.sort((a, b) => a.month - b.month);
+
+      const result = {
+        executiveDashboard: {
+          totalLeads,
+          soldLeads,
+          conversionRate,
+          totalRevenue,
+          averageDealSize
+        },
+        leadOriginPerformance,
+        monthlyBreakdown,
+        filterInfo: {
+          year: year ? parseInt(year as string) : null,
+          month: month ? parseInt(month as string) : null,
+          period: year && month ? `${year}-${month}` : year ? year as string : 'All time'
+        }
+      };
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error generating commercial analytics:', error);
+      res.status(500).json({ error: 'Failed to generate commercial analytics' });
     }
   });
 
@@ -1220,31 +1854,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const project of completedProjectsData) {
         if (!project.assigned_installer) continue;
         
-        const installerName = project.assigned_installer;
+        // Split comma-separated installer names into individual installers
+        const installerNames = project.assigned_installer.split(',').map(name => name.trim()).filter(name => name.length > 0);
         
-        if (!installerMetrics.has(installerName)) {
-          installerMetrics.set(installerName, {
-            installerName,
-            totalInstallations: 0,
-            totalValue: 0,
-            averageProjectValue: 0,
-            completedInstallations: 0,
-            pendingInstallations: 0,
-            installations: []
+        for (const installerName of installerNames) {
+          if (!installerMetrics.has(installerName)) {
+            installerMetrics.set(installerName, {
+              installerName,
+              totalInstallations: 0,
+              totalValue: 0,
+              averageProjectValue: 0,
+              completedInstallations: 0,
+              pendingInstallations: 0,
+              installations: []
+            });
+          }
+
+          const installer = installerMetrics.get(installerName)!;
+          installer.totalInstallations++;
+          installer.completedInstallations++;
+          // Split project value equally among all installers for this project
+          const projectValue = parseFloat(project.project_amount?.toString() || '0');
+          const valuePerInstaller = projectValue / installerNames.length;
+          installer.totalValue += valuePerInstaller;
+          installer.installations.push({
+            projectId: project.id,
+            customerName: project.customer_name,
+            projectValue: valuePerInstaller,
+            installationDate: project.completion_date?.toString() || '',
+            status: 'completed'
           });
         }
-        
-        const installer = installerMetrics.get(installerName)!;
-        installer.totalInstallations++;
-        installer.completedInstallations++;
-        installer.totalValue += parseFloat(project.project_amount?.toString() || '0');
-        installer.installations.push({
-          projectId: project.id,
-          customerName: project.customer_name,
-          projectValue: parseFloat(project.project_amount?.toString() || '0'),
-          installationDate: project.completion_date?.toString() || '',
-          status: 'completed'
-        });
       }
       
       // Calculate average project values
@@ -2289,11 +2929,68 @@ WMK CRM System`
   // Calendar Events API
   app.get("/api/calendar/events", async (req, res) => {
     try {
+      // Prevent caching for this API endpoint
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+      
       const events = await storage.getCalendarEvents();
       res.json(events);
     } catch (error) {
       console.error("Failed to fetch calendar events:", error);
       res.status(500).json({ message: "Failed to fetch calendar events" });
+    }
+  });
+
+  // Debug endpoint to see all events with full details
+  app.get("/api/calendar/events/debug", async (req, res) => {
+    try {
+      const events = await storage.getCalendarEvents();
+      const debugInfo = events.map(event => ({
+        id: event.id,
+        title: event.title,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        google_event_id: event.google_event_id,
+        year: event.start_date ? new Date(event.start_date).getFullYear() : 'Unknown'
+      }));
+      res.json({
+        total: events.length,
+        events: debugInfo,
+        yearBreakdown: debugInfo.reduce((acc, event) => {
+          const year = event.year;
+          acc[year] = (acc[year] || 0) + 1;
+          return acc;
+        }, {} as Record<string | number, number>)
+      });
+    } catch (error) {
+      console.error("Failed to fetch calendar events debug info:", error);
+      res.status(500).json({ message: "Failed to fetch calendar events debug info" });
+    }
+  });
+
+  // Clear all Google Calendar events from database
+  app.delete("/api/calendar/events/google", async (req, res) => {
+    try {
+      const events = await storage.getCalendarEvents();
+      const googleEvents = events.filter(e => e.google_event_id);
+      
+      let deletedCount = 0;
+      for (const event of googleEvents) {
+        const success = await storage.deleteCalendarEvent(event.id.toString());
+        if (success) deletedCount++;
+      }
+      
+      res.json({
+        message: `Cleared ${deletedCount} Google Calendar events`,
+        totalEvents: events.length,
+        deletedCount
+      });
+    } catch (error) {
+      console.error("Failed to clear Google Calendar events:", error);
+      res.status(500).json({ message: "Failed to clear Google Calendar events" });
     }
   });
 
@@ -2493,6 +3190,26 @@ WMK CRM System`
     }
   });
 
+  // Get active users for assignment dropdowns
+  app.get("/api/users/active", async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      // Filter for active users and return minimal data needed for assignments
+      const activeUsers = users
+        .filter(user => user.is_active)
+        .map(user => ({
+          id: user.id,
+          username: user.username,
+          full_name: user.full_name,
+          role: user.role
+        }));
+      res.json(activeUsers);
+    } catch (error) {
+      console.error('Error fetching active users:', error);
+      res.status(500).json({ message: "Failed to fetch active users" });
+    }
+  });
+
   // Admin User Management
   app.get("/api/admin/users", async (req, res) => {
     try {
@@ -2665,7 +3382,22 @@ WMK CRM System`
   // Repair Requests endpoints
   app.get("/api/repair-requests", async (req, res) => {
     try {
-      const requests = await db.select().from(repairRequests).orderBy(desc(repairRequests.created_at));
+      const { username } = req.query;
+      console.log(`[DEBUG] Repair Requests API received username: '${username}'`);
+
+      let requests = await db.select().from(repairRequests).orderBy(desc(repairRequests.created_at));
+
+      // Apply role-based filtering if username is provided
+      if (username) {
+        const user = await storage.getUserByUsername(username as string);
+        console.log(`[DEBUG] Repair Requests - Found user:`, user ? { username: user.username, role: user.role } : 'null');
+
+        if (user && user.role === 'commercial_sales') {
+          console.log(`[DEBUG] Repair Requests - Applied Commercial filter for commercial_sales user`);
+          requests = requests.filter((request: any) => request.project_type === 'Commercial');
+        }
+      }
+
       res.json(requests);
     } catch (error) {
       console.error('Error fetching repair requests:', error);
@@ -2818,6 +3550,23 @@ WMK CRM System`
     }
   });
 
+  // Clear Google Calendar authentication tokens
+  app.post("/api/calendar/auth/clear", (req, res) => {
+    try {
+      // This will be implemented in the Google Calendar service
+      if (typeof googleCalendarService.clearTokens === 'function') {
+        googleCalendarService.clearTokens();
+        console.log('🗑️ Cleared Google Calendar authentication tokens');
+        res.json({ success: true, message: 'Authentication tokens cleared' });
+      } else {
+        res.status(500).json({ error: 'Clear tokens function not available' });
+      }
+    } catch (error) {
+      console.error('Error clearing auth tokens:', error);
+      res.status(500).json({ error: 'Failed to clear auth tokens' });
+    }
+  });
+
   // Sync Google Calendar events to business calendar
   app.post("/api/calendar/sync", async (req, res) => {
     try {
@@ -2845,9 +3594,14 @@ WMK CRM System`
         console.log(`🗑️  Cleared ${googleEvents.length} existing Google Calendar events`);
       }
       
-      // Get events from Google Calendar
-      const googleEvents = await googleCalendarService.importEvents();
-      console.log(`📅 Found ${googleEvents.length} events in Google Calendar`);
+      // Get events from Google Calendar for current year (2025)
+      const currentYear = new Date().getFullYear();
+      const startDate = `${currentYear}-01-01T00:00:00.000Z`;
+      const endDate = `${currentYear}-12-31T23:59:59.999Z`;
+      
+      console.log(`📅 Fetching Google Calendar events for ${currentYear} (${startDate} to ${endDate})`);
+      const googleEvents = await googleCalendarService.importEvents(startDate, endDate);
+      console.log(`📅 Found ${googleEvents.length} events in Google Calendar for ${currentYear}`);
 
       let syncedCount = 0;
       let skippedCount = 0;
@@ -2948,12 +3702,25 @@ WMK CRM System`
       console.log(`🎉 Sync complete: ${syncedCount} synced, ${skippedCount} skipped`);
       res.json(result);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Google Calendar sync failed:', error);
-      res.status(500).json({ 
-        error: 'Sync failed', 
-        details: error.message 
-      });
+      
+      // Check for specific authentication errors
+      if (error.message?.includes('invalid_grant') || 
+          error.message?.includes('invalid_token') ||
+          error.message?.includes('unauthorized')) {
+        console.error('🔑 Authentication error detected - tokens may be expired');
+        res.status(401).json({ 
+          error: 'Authentication expired', 
+          details: 'Google Calendar authentication has expired. Please re-authenticate.',
+          requiresAuth: true
+        });
+      } else {
+        res.status(500).json({ 
+          error: 'Sync failed', 
+          details: error.message 
+        });
+      }
     }
   });
 
