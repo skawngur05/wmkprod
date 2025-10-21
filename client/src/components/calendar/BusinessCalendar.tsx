@@ -3,9 +3,9 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CalendarEvent, Lead, InsertCalendarEvent, UpdateCalendarEvent, EVENT_TYPES } from '@shared/schema';
-import { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { CalendarEvent, Lead, InsertCalendarEvent, UpdateCalendarEvent } from '@shared/schema';
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,147 +13,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarDays, User, MapPin, FileText, Plus, Edit, Trash2, Calendar, RefreshCw, Link } from 'lucide-react';
-import '@/styles/calendar-mobile.css';
+import { Calendar, Plus, X, Edit2, Trash2, RefreshCw, Users, MapPin, Clock, FileText, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import '@/styles/calendar.css';
 
 interface BusinessCalendarProps {
   mode?: 'full' | 'mini';
   height?: string;
 }
 
-// US Holiday utility functions
-const getUSHolidays = (year: number) => {
-  const holidays = [];
-  
-  // New Year's Day
-  holidays.push({
-    id: `holiday-new-year-${year}`,
-    title: "New Year's Day",
-    start: `${year}-01-01`,
-    allDay: true,
-    color: '#EC4899',
-    extendedProps: { type: 'us-holiday', isEditable: false }
-  });
-  
-  // Martin Luther King Jr. Day (3rd Monday in January)
-  const mlkDay = getNthWeekdayOfMonth(year, 0, 1, 3); // 3rd Monday of January
-  holidays.push({
-    id: `holiday-mlk-${year}`,
-    title: "Martin Luther King Jr. Day",
-    start: formatDateToYMD(mlkDay),
-    allDay: true,
-    color: '#EC4899',
-    extendedProps: { type: 'us-holiday', isEditable: false }
-  });
-  
-  // Presidents Day (3rd Monday in February)
-  const presidentsDay = getNthWeekdayOfMonth(year, 1, 1, 3); // 3rd Monday of February
-  holidays.push({
-    id: `holiday-presidents-${year}`,
-    title: "Presidents Day",
-    start: formatDateToYMD(presidentsDay),
-    allDay: true,
-    color: '#EC4899',
-    extendedProps: { type: 'us-holiday', isEditable: false }
-  });
-  
-  // Memorial Day (Last Monday in May)
-  const memorialDay = getLastWeekdayOfMonth(year, 4, 1); // Last Monday of May
-  holidays.push({
-    id: `holiday-memorial-${year}`,
-    title: "Memorial Day",
-    start: formatDateToYMD(memorialDay),
-    allDay: true,
-    color: '#EC4899',
-    extendedProps: { type: 'us-holiday', isEditable: false }
-  });
-  
-  // Independence Day
-  holidays.push({
-    id: `holiday-independence-${year}`,
-    title: "Independence Day",
-    start: `${year}-07-04`,
-    allDay: true,
-    color: '#EC4899',
-    extendedProps: { type: 'us-holiday', isEditable: false }
-  });
-  
-  // Labor Day (1st Monday in September)
-  const laborDay = getNthWeekdayOfMonth(year, 8, 1, 1); // 1st Monday of September
-  holidays.push({
-    id: `holiday-labor-${year}`,
-    title: "Labor Day",
-    start: formatDateToYMD(laborDay),
-    allDay: true,
-    color: '#EC4899',
-    extendedProps: { type: 'us-holiday', isEditable: false }
-  });
-  
-  // Columbus Day (2nd Monday in October)
-  const columbusDay = getNthWeekdayOfMonth(year, 9, 1, 2); // 2nd Monday of October
-  holidays.push({
-    id: `holiday-columbus-${year}`,
-    title: "Columbus Day",
-    start: formatDateToYMD(columbusDay),
-    allDay: true,
-    color: '#EC4899',
-    extendedProps: { type: 'us-holiday', isEditable: false }
-  });
-  
-  // Veterans Day
-  holidays.push({
-    id: `holiday-veterans-${year}`,
-    title: "Veterans Day",
-    start: `${year}-11-11`,
-    allDay: true,
-    color: '#EC4899',
-    extendedProps: { type: 'us-holiday', isEditable: false }
-  });
-  
-  // Thanksgiving (4th Thursday in November)
-  const thanksgiving = getNthWeekdayOfMonth(year, 10, 4, 4); // 4th Thursday of November
-  holidays.push({
-    id: `holiday-thanksgiving-${year}`,
-    title: "Thanksgiving Day",
-    start: formatDateToYMD(thanksgiving),
-    allDay: true,
-    color: '#EC4899',
-    extendedProps: { type: 'us-holiday', isEditable: false }
-  });
-  
-  // Christmas Day
-  holidays.push({
-    id: `holiday-christmas-${year}`,
-    title: "Christmas Day",
-    start: `${year}-12-25`,
-    allDay: true,
-    color: '#EC4899',
-    extendedProps: { type: 'us-holiday', isEditable: false }
-  });
-  
-  return holidays;
-};
-
-// Helper function to get the nth weekday of a month
-const getNthWeekdayOfMonth = (year: number, month: number, weekday: number, n: number) => {
-  const date = new Date(year, month, 1);
-  const firstWeekday = date.getDay();
-  const offset = (weekday - firstWeekday + 7) % 7;
-  date.setDate(1 + offset + (n - 1) * 7);
-  return date;
-};
-
-// Helper function to get the last weekday of a month
-const getLastWeekdayOfMonth = (year: number, month: number, weekday: number) => {
-  const date = new Date(year, month + 1, 0); // Last day of the month
-  const lastDay = date.getDate();
-  const lastWeekday = date.getDay();
-  const offset = (lastWeekday - weekday + 7) % 7;
-  date.setDate(lastDay - offset);
-  return date;
-};
-
-// Helper function to format date to YYYY-MM-DD using local system time
 const formatDateToYMD = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -161,91 +29,75 @@ const formatDateToYMD = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-// Helper function to format datetime to ISO string using local system time
 const formatDateTimeLocal = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// Helper function to get event color based on type
-const getEventColor = (type: string) => {
-  const eventTypeColors: Record<string, string> = {
-    'call': '#3B82F6',
-    'email': '#10B981',
-    'meeting': '#F59E0B',
-    'follow-up': '#EF4444',
-    'appointment': '#8B5CF6',
-    'us-holiday': '#EC4899',
-    'google-calendar': '#4285F4'
-  };
-  return eventTypeColors[type] || '#6B7280';
+const EVENT_TYPE_CONFIG = {
+  installation: { 
+    label: 'Installation', 
+    color: '#10b981',
+    bgColor: '#d1fae5',
+    icon: '🔧'
+  },
+  pickup: { 
+    label: 'Pickup', 
+    color: '#3b82f6',
+    bgColor: '#dbeafe',
+    icon: '📦'
+  },
+  leave: { 
+    label: 'Leave', 
+    color: '#f59e0b',
+    bgColor: '#fef3c7',
+    icon: '🏖️'
+  },
+  'trade-show': { 
+    label: 'Trade Show', 
+    color: '#8b5cf6',
+    bgColor: '#ede9fe',
+    icon: '🎪'
+  },
+  'showroom-visit': { 
+    label: 'Showroom Visit', 
+    color: '#06b6d4',
+    bgColor: '#cffafe',
+    icon: '🏢'
+  },
+  holiday: { 
+    label: 'Holiday', 
+    color: '#ec4899',
+    bgColor: '#fce7f3',
+    icon: '🎉'
+  },
+  imported: { 
+    label: 'Google Event', 
+    color: '#6366f1',
+    bgColor: '#e0e7ff',
+    icon: '📅'
+  },
 };
 
-interface CalendarEventDisplay {
-  id: string;
-  title: string;
-  start: string;
-  end?: string;
-  allDay?: boolean;
-  color: string;
-  extendedProps: {
-    type: string;
-    description?: string | null;
-    location?: string | null;
-    assignedTo?: string | null;
-  };
-}
-
-export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCalendarProps) {
-  console.log('🚀 BusinessCalendar component starting to load...');
-  
-  // Add error boundary to catch any React errors
-  useEffect(() => {
-    console.log('📍 BusinessCalendar useEffect hook running...');
-    
-    const errorHandler = (error: ErrorEvent) => {
-      console.error('🚨 JavaScript Error in Calendar:', error.error, error.message);
-    };
-    
-    const rejectionHandler = (event: PromiseRejectionEvent) => {
-      console.error('🚨 Promise Rejection in Calendar:', event.reason);
-    };
-    
-    window.addEventListener('error', errorHandler);
-    window.addEventListener('unhandledrejection', rejectionHandler);
-    
-    return () => {
-      window.removeEventListener('error', errorHandler);
-      window.removeEventListener('unhandledrejection', rejectionHandler);
-    };
-  }, []);
-  
+export function BusinessCalendar({ mode = 'full', height = '700px' }: BusinessCalendarProps) {
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [addEventModalOpen, setAddEventModalOpen] = useState(false);
   const [editEventModalOpen, setEditEventModalOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
+  const [currentView, setCurrentView] = useState('dayGridMonth');
   
-  // Initialize mobile detection
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobileView(window.innerWidth < 768);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
-  // Helper function to get default start time (next hour)
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const getDefaultStartTime = (): Date => {
     const now = new Date();
     const nextHour = new Date(now);
-    nextHour.setHours(now.getHours() + 1, 0, 0, 0); // Next hour, 0 minutes, 0 seconds
+    nextHour.setHours(now.getHours() + 1, 0, 0, 0);
     return nextHour;
   };
 
@@ -257,246 +109,34 @@ export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCa
     all_day: false,
     description: '',
     location: '',
-    assigned_to: 'none',
+    assigned_to: '',
   });
 
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  // Google Calendar auth state
-  const [isGoogleAuthed, setIsGoogleAuthed] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-
-  // Check Google Calendar auth status
-  const { data: authStatus } = useQuery({
-    queryKey: ['/api/calendar/auth/status'],
-    queryFn: async () => {
-      const response = await fetch('/api/calendar/auth/status');
-      if (!response.ok) throw new Error('Failed to check auth status');
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
-  });
-
-  // Fetch active users for assignment
-  const { data: activeUsers = [] } = useQuery({
-    queryKey: ['/api/users/active'],
-    queryFn: async () => {
-      const response = await fetch('/api/users/active');
-      if (!response.ok) throw new Error('Failed to fetch users');
-      return response.json();
-    }
-  });
-
-  // Update authentication state when data changes
   useEffect(() => {
-    if (authStatus?.authenticated !== undefined) {
-      setIsGoogleAuthed(authStatus.authenticated);
-      // Clear auth error if authentication is successful
-      if (authStatus.authenticated) {
-        setAuthError(null);
-      }
-    }
-  }, [authStatus]);
-
-  // Google Calendar sync function
-  const handleGoogleAuth = () => {
-    window.location.href = '/auth/google';
-  };
-
-  // Test Google Calendar connection
-  const testGoogleConnection = useMutation({
-    mutationFn: async () => {
-      const response = await fetch('/api/calendar/sync/test', {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to test connection');
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({ 
-        title: 'Google Calendar', 
-        description: data.message,
-        variant: data.connected ? 'default' : 'destructive'
-      });
-    },
-    onError: () => {
-      toast({ 
-        title: 'Error', 
-        description: 'Failed to test Google Calendar connection',
-        variant: 'destructive'
-      });
-    },
-  });
-
-  // Handle OAuth callback
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const error = urlParams.get('error');
-
-    if (error) {
-      toast({
-        title: 'Google Calendar',
-        description: 'Authorization was cancelled or failed',
-        variant: 'destructive'
-      });
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
-
-    if (code) {
-      // Exchange code for tokens
-      exchangeCodeForTokens.mutate(code);
-    }
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Sync events from Google Calendar
-  const syncFromGoogle = useMutation({
-    mutationFn: async (queryParams: string = '') => {
-      console.log('📡 Calling sync API...', queryParams);
-      const response = await fetch(`/api/calendar/sync${queryParams}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        
-        // Handle authentication errors specifically
-        if (response.status === 401 || errorData?.requiresAuth) {
-          throw new Error('Authentication expired. Please re-authenticate with Google Calendar.');
-        }
-        
-        throw new Error(errorData?.details || 'Failed to sync from Google Calendar');
-      }
-      
-      const result = await response.json();
-      console.log('📡 Sync API response:', result);
-      return result;
-    },
-    onSuccess: (result) => {
-      console.log('✅ Sync success:', result);
-      toast({
-        title: 'Google Calendar Sync',
-        description: `Successfully synced ${result.synced} events from Google Calendar. ${result.skipped > 0 ? `${result.skipped} events were already synced.` : ''}`,
-        variant: 'default'
-      });
-      // Refresh the calendar events
-      queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
-    },
-    onError: (error: any) => {
-      console.error('❌ Sync error:', error);
-      
-      // Check if error is related to authentication
-      if (error.message?.includes('invalid_grant') || 
-          error.message?.includes('Authentication expired') ||
-          error.message?.includes('unauthorized') ||
-          error.message?.includes('invalid_token') ||
-          error.message?.includes('re-authenticate')) {
-        setAuthError('Google Calendar authentication has expired. Please reconnect.');
-        setIsGoogleAuthed(false);
-        
-        // Clear tokens on server
-        fetch('/api/calendar/auth/clear', { method: 'POST' })
-          .then(() => console.log('🗑️ Cleared expired tokens'))
-          .catch(err => console.error('Failed to clear tokens:', err));
-        
-        // Refresh auth status
-        queryClient.invalidateQueries({ queryKey: ['/api/calendar/auth/status'] });
-      }
-      
-      toast({
-        title: 'Sync Failed',
-        description: error.message || 'Failed to sync events from Google Calendar',
-        variant: 'destructive'
-      });
-    }
+  const { data: activeUsers = [] } = useQuery({
+    queryKey: ['/api/users/active'],
   });
 
-  // Exchange authorization code for tokens
-  const exchangeCodeForTokens = useMutation({
-    mutationFn: async (code: string) => {
-      const response = await fetch('/auth/google/callback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
-      });
-      if (!response.ok) throw new Error('Failed to exchange code for tokens');
-      return response.json();
-    },
-    onSuccess: () => {
-      console.log('🎉 OAuth success! Starting automatic sync...');
-      toast({
-        title: 'Google Calendar',
-        description: 'Successfully connected to Google Calendar! Starting sync...',
-        variant: 'default'
-      });
-      // Clean URL and refresh auth status
-      window.history.replaceState({}, document.title, window.location.pathname);
-      queryClient.invalidateQueries({ queryKey: ['/api/calendar/auth/status'] });
-      
-      // Automatically sync events after successful connection
-      setTimeout(() => {
-        console.log('🔄 Triggering automatic sync...');
-        syncFromGoogle.mutate('');
-      }, 1000); // Small delay to ensure auth status is updated
-    },
-    onError: (error) => {
-      console.error('Token exchange error:', error);
-      toast({
-        title: 'Google Calendar',
-        description: 'Failed to complete authentication',
-        variant: 'destructive'
-      });
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  });
-
-  // Fetch installations (already in database)
   const { data: installations = [], isLoading: installationsLoading } = useQuery<Lead[]>({
     queryKey: ['/api/installations'],
-    queryFn: async () => {
-      console.log('🔄 Fetching installations API...');
-      const response = await fetch('/api/installations', {
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch installations');
-      const data = await response.json();
-      console.log('✅ Installations API response:', data.length, 'items');
-      return data;
-    },
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
 
-  // Fetch calendar events from the API
   const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
     queryKey: ['/api/calendar/events'],
-    queryFn: async () => {
-      console.log('🔄 Fetching calendar events API...');
-      const response = await fetch('/api/calendar/events', {
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch events');
-      const data = await response.json();
-      console.log('✅ Calendar events API response:', data.length, 'events');
-      return data;
-    },
-    staleTime: 0, // Always consider data stale
-    refetchOnWindowFocus: true, // Refetch when window gains focus
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
-  // Mutations for CRUD operations
   const createEventMutation = useMutation({
     mutationFn: async (eventData: InsertCalendarEvent) => {
       const response = await fetch('/api/calendar/events', {
@@ -519,7 +159,7 @@ export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCa
   });
 
   const updateEventMutation = useMutation({
-    mutationFn: async ({ id, ...updates }: UpdateCalendarEvent & { id: number }) => {
+    mutationFn: async ({ id, ...updates }: any) => {
       const response = await fetch(`/api/calendar/events/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -563,163 +203,149 @@ export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCa
       <div className="flex justify-center items-center" style={{ height: '400px' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-gray-600">Loading calendar...</p>
+          <p className="text-muted-foreground">Loading calendar...</p>
         </div>
       </div>
     );
   }
 
-  // Convert installations to calendar events
-  const installationEvents: CalendarEventDisplay[] = installations
+  const installationEvents = installations
     .filter(lead => lead.installation_date && lead.remarks === 'Sold')
     .map(lead => ({
       id: `installation-${lead.id}`,
-      title: `Installation: ${lead.name}`,
-      start: formatDateTimeLocal(new Date(lead.installation_date!)),
-      allDay: false,
-      color: '#16a34a', // Green for installations (matching legend)
+      title: lead.name,
+      start: lead.installation_date,
+      allDay: true,
+      backgroundColor: EVENT_TYPE_CONFIG.installation.color,
+      borderColor: EVENT_TYPE_CONFIG.installation.color,
       extendedProps: {
         type: 'installation',
-        description: `Project: ${lead.project_amount ? `$${lead.project_amount}` : 'N/A'}`,
-        location: 'Customer Location',
-        assignedTo: Array.isArray(lead.assigned_installer) && lead.assigned_installer.length > 0
-          ? lead.assigned_installer.join(', ') 
-          : 'Not assigned',
-        isEditable: false, // Installation events are read-only
+        description: lead.notes,
+        location: lead.address,
+        assignedTo: lead.assigned_installer,
+        isEditable: false,
       },
     }));
 
-  // Convert pickup dates to calendar events
-  const pickupEvents: CalendarEventDisplay[] = installations
+  const pickupEvents = installations
     .filter(lead => lead.pickup_date && lead.remarks === 'Sold')
     .map(lead => ({
       id: `pickup-${lead.id}`,
       title: `Pickup: ${lead.name}`,
-      start: formatDateTimeLocal(new Date(lead.pickup_date!)),
-      allDay: false,
-      color: '#0ea5e9', // Sky blue for pickups (matching meeting color in legend)
+      start: lead.pickup_date,
+      allDay: true,
+      backgroundColor: EVENT_TYPE_CONFIG.pickup.color,
+      borderColor: EVENT_TYPE_CONFIG.pickup.color,
       extendedProps: {
         type: 'pickup',
-        description: `Project: ${lead.project_amount ? `$${lead.project_amount}` : 'N/A'}`,
-        location: 'Pickup Location',
-        assignedTo: Array.isArray(lead.assigned_installer) && lead.assigned_installer.length > 0
-          ? lead.assigned_installer.join(', ') 
-          : 'Not assigned',
-        isEditable: false, // Pickup events are read-only
+        description: lead.notes,
+        location: lead.address,
+        assignedTo: lead.assigned_installer,
+        isEditable: false,
       },
     }));
 
-  // Convert other events to calendar format
-  const otherEvents: CalendarEventDisplay[] = events.map(event => {
-    let color = '#6B7280'; // Default gray
+  const otherEvents = events.map(event => {
+    const config = EVENT_TYPE_CONFIG[event.type as keyof typeof EVENT_TYPE_CONFIG] || EVENT_TYPE_CONFIG.imported;
     
-    // Use stored color for imported events (from Google Calendar) - now with proper color mapping
-    if (event.type === 'imported' && event.color) {
-      color = event.color;
-    } else {
-      // Use type-based colors for other events - matching the legend
-      switch (event.type) {
-        case 'installation':
-          color = '#16a34a'; // Green (Installation)
-          break;
-        case 'pickup':
-          color = '#0ea5e9'; // Sky blue (Meeting/Pickup)
-          break;
-        case 'leave':
-          color = '#ea580c'; // Orange (Follow-up/Leave)
-          break;
-        case 'trade-show':
-          color = '#4f46e5'; // Indigo (Appointment/Trade Show)
-          break;
-        case 'showroom-visit':
-          color = '#4f46e5'; // Indigo (Appointment/Showroom Visit)
-          break;
-        case 'holiday':
-          color = '#ec4899'; // Pink (Holiday)
-          break;
-        default:
-          color = '#4f46e5'; // Default to appointment color (Indigo)
-          break;
-      }
-    }
-
     return {
-      id: event.id.toString(), // Convert number to string
+      id: event.id.toString(),
       title: event.title,
-      start: formatDateTimeLocal(new Date(event.start_date)),
-      end: event.end_date ? formatDateTimeLocal(new Date(event.end_date)) : undefined,
+      start: event.start_date,
+      end: event.end_date || undefined,
       allDay: event.all_day,
-      color,
+      backgroundColor: event.color || config.color,
+      borderColor: event.color || config.color,
       extendedProps: {
-        id: event.id, // Store database ID for editing/deleting
         type: event.type,
         description: event.description,
         location: event.location,
         assignedTo: event.assigned_to,
-        isEditable: true, // Mark as editable calendar event
+        isEditable: !event.google_event_id,
+        googleEventId: event.google_event_id,
       },
     };
   });
 
-  // Generate US holidays for current and next year
-  const currentYear = new Date().getFullYear();
-  const usHolidays = [
-    ...getUSHolidays(currentYear),
-    ...getUSHolidays(currentYear + 1)
-  ];
-
-  const allEventsForCalendar = [...otherEvents, ...installationEvents, ...pickupEvents, ...usHolidays];
-
-  // Debug logging to understand what data we have
-  console.log('📊 Calendar Debug Info:');
-  console.log('- Loading states - events:', isLoading, 'installations:', installationsLoading);
-  console.log('- Raw events from API:', events?.length || 0, events);
-  console.log('- Raw installations from API:', installations?.length || 0, installations);
-  console.log('- Processed otherEvents:', otherEvents.length);
-  console.log('- Processed installationEvents:', installationEvents.length);
-  console.log('- Processed pickupEvents:', pickupEvents.length);
-  console.log('- US Holidays:', usHolidays.length);
-  console.log('- Total allEventsForCalendar:', allEventsForCalendar.length);
-  console.log('- Sample events:', allEventsForCalendar.slice(0, 3));
-  
-  // Additional debugging for event structure
-  if (allEventsForCalendar.length > 0) {
-    console.log('🔍 First Google Calendar event:', allEventsForCalendar.find(e => e.extendedProps?.type === 'imported'));
-    console.log('🔍 First installation event:', allEventsForCalendar.find(e => e.extendedProps?.type === 'installation'));
-    console.log('🔍 First holiday event:', allEventsForCalendar.find(e => e.extendedProps?.type === 'us-holiday'));
-    console.log('🔍 Events by type:', {
-      imported: allEventsForCalendar.filter(e => e.extendedProps?.type === 'imported').length,
-      installation: allEventsForCalendar.filter(e => e.extendedProps?.type === 'installation').length,
-      pickup: allEventsForCalendar.filter(e => e.extendedProps?.type === 'pickup').length,
-      holidays: allEventsForCalendar.filter(e => e.extendedProps?.type === 'us-holiday').length,
-      other: allEventsForCalendar.filter(e => !['imported', 'installation', 'pickup', 'us-holiday'].includes(e.extendedProps?.type || '')).length
-    });
-  }
-
-  // Helper function to format date for datetime-local input
-  const formatDateTimeForInput = (date: Date | string | null | undefined): string => {
-    if (!date) return '';
-    const d = new Date(date);
-    // Use local system time directly
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
-  // Helper function to parse datetime-local input to proper Date
-  const parseDateTimeLocal = (value: string): Date | undefined => {
-    if (!value) return undefined;
-    // datetime-local gives us local time, create Date object accordingly
-    return new Date(value);
-  };
+  const allEvents = [...installationEvents, ...pickupEvents, ...otherEvents];
 
   const handleEventClick = (info: any) => {
-    const { event } = info;
-    setSelectedEvent(event);
+    setSelectedEvent(info.event);
     setEventModalOpen(true);
+  };
+
+  const handleDateClick = (info: any) => {
+    const clickedDate = new Date(info.dateStr);
+    clickedDate.setHours(9, 0, 0, 0);
+    setFormData({
+      ...formData,
+      start_date: clickedDate,
+      end_date: undefined,
+    });
+    setAddEventModalOpen(true);
+  };
+
+  const handleEditEvent = () => {
+    if (!selectedEvent) return;
+    
+    const eventId = parseInt(selectedEvent.id);
+    const dbEvent = events.find(e => e.id === eventId);
+    
+    if (!dbEvent) return;
+
+    setFormData({
+      title: dbEvent.title,
+      type: dbEvent.type,
+      start_date: new Date(dbEvent.start_date),
+      end_date: dbEvent.end_date ? new Date(dbEvent.end_date) : undefined,
+      all_day: dbEvent.all_day,
+      description: dbEvent.description || '',
+      location: dbEvent.location || '',
+      assigned_to: dbEvent.assigned_to || '',
+    });
+    
+    setEventModalOpen(false);
+    setEditEventModalOpen(true);
+  };
+
+  const handleDeleteEvent = () => {
+    if (!selectedEvent) return;
+    
+    const eventId = parseInt(selectedEvent.id);
+    if (confirm('Are you sure you want to delete this event?')) {
+      deleteEventMutation.mutate(eventId);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title || !formData.start_date) {
+      toast({ 
+        title: 'Error', 
+        description: 'Please fill in all required fields',
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    const eventData: InsertCalendarEvent = {
+      title: formData.title,
+      type: formData.type || 'installation',
+      start_date: formData.start_date,
+      end_date: formData.end_date,
+      all_day: formData.all_day || false,
+      description: formData.description || '',
+      location: formData.location || '',
+      assigned_to: formData.assigned_to || '',
+    };
+
+    if (editEventModalOpen && selectedEvent) {
+      const eventId = parseInt(selectedEvent.id);
+      updateEventMutation.mutate({ id: eventId, ...eventData });
+    } else {
+      createEventMutation.mutate(eventData);
+    }
   };
 
   const resetForm = () => {
@@ -731,336 +357,183 @@ export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCa
       all_day: false,
       description: '',
       location: '',
-      assigned_to: 'none',
+      assigned_to: '',
     });
   };
 
-  const handleAddEvent = () => {
-    resetForm();
-    setAddEventModalOpen(true);
-  };
-
-  const handleEditEvent = () => {
-    if (selectedEvent && selectedEvent.extendedProps.isEditable) {
-      setFormData({
-        title: selectedEvent.title || '',
-        type: selectedEvent.extendedProps.type || 'installation',
-        start_date: selectedEvent.start,
-        end_date: selectedEvent.end,
-        all_day: selectedEvent.allDay || false,
-        description: selectedEvent.extendedProps.description || '',
-        location: selectedEvent.extendedProps.location || '',
-        assigned_to: selectedEvent.extendedProps.assignedTo || 'none',
-      });
-      setEventModalOpen(false);
-      setEditEventModalOpen(true);
-    }
-  };
-
-  const handleDeleteEvent = () => {
-    if (selectedEvent && selectedEvent.extendedProps.isEditable && selectedEvent.extendedProps.id) {
-      deleteEventMutation.mutate(selectedEvent.extendedProps.id);
-    }
-  };
-
-  const handleSubmit = (isEdit: boolean) => {
-    const eventData = {
-      ...formData,
-      start_date: formData.start_date ? new Date(formData.start_date) : new Date(),
-      end_date: formData.end_date ? new Date(formData.end_date) : undefined,
-      assigned_to: formData.assigned_to === 'none' ? null : formData.assigned_to,
-    };
-
-    if (isEdit && selectedEvent && selectedEvent.extendedProps.isEditable && selectedEvent.extendedProps.id) {
-      updateEventMutation.mutate({ id: selectedEvent.extendedProps.id, ...eventData });
-    } else if (!isEdit) {
-      createEventMutation.mutate(eventData as InsertCalendarEvent);
-    }
+  const getEventTypeConfig = (type: string) => {
+    return EVENT_TYPE_CONFIG[type as keyof typeof EVENT_TYPE_CONFIG] || EVENT_TYPE_CONFIG.imported;
   };
 
   return (
-    <div className={`calendar-container relative ${mode === 'mini' ? 'mini-calendar' : ''}`}>
-      {/* Loading overlay */}
-      {(isLoading || createEventMutation.isPending || updateEventMutation.isPending || deleteEventMutation.isPending) && (
-        <div className="calendar-loading">
-          <div className="calendar-loading-spinner" />
-        </div>
-      )}
-      
-      {/* Toolbar with responsive design */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
-        <div className="flex items-center gap-2">
-          <h3 className={`font-semibold ${mode === 'mini' ? 'text-base' : 'text-lg'}`}>Business Calendar</h3>
-          {isGoogleAuthed && (
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 gap-1">
-              <Link className="h-3 w-3" />
-              Google Synced
-            </Badge>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {!isGoogleAuthed || authError ? (
-            <Button 
-              onClick={handleGoogleAuth} 
-              variant="outline" 
-              className={`flex items-center gap-2 text-xs sm:text-sm ${authError ? 'border-red-300 text-red-600 hover:bg-red-50' : ''}`}
-              size="sm"
+    <div className="calendar-redesign">
+      {/* Modern Toolbar */}
+      <div className="calendar-toolbar bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4 rounded-t-lg">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Calendar className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Business Calendar</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Manage your schedule and events</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setAddEventModalOpen(true)}
+              className="bg-primary hover:bg-primary/90 text-white"
+              data-testid="button-add-event"
             >
-              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-              {authError ? 'Reconnect Google' : 'Connect Google'}
+              <Plus className="h-4 w-4 mr-2" />
+              Add Event
             </Button>
-          ) : (
-            <>
-              <Button 
-                onClick={() => {
-                  console.log('Manual Sync Test button clicked');
-                  setAuthError(null); // Clear any previous auth errors
-                  syncFromGoogle.mutate('');
-                }} 
-                variant="outline" 
-                className="flex items-center gap-2 text-xs sm:text-sm"
-                size="sm"
-                disabled={syncFromGoogle.isPending}
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${syncFromGoogle.isPending ? 'animate-spin' : ''}`} />
-                {syncFromGoogle.isPending ? 'Syncing...' : 'Sync with Google'}
-              </Button>
-              <Button 
-                onClick={() => {
-                  console.log('Force Sync button clicked');
-                  setAuthError(null); // Clear any previous auth errors
-                  syncFromGoogle.mutate('?force=true');
-                }} 
-                variant="destructive" 
-                className="flex items-center gap-2 text-xs sm:text-sm"
-                size="sm"
-                disabled={syncFromGoogle.isPending}
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${syncFromGoogle.isPending ? 'animate-spin' : ''}`} />
-                {syncFromGoogle.isPending ? 'Force Syncing...' : 'Force Sync'}
-              </Button>
-            </>
-          )}
-          <Button 
-            onClick={() => {
-              resetForm();
-              setAddEventModalOpen(true);
-            }}
-            className="flex items-center gap-2 text-xs sm:text-sm"
-            size="sm"
-          >
-            <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-            Add Event
-          </Button>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex flex-wrap gap-3">
+            {Object.entries(EVENT_TYPE_CONFIG).map(([key, config]) => (
+              <div key={key} className="flex items-center gap-2" data-testid={`legend-${key}`}>
+                <div 
+                  className="w-3 h-3 rounded-full" 
+                  style={{ backgroundColor: config.color }}
+                ></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {config.icon} {config.label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-      
-      {/* Calendar Legend - only show in full mode */}
-      {mode === 'full' && (
-        <div className="calendar-legend mb-4 p-3 bg-gray-50 rounded-md border border-gray-100">
-          <div className="text-sm font-medium mb-2 text-gray-700">Event Types:</div>
-          <div className="flex flex-wrap gap-3">
-            <div className="legend-item">
-              <div className="legend-color" style={{ backgroundColor: '#3B82F6' }}></div>
-              <span>Call</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color" style={{ backgroundColor: '#10B981' }}></div>
-              <span>Email</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color" style={{ backgroundColor: '#F59E0B' }}></div>
-              <span>Meeting</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color" style={{ backgroundColor: '#EF4444' }}></div>
-              <span>Follow-up</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color" style={{ backgroundColor: '#8B5CF6' }}></div>
-              <span>Appointment</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color" style={{ backgroundColor: '#EC4899' }}></div>
-              <span>Holiday</span>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Authentication Error Alert */}
-      {authError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <div className="flex items-center gap-2">
-            <div className="text-red-600">
-              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="text-sm text-red-700">{authError}</div>
-          </div>
-        </div>
-      )}
-      
-      {/* Loading overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="mt-2 text-sm text-gray-600">Loading calendar...</p>
-          </div>
-        </div>
-      )}
-      
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        initialView="timeGridWeek"
-        headerToolbar={{
-          left: 'prev,next today',
-          center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay'
-        }}
-        events={allEventsForCalendar}
-        eventClick={handleEventClick}
-        height="600px"
-        editable={true}
-        selectable={true}
-        nowIndicator={true}
-        eventDidMount={(info) => {
-          console.log('🎯 FullCalendar mounted event:', info.event.title, 'Start:', info.event.start, 'End:', info.event.end);
-        }}
-        eventWillUnmount={(info) => {
-          console.log('🗑️ FullCalendar unmounting event:', info.event.title);
-        }}
-        datesSet={(dateInfo) => {
-          console.log('📅 FullCalendar dates changed:', dateInfo.startStr, 'to', dateInfo.endStr);
-          console.log('📊 Events in current view range:', allEventsForCalendar.filter(event => {
-            const eventDate = new Date(event.start);
-            return eventDate >= dateInfo.start && eventDate <= dateInfo.end;
-          }).length);
-        }}
-      />
 
-      {/* Event Details Modal */}
+      {/* Calendar Container */}
+      <div className="calendar-container bg-white dark:bg-gray-900 rounded-b-lg" style={{ height }}>
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView={isMobileView ? 'dayGridMonth' : 'dayGridMonth'}
+          headerToolbar={{
+            left: 'prev,next today',
+            center: 'title',
+            right: isMobileView ? '' : 'dayGridMonth,timeGridWeek,timeGridDay'
+          }}
+          events={allEvents}
+          eventClick={handleEventClick}
+          dateClick={handleDateClick}
+          height="100%"
+          eventDisplay="block"
+          dayMaxEvents={3}
+          moreLinkClick="popover"
+          eventTimeFormat={{
+            hour: '2-digit',
+            minute: '2-digit',
+            meridiem: 'short'
+          }}
+          slotLabelFormat={{
+            hour: '2-digit',
+            minute: '2-digit',
+            meridiem: 'short'
+          }}
+          viewDidMount={(info) => setCurrentView(info.view.type)}
+        />
+      </div>
+
+      {/* View Event Modal */}
       <Dialog open={eventModalOpen} onOpenChange={setEventModalOpen}>
-        <DialogContent className="calendar-dialog-content">
+        <DialogContent className="sm:max-w-[500px]" data-testid="dialog-view-event">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5" />
-              Event Details
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              View event information and manage event actions.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedEvent && (
-            <div className="calendar-event-details">
-              <div className="flex flex-col gap-1 bg-slate-50 p-3 rounded-md mb-3">
-                <h3 className="font-semibold text-base sm:text-lg border-b pb-2 mb-1">{selectedEvent.title}</h3>
-                <div className="flex justify-between items-center">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <DialogTitle className="text-xl font-semibold mb-2">
+                  {selectedEvent?.title}
+                </DialogTitle>
+                {selectedEvent?.extendedProps?.type && (
                   <Badge 
-                    variant="outline" 
-                    className="text-xs" 
-                    style={{
-                      backgroundColor: `${selectedEvent.backgroundColor}25`,
-                      color: selectedEvent.backgroundColor,
-                      borderColor: `${selectedEvent.backgroundColor}50`
+                    className="text-xs"
+                    style={{ 
+                      backgroundColor: getEventTypeConfig(selectedEvent.extendedProps.type).bgColor,
+                      color: getEventTypeConfig(selectedEvent.extendedProps.type).color
                     }}
                   >
-                    {selectedEvent.extendedProps.type.replace('-', ' ')}
+                    {getEventTypeConfig(selectedEvent.extendedProps.type).icon} {getEventTypeConfig(selectedEvent.extendedProps.type).label}
                   </Badge>
-                  <span className="text-xs text-gray-500">
-                    {selectedEvent.extendedProps.isEditable !== false ? 'Editable' : 'System Event'}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 bg-white p-2 rounded-md border border-gray-100 shadow-sm">
-                  <CalendarDays className="h-4 w-4 text-primary" />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">
-                      {selectedEvent.start.toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </span>
-                    {selectedEvent.start.toTimeString() !== selectedEvent.start.toDateString() && (
-                      <span className="text-xs text-gray-500">
-                        {selectedEvent.start.toLocaleTimeString('en-US', {
-                          hour: 'numeric',
-                          minute: '2-digit'
-                        })}
-                        {selectedEvent.end && ` - ${selectedEvent.end.toLocaleTimeString('en-US', {
-                          hour: 'numeric',
-                          minute: '2-digit'
-                        })}`}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {selectedEvent.extendedProps.assignedTo && (
-                  <div className="flex items-center gap-2 bg-white p-2 rounded-md border border-gray-100 shadow-sm">
-                    <User className="h-4 w-4 text-blue-500" />
-                    <div className="flex flex-col">
-                      <span className="text-xs text-gray-500">Assigned To</span>
-                      <span className="text-sm font-medium">{selectedEvent.extendedProps.assignedTo}</span>
-                    </div>
-                  </div>
-                )}
-
-                {selectedEvent.extendedProps.location && (
-                  <div className="flex items-center gap-2 bg-white p-2 rounded-md border border-gray-100 shadow-sm">
-                    <MapPin className="h-4 w-4 text-amber-500" />
-                    <div className="flex flex-col">
-                      <span className="text-xs text-gray-500">Location</span>
-                      <span className="text-sm">{selectedEvent.extendedProps.location}</span>
-                    </div>
-                  </div>
-                )}
-
-                {selectedEvent.extendedProps.description && (
-                  <div className="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <FileText className="h-4 w-4 text-emerald-500" />
-                      <span className="text-xs text-gray-500">Description</span>
-                    </div>
-                    <p className="text-sm whitespace-pre-line pl-6">{selectedEvent.extendedProps.description}</p>
-                  </div>
                 )}
               </div>
-
-              {/* Action Buttons - Only show for editable events */}
-              {selectedEvent?.extendedProps?.isEditable !== false && (
-                <div className="flex gap-2 pt-4 mt-4 border-t">
-                  <Button 
-                    onClick={handleEditEvent} 
-                    variant="outline" 
-                    className="flex-1 flex items-center justify-center gap-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Edit
-                  </Button>
-                  <Button 
-                    onClick={handleDeleteEvent} 
-                    variant="destructive" 
-                    className="flex-1 flex items-center justify-center gap-2"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </Button>
-                </div>
-              )}
-              {!selectedEvent?.extendedProps?.isEditable && (
-                <div className="flex justify-center pt-4 border-t">
-                  <span className="text-sm text-muted-foreground">
-                    Installation events can be managed in the Installations section
-                  </span>
-                </div>
-              )}
             </div>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex items-start gap-3">
+              <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Time</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {selectedEvent?.start ? new Date(selectedEvent.start).toLocaleString() : 'N/A'}
+                  {selectedEvent?.end && ` - ${new Date(selectedEvent.end).toLocaleString()}`}
+                  {selectedEvent?.allDay && ' (All day)'}
+                </p>
+              </div>
+            </div>
+
+            {selectedEvent?.extendedProps?.assignedTo && (
+              <div className="flex items-start gap-3">
+                <Users className="h-5 w-5 text-gray-400 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Assigned To</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedEvent.extendedProps.assignedTo}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {selectedEvent?.extendedProps?.location && (
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Location</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedEvent.extendedProps.location}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {selectedEvent?.extendedProps?.description && (
+              <div className="flex items-start gap-3">
+                <FileText className="h-5 w-5 text-gray-400 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Description</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedEvent.extendedProps.description}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {selectedEvent?.extendedProps?.isEditable && (
+            <DialogFooter className="flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={handleDeleteEvent}
+                disabled={deleteEventMutation.isPending}
+                data-testid="button-delete-event"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+              <Button
+                onClick={handleEditEvent}
+                data-testid="button-edit-event"
+              >
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </DialogFooter>
           )}
         </DialogContent>
       </Dialog>
@@ -1073,121 +546,149 @@ export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCa
           resetForm();
         }
       }}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[550px]" data-testid="dialog-add-edit-event">
           <DialogHeader>
-            <DialogTitle>
-              {editEventModalOpen ? 'Edit Event' : 'Add New Event'}
+            <DialogTitle className="text-xl font-semibold">
+              {editEventModalOpen ? 'Edit Event' : 'Create New Event'}
             </DialogTitle>
             <DialogDescription>
-              {editEventModalOpen ? 'Update the event details below.' : 'Fill in the details to create a new calendar event.'}
+              {editEventModalOpen ? 'Update event details below' : 'Fill in the event details below'}
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Event Title</Label>
+
+          <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Event Title *</Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Enter event title"
+                required
+                data-testid="input-event-title"
               />
             </div>
 
-            <div>
-              <Label htmlFor="type">Event Type</Label>
-              <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select event type" />
+            <div className="space-y-2">
+              <Label htmlFor="type">Event Type *</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => setFormData({ ...formData, type: value as any })}
+              >
+                <SelectTrigger data-testid="select-event-type">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {EVENT_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  {Object.entries(EVENT_TYPE_CONFIG).filter(([key]) => key !== 'imported').map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      {config.icon} {config.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="start_date">Start Date & Time</Label>
-              <Input
-                id="start_date"
-                type="datetime-local"
-                value={formatDateTimeForInput(formData.start_date)}
-                onChange={(e) => setFormData({ ...formData, start_date: parseDateTimeLocal(e.target.value) })}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start_date">Start Date & Time *</Label>
+                <Input
+                  id="start_date"
+                  type="datetime-local"
+                  value={formData.start_date ? formatDateTimeLocal(new Date(formData.start_date)) : ''}
+                  onChange={(e) => setFormData({ ...formData, start_date: new Date(e.target.value) })}
+                  required
+                  data-testid="input-start-date"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="end_date">End Date & Time</Label>
+                <Input
+                  id="end_date"
+                  type="datetime-local"
+                  value={formData.end_date ? formatDateTimeLocal(new Date(formData.end_date)) : ''}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value ? new Date(e.target.value) : undefined })}
+                  data-testid="input-end-date"
+                />
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="end_date">End Date & Time (Optional)</Label>
-              <Input
-                id="end_date"
-                type="datetime-local"
-                value={formatDateTimeForInput(formData.end_date)}
-                onChange={(e) => setFormData({ ...formData, end_date: parseDateTimeLocal(e.target.value) })}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="all_day"
+                checked={formData.all_day || false}
+                onCheckedChange={(checked) => setFormData({ ...formData, all_day: checked })}
+                data-testid="switch-all-day"
               />
+              <Label htmlFor="all_day" className="cursor-pointer">All day event</Label>
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="assigned_to">Assigned To</Label>
-              <Select value={formData.assigned_to || undefined} onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select assignee" />
+              <Select
+                value={formData.assigned_to || 'none'}
+                onValueChange={(value) => setFormData({ ...formData, assigned_to: value === 'none' ? '' : value })}
+              >
+                <SelectTrigger data-testid="select-assigned-to">
+                  <SelectValue placeholder="Select user" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="none">Not assigned</SelectItem>
                   {activeUsers.map((user: any) => (
-                    <SelectItem key={user.username} value={user.full_name || user.username}>
-                      {user.full_name || user.username}
+                    <SelectItem key={user.id} value={user.full_name}>
+                      {user.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="location">Location (Optional)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
               <Input
                 id="location"
                 value={formData.location || ''}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 placeholder="Enter location"
+                data-testid="input-location"
               />
             </div>
 
-            <div>
-              <Label htmlFor="description">Description (Optional)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 value={formData.description || ''}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Enter event description"
+                placeholder="Add event description"
                 rows={3}
+                data-testid="textarea-description"
               />
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button 
-                onClick={() => handleSubmit(editEventModalOpen)} 
-                className="flex-1"
-                disabled={!formData.title || createEventMutation.isPending || updateEventMutation.isPending}
-              >
-                {createEventMutation.isPending || updateEventMutation.isPending ? 'Saving...' : (editEventModalOpen ? 'Update Event' : 'Create Event')}
-              </Button>
-              <Button 
-                variant="outline" 
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => {
                   setAddEventModalOpen(false);
                   setEditEventModalOpen(false);
                   resetForm();
                 }}
+                data-testid="button-cancel"
               >
                 Cancel
               </Button>
-            </div>
-          </div>
+              <Button
+                type="submit"
+                disabled={createEventMutation.isPending || updateEventMutation.isPending}
+                data-testid="button-save-event"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                {editEventModalOpen ? 'Update Event' : 'Create Event'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
