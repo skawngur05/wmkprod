@@ -232,90 +232,77 @@ export default function SampleBooklets() {
 
   return (
     <div className="container-fluid py-4">
-      {/* Header */}
-      <div className="row mb-4">
-        <div className="col">
-          <div className="d-flex justify-content-between align-items-center">
-            <h1 className="h3 fw-bold" data-testid="booklets-title">Sample Booklets Management</h1>
-            <div>
-              <button
-                className="btn btn-success me-2"
-                onClick={() => setShowAddModal(true)}
-                data-testid="button-add-booklet"
-              >
-                <i className="fas fa-plus me-1"></i>Add New Order
-              </button>
-
-              <button className="btn btn-outline-secondary" data-testid="button-export-booklets">
-                <i className="fas fa-download me-1"></i>Export Orders
-              </button>
-            </div>
-          </div>
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+        <h1 className="text-2xl md:text-3xl font-bold" data-testid="booklets-title">Sample Booklets Management</h1>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            className="btn btn-success"
+            onClick={() => setShowAddModal(true)}
+            data-testid="button-add-booklet"
+          >
+            <i className="fas fa-plus me-1"></i>
+            <span className="hidden sm:inline">Add New Order</span>
+            <span className="inline sm:hidden">Add Order</span>
+          </button>
+          <button className="btn btn-outline-secondary" data-testid="button-export-booklets">
+            <i className="fas fa-download me-1"></i>
+            <span className="hidden sm:inline">Export Orders</span>
+            <span className="inline sm:hidden">Export</span>
+          </button>
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards - Responsive Grid */}
       {stats && (
-        <div className="row mb-4">
-          <div className="col-md-2 mb-3">
-            <div className="stats-card card text-center">
-              <div className="card-body">
-                <h3 className="text-primary">{stats.totalOrders}</h3>
-                <p className="mb-0">Total Orders</p>
-              </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-4">
+          <div className="stats-card card text-center">
+            <div className="card-body p-3 md:p-4">
+              <h3 className="text-primary text-xl md:text-2xl">{stats.totalOrders}</h3>
+              <p className="mb-0 text-xs md:text-sm">Total Orders</p>
             </div>
           </div>
-          <div className="col-md-2 mb-3">
-            <div className="stats-card card text-center">
-              <div className="card-body">
-                <h3 className="text-warning">{stats.pendingOrders}</h3>
-                <p className="mb-0">Pending</p>
-              </div>
+          <div className="stats-card card text-center">
+            <div className="card-body p-3 md:p-4">
+              <h3 className="text-warning text-xl md:text-2xl">{stats.pendingOrders}</h3>
+              <p className="mb-0 text-xs md:text-sm">Pending</p>
             </div>
           </div>
-          <div className="col-md-2 mb-3">
-            <div className="stats-card card text-center">
-              <div className="card-body">
-                <h3 className="text-info">{stats.shippedOrders}</h3>
-                <p className="mb-0">Shipped</p>
-              </div>
+          <div className="stats-card card text-center">
+            <div className="card-body p-3 md:p-4">
+              <h3 className="text-info text-xl md:text-2xl">{stats.shippedOrders}</h3>
+              <p className="mb-0 text-xs md:text-sm">Shipped</p>
             </div>
           </div>
-          <div className="col-md-2 mb-3">
-            <div className="stats-card card text-center">
-              <div className="card-body">
-                <h3 className="text-success">{stats.deliveredOrders}</h3>
-                <p className="mb-0">Delivered</p>
-              </div>
+          <div className="stats-card card text-center">
+            <div className="card-body p-3 md:p-4">
+              <h3 className="text-success text-xl md:text-2xl">{stats.deliveredOrders}</h3>
+              <p className="mb-0 text-xs md:text-sm">Delivered</p>
             </div>
           </div>
-          <div className="col-md-2 mb-3">
-            <div className="stats-card card text-center">
-              <div className="card-body">
-                <h3 className="text-danger">{stats.deliveredOrders || 0}</h3>
-                <p className="mb-0">Delivered</p>
-              </div>
+          <div className="stats-card card text-center">
+            <div className="card-body p-3 md:p-4">
+              <h3 className="text-danger text-xl md:text-2xl">{stats.deliveredOrders || 0}</h3>
+              <p className="mb-0 text-xs md:text-sm">Delivered</p>
             </div>
           </div>
-          <div className="col-md-2 mb-3">
-            <div className="stats-card card text-center">
-              <div className="card-body">
-                <h3 className="text-primary">{stats.thisWeekOrders}</h3>
-                <p className="mb-0">This Week</p>
-              </div>
+          <div className="stats-card card text-center">
+            <div className="card-body p-3 md:p-4">
+              <h3 className="text-primary text-xl md:text-2xl">{stats.thisWeekOrders}</h3>
+              <p className="mb-0 text-xs md:text-sm">This Week</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Filters */}
+      {/* Filters - Responsive */}
       <div className="card mb-4">
-        <div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-3">
-              <label className="form-label">Filter by Status</label>
+        <div className="card-body p-3 md:p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div>
+              <label className="form-label text-sm md:text-base">Filter by Status</label>
               <select
-                className="form-select"
+                className="form-select w-full"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 data-testid="select-filter-status"

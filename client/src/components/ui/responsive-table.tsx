@@ -1,6 +1,5 @@
-import React from 'react';
 import { TableWrapper } from '@/components/ui/table-wrapper';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table } from '@/components/ui/table';
 
 interface ResponsiveTableProps {
   children: React.ReactNode;
@@ -9,10 +8,12 @@ interface ResponsiveTableProps {
 
 export const ResponsiveTable: React.FC<ResponsiveTableProps> = ({ children, className = '' }) => {
   return (
-    <TableWrapper className={className}>
-      <Table>
-        {children}
-      </Table>
-    </TableWrapper>
+    <div className="w-full overflow-x-auto">
+      <TableWrapper className={className}>
+        <Table className="min-w-full">
+          {children}
+        </Table>
+      </TableWrapper>
+    </div>
   );
 };

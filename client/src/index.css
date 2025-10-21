@@ -231,7 +231,7 @@
   transform: scale(0.95);
 }
 
-/* Mobile styles for sidebar toggle */
+/* Mobile and Responsive styles */
 @media (max-width: 768px) {
   .collapse-toggle {
     width: 30px;
@@ -291,6 +291,134 @@
   .modern-sidebar:not(.collapsed) .brand-subtitle,
   .modern-sidebar:not(.collapsed) .nav-section-title {
     opacity: 1;
+  }
+
+  /* Mobile content adjustments */
+  .main-content {
+    margin-left: 0 !important;
+    padding-bottom: 5rem; /* Space for bottom navigation */
+  }
+
+  /* Mobile card adjustments */
+  .card {
+    border-radius: 12px;
+    margin-bottom: 1rem;
+  }
+
+  /* Mobile form adjustments */
+  .form-label {
+    font-size: 0.875rem;
+  }
+
+  .form-control, .form-select {
+    font-size: 1rem; /* Prevent zoom on iOS */
+  }
+
+  /* Mobile button adjustments */
+  .btn {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .btn-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Tablet responsive styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main-content {
+    margin-left: 280px;
+  }
+
+  .modern-sidebar {
+    width: 280px;
+  }
+
+  /* Optimize spacing for tablets */
+  .card {
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Responsive Utility Classes */
+.responsive-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Responsive Container */
+.responsive-container {
+  padding: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-container {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-container {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .responsive-container {
+    padding: 2rem;
+  }
+}
+
+/* Mobile friendly touch targets */
+@media (max-width: 768px) {
+  button, .btn, a.btn {
+    min-height: 44px; /* Apple's recommended touch target size */
+    min-width: 44px;
+  }
+
+  /* Improve touch scrolling */
+  .table-wrapper, .card-body {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Make modals full screen on mobile */
+  .modal-dialog {
+    margin: 0;
+    max-width: 100% !important;
+    height: 100vh;
+  }
+
+  .modal-content {
+    height: 100vh;
+    border-radius: 0;
   }
 }
 
@@ -520,6 +648,14 @@
   min-height: 100vh;
   background: var(--light-bg);
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.mobile-content {
+  margin-left: 0 !important;
+  padding-bottom: 5rem;
+  width: 100%;
 }
 
 .app-layout.sidebar-collapsed .main-content {
