@@ -673,186 +673,185 @@ export default function Dashboard() {
       
       <div className="container-fluid py-4">
         
-        {/* Welcome Section */}
-        <div className={`row mb-4 dashboard-section ${animationStep >= 1 ? 'animate' : ''}`}>
-          <div className="col-8 col-md-10">
-            <h1 className="h3 fw-bold" data-testid="dashboard-welcome">
-              Welcome back, {user ? capitalizeFirst(user.username) : 'User'}!
+        {/* Welcome Section - Responsive */}
+        <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 md:gap-4 mb-6 dashboard-section ${animationStep >= 1 ? 'animate' : ''}`}>
+          <div className="flex-1">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1" data-testid="dashboard-welcome">
+              Welcome back, {user ? capitalizeFirst(user.username) : 'User'}! 👋
             </h1>
-            <p className="text-muted" data-testid="dashboard-subtitle">
-              Here's what's happening with your leads today.
+            <p className="text-sm md:text-base text-muted" data-testid="dashboard-subtitle">
+              Here's your business overview for today
             </p>
           </div>
-          <div className="col-4 col-md-2 text-end">
+          <div className="flex gap-2">
             <button 
-              className="btn btn-outline-primary btn-sm"
+              className="btn btn-outline-primary btn-sm flex items-center gap-2"
               onClick={() => {
                 forceRefreshData(user?.username);
                 refetchStats();
                 window.location.reload();
               }}
               title="Force refresh all data"
+              data-testid="button-refresh-dashboard"
             >
               <i className="fas fa-sync-alt"></i>
-              <span className="d-none d-md-inline ms-1">Refresh</span>
+              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className={`row mb-4 dashboard-section ${animationStep >= 2 ? 'animate' : ''}`}>
-        <div className="col-6 col-sm-6 col-md-3 mb-3">
+        {/* Statistics Cards - Improved Responsive Grid */}
+        <div className={`grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 mb-6 dashboard-section ${animationStep >= 2 ? 'animate' : ''}`}>
+          {/* Total Leads Card */}
           <div 
-            className="card stats-card clickable-card" 
+            className="card stats-card clickable-card bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-800 border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all cursor-pointer" 
             data-testid="stat-total-leads"
             onClick={() => handleStatsCardClick('total-leads')}
-            style={{ cursor: 'pointer' }}
             title="Click to view all leads"
           >
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="card-title text-muted mb-1">
-                    Total Leads
-                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
-                  </h6>
-                  <h3 className="fw-bold text-primary">{(stats && stats.totalLeads) || 0}</h3>
+            <div className="card-body p-4">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h6 className="text-xs md:text-sm text-muted font-medium uppercase tracking-wide">
+                      Total Leads
+                    </h6>
+                    <i className="fas fa-external-link-alt text-[10px] opacity-50"></i>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-primary mb-1">{(stats && stats.totalLeads) || 0}</h3>
+                  <p className="text-xs text-muted">All leads in system</p>
                 </div>
-                <div className="text-primary">
-                  <i className="fas fa-users fa-2x"></i>
+                <div className="text-primary/20 dark:text-primary/30">
+                  <i className="fas fa-users text-3xl md:text-4xl"></i>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div className="col-6 col-sm-6 col-md-3 mb-3">
+          
+          {/* Sold Today Card */}
           <div 
-            className="card stats-card clickable-card" 
+            className="card stats-card clickable-card bg-gradient-to-br from-green-50 to-white dark:from-green-900/20 dark:to-gray-800 border-green-200 dark:border-green-800 hover:shadow-lg transition-all cursor-pointer" 
             data-testid="stat-sold-leads"
             onClick={() => handleStatsCardClick('sold-leads')}
-            style={{ cursor: 'pointer' }}
             title="Click to view leads sold today"
           >
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="card-title text-muted mb-1">
-                    Sold Today
-                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
-                  </h6>
-                  <h3 className="fw-bold text-success">{(stats && stats.soldToday) || 0}</h3>
+            <div className="card-body p-4">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h6 className="text-xs md:text-sm text-muted font-medium uppercase tracking-wide">
+                      Sold Today
+                    </h6>
+                    <i className="fas fa-external-link-alt text-[10px] opacity-50"></i>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-success mb-1">{(stats && stats.soldToday) || 0}</h3>
+                  <p className="text-xs text-muted">Closed deals</p>
                 </div>
-                <div className="text-success">
-                  <i className="fas fa-handshake fa-2x"></i>
+                <div className="text-success/20 dark:text-success/30">
+                  <i className="fas fa-handshake text-3xl md:text-4xl"></i>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div className="col-6 col-sm-6 col-md-3 mb-3">
+          
+          {/* Due Today Card */}
           <div 
-            className="card stats-card clickable-card" 
+            className="card stats-card clickable-card bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-900/20 dark:to-gray-800 border-yellow-200 dark:border-yellow-800 hover:shadow-lg transition-all cursor-pointer" 
             data-testid="stat-today-followups"
             onClick={() => handleStatsCardClick('today-followups')}
-            style={{ cursor: 'pointer' }}
             title="Click to view follow-ups due today (not including overdue)"
           >
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="card-title text-muted mb-1">
-                    Due Today
-                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
-                  </h6>
-                  <h3 className="fw-bold text-warning">
-                    {/* ONLY use dueToday count, not including overdue */}
+            <div className="card-body p-4">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h6 className="text-xs md:text-sm text-muted font-medium uppercase tracking-wide">
+                      Due Today
+                    </h6>
+                    <i className="fas fa-external-link-alt text-[10px] opacity-50"></i>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-warning mb-1">
                     {(() => {
-                      // Direct calculation from followupsData arrays - ONLY due today
                       if (followupsData && Array.isArray(followupsData.dueToday)) {
                         return followupsData.dueToday.length;
                       }
-                      // If arrays aren't available but we have the summary object from API
                       else if (followupsData && typeof followupsData.dueTodayCount === 'number') {
                         return followupsData.dueTodayCount;
                       }
-                      // Fallback to 0 to ensure we don't show stale data
                       return 0;
                     })()}
                   </h3>
+                  <p className="text-xs text-muted">Follow-ups today</p>
                 </div>
-                <div className="text-warning">
-                  <i className="fas fa-calendar-day fa-2x"></i>
+                <div className="text-warning/20 dark:text-warning/30">
+                  <i className="fas fa-calendar-day text-3xl md:text-4xl"></i>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div className="col-6 col-sm-6 col-md-3 mb-3">
+          
+          {/* Overdue Card */}
           <div 
-            className="card stats-card clickable-card" 
+            className="card stats-card clickable-card bg-gradient-to-br from-red-50 to-white dark:from-red-900/20 dark:to-gray-800 border-red-200 dark:border-red-800 hover:shadow-lg transition-all cursor-pointer" 
             data-testid="stat-overdue"
             onClick={() => handleStatsCardClick('overdue')}
-            style={{ cursor: 'pointer' }}
             title="Click to view overdue follow-ups"
           >
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="card-title text-muted mb-1">
-                    Overdue
-                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
-                  </h6>
-                  <h3 className="fw-bold text-danger">
+            <div className="card-body p-4">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h6 className="text-xs md:text-sm text-muted font-medium uppercase tracking-wide">
+                      Overdue
+                    </h6>
+                    <i className="fas fa-external-link-alt text-[10px] opacity-50"></i>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-danger mb-1">
                     {(() => {
-                      // Show actual overdue count from followupsData
                       if (followupsData && Array.isArray(followupsData.overdue)) {
                         return followupsData.overdue.length;
                       }
-                      // If arrays aren't available but we have the summary object from API
                       else if (followupsData && typeof followupsData.overdueCount === 'number') {
                         return followupsData.overdueCount;
                       }
-                      // Fallback to 0 if no data available
                       return 0;
                     })()}
                   </h3>
+                  <p className="text-xs text-muted">Needs attention</p>
                 </div>
-                <div className="text-danger">
-                  <i className="fas fa-exclamation-circle fa-2x"></i>
+                <div className="text-danger/20 dark:text-danger/30">
+                  <i className="fas fa-exclamation-circle text-3xl md:text-4xl"></i>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div className="col-6 col-sm-6 col-md-3 mb-3 d-none d-md-block">
+          
+          {/* New Today Card - Hidden on mobile, shows on lg+ */}
           <div 
-            className="card stats-card clickable-card" 
+            className="card stats-card clickable-card bg-gradient-to-br from-cyan-50 to-white dark:from-cyan-900/20 dark:to-gray-800 border-cyan-200 dark:border-cyan-800 hover:shadow-lg transition-all cursor-pointer hidden lg:block" 
             data-testid="stat-new-today"
             onClick={() => handleStatsCardClick('new-today')}
-            style={{ cursor: 'pointer' }}
             title="Click to view today's new leads"
           >
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="card-title text-muted mb-1">
-                    New Today
-                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
-                  </h6>
-                  <h3 className="fw-bold text-info">{(stats && stats.newToday) || 0}</h3>
+            <div className="card-body p-4">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h6 className="text-xs md:text-sm text-muted font-medium uppercase tracking-wide">
+                      New Today
+                    </h6>
+                    <i className="fas fa-external-link-alt text-[10px] opacity-50"></i>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-info mb-1">{(stats && stats.newToday) || 0}</h3>
+                  <p className="text-xs text-muted">Fresh leads</p>
                 </div>
-                <div className="text-info">
-                  <i className="fas fa-plus-circle fa-2x"></i>
+                <div className="text-info/20 dark:text-info/30">
+                  <i className="fas fa-plus-circle text-3xl md:text-4xl"></i>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
       {/* Business Calendar Section - Mobile Friendly Navigation */}
       {!isMobileSafari && (
