@@ -1,50 +1,65 @@
-import { mysqlTable, varchar, text, int, boolean, timestamp, decimal, mysqlEnum, date } from "drizzle-orm/mysql-core";
+import { pgTable, varchar, text, integer, boolean, timestamp, numeric, pgEnum, serial } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-export const users = mysqlTable("users", {
-  id: int("id").primaryKey().autoincrement(),
+
+// Define all enums BEFORE table definitions
+export const roleEnum = pgEnum("role", ["installer", "sales_rep", "commercial_sales", "manager", "owner", "admin", "administrator"]);
+export const leadOriginEnum = pgEnum("lead_origin", ["Facebook", "Google Text", "Instagram", "Trade Show", "WhatsApp", "Commercial", "Referral", "Website", "Cold Call"]);
+export const projectTypeEnum = pgEnum("project_type", ["Residential", "Commercial"]);
+export const remarksEnum = pgEnum("remarks", ["Not Interested", "Not Service Area", "Not Compatible", "Sold", "In Progress", "New", "Friendly Partner", "Franchise Request"]);
+export const originalLeadOriginEnum = pgEnum("original_lead_origin", ["Facebook", "Google Text", "Instagram", "Trade Show", "WhatsApp", "Commercial", "Referral"]);
+export const originalAssignedToEnum = pgEnum("original_assigned_to", ["Kim", "Patrick", "Lina"]);
+export const priorityEnum = pgEnum("priority", ["Low", "Medium", "High", "Urgent"]);
+export const repairStatusEnum = pgEnum("repair_status", ["Pending", "In Progress", "Completed", "Cancelled"]);
+export const productTypeEnum = pgEnum("product_type", ["Demo Kit & Sample Booklet", "Sample Booklet Only", "Trial Kit", "Demo Kit Only"]);
+export const bookletStatusEnum = pgEnum("booklet_status", ["Pending", "Shipped", "Delivered", "Refunded"]);
+export const installerStatusEnum = pgEnum("installer_status", ["active", "inactive"]);
+export const templateTypeEnum = pgEnum("template_type", ["repair_notification", "follow_up", "installation_reminder", "custom"]);
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
   username: varchar("username", { length: 50 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   full_name: varchar("full_name", { length: 100 }).notNull(),
   email: varchar("email", { length: 100 }).unique(),
-  role: mysqlEnum("role", ["installer", "sales_rep", "commercial_sales", "manager", "owner", "admin", "administrator"]).notNull().default("sales_rep"),
+  role: roleEnum("role").notNull().default("sales_rep"),
   permissions: text("permissions"), // Changed to text to match MySQL longtext
   is_active: boolean("is_active").notNull().default(true),
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
+  created_at: timestamp("created_at").notNull().defaultNow(),
   last_login: timestamp("last_login"),
 });
 
 // User Sessions table
-export const userSessions = mysqlTable("user_sessions", {
-  id: int("id").primaryKey().autoincrement(),
-  user_id: int("user_id").notNull(),
+export const userSessions = pgTable("user_sessions", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull(),
   session_id: varchar("session_id", { length: 128 }).notNull(),
   ip_address: varchar("ip_address", { length: 45 }).notNull(),
   user_agent: text("user_agent"),
-  login_time: timestamp("login_time").notNull().default(sql`current_timestamp()`),
-  last_activity: timestamp("last_activity").notNull().default(sql`current_timestamp()`).onUpdateNow(),
+  login_time: timestamp("login_time").notNull().defaultNow(),
+  last_activity: timestamp("last_activity").notNull().defaultNow().$onUpdate(() => new Date()),
   is_active: boolean("is_active").default(true),
   logout_time: timestamp("logout_time"),
 });
 
-export const leads = mysqlTable("leads", {
-  id: int("id").primaryKey().autoincrement(),
+export const leads = pgTable("leads", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 100 }),
-  lead_origin: mysqlEnum("lead_origin", ["Facebook", "Google Text", "Instagram", "Trade Show", "WhatsApp", "Commercial", "Referral", "Website", "Cold Call"]).notNull(),
-  project_type: mysqlEnum("project_type", ["Residential", "Commercial"]).notNull(),
+  lead_origin: leadOriginEnum("lead_origin").notNull(),
+  project_type: projectTypeEnum("project_type").notNull(),
   commercial_subcategory: varchar("commercial_subcategory", { length: 50 }),
   date_created: varchar("date_created", { length: 10 }).notNull(), // Store as YYYY-MM-DD string
   next_followup_date: varchar("next_followup_date", { length: 10 }), // Store as YYYY-MM-DD string
-  remarks: mysqlEnum("remarks", ["Not Interested", "Not Service Area", "Not Compatible", "Sold", "In Progress", "New", "Friendly Partner", "Franchise Request"]).default("New"),
+  remarks: remarksEnum("remarks").default("New"),
   assigned_to: varchar("assigned_to", { length: 100 }).notNull(),
   notes: text("notes"),
   additional_notes: text("additional_notes"),
-  project_amount: decimal("project_amount", { precision: 10, scale: 2 }).default("0.00"),
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
-  updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
+  project_amount: numeric("project_amount", { precision: 10, scale: 2 }).default("0.00"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   deposit_paid: boolean("deposit_paid").default(false),
   balance_paid: boolean("balance_paid").default(false),
   pickup_date: varchar("pickup_date", { length: 10 }), // Store as YYYY-MM-DD string
@@ -259,8 +274,8 @@ export const COMMERCIAL_SUBCATEGORIES = ["ALL products", "Furnitures", "Walls", 
 export const MARKETS = ["Office Space", "Hospitality", "Healthcare", "Retail", "Marine", "Signage"] as const;
 
 // Calendar Events schema
-export const calendarEvents = mysqlTable("calendar_events", {
-  id: int("id").primaryKey().autoincrement(),
+export const calendarEvents = pgTable("calendar_events", {
+  id: serial("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
   type: varchar("type", { length: 50 }).notNull(), // installation, leave, trade-show, showroom-visit, holiday
   start_date: timestamp("start_date").notNull(),
@@ -269,50 +284,50 @@ export const calendarEvents = mysqlTable("calendar_events", {
   description: text("description"),
   location: varchar("location", { length: 255 }),
   assigned_to: varchar("assigned_to", { length: 255 }), // for leave events
-  related_lead_id: int("related_lead_id"), // for installation events
+  related_lead_id: integer("related_lead_id"), // for installation events
   google_event_id: varchar("google_event_id", { length: 255 }), // Google Calendar event ID for sync
   color: varchar("color", { length: 7 }), // Hex color code from Google Calendar (e.g., #FF5722)
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
+  created_at: timestamp("created_at").notNull().defaultNow(),
 });
 
 // Completed Projects table
-export const completedProjects = mysqlTable("completed_projects", {
-  id: int("id").primaryKey().autoincrement(),
-  lead_id: int("lead_id").notNull(),
+export const completedProjects = pgTable("completed_projects", {
+  id: serial("id").primaryKey(),
+  lead_id: integer("lead_id").notNull(),
   customer_name: varchar("customer_name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 100 }),
   address: text("address"),
-  project_amount: decimal("project_amount", { precision: 10, scale: 2 }).default("0.00"),
+  project_amount: numeric("project_amount", { precision: 10, scale: 2 }).default("0.00"),
   deposit_paid: boolean("deposit_paid").default(false),
   balance_paid: boolean("balance_paid").default(false),
   installation_date: varchar("installation_date", { length: 10 }), // Store as YYYY-MM-DD string
   completion_date: varchar("completion_date", { length: 10 }).notNull(), // Store as YYYY-MM-DD string
   assigned_installer: varchar("assigned_installer", { length: 100 }),
   notes: text("notes"),
-  original_lead_origin: mysqlEnum("original_lead_origin", ["Facebook", "Google Text", "Instagram", "Trade Show", "WhatsApp", "Commercial", "Referral"]),
+  original_lead_origin: originalLeadOriginEnum("original_lead_origin"),
   original_date_created: varchar("original_date_created", { length: 10 }), // Store as YYYY-MM-DD string
-  original_assigned_to: mysqlEnum("original_assigned_to", ["Kim", "Patrick", "Lina"]),
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
-  updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
+  original_assigned_to: originalAssignedToEnum("original_assigned_to"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 // Repair Requests table
-export const repairRequests = mysqlTable("repair_requests", {
-  id: int("id").primaryKey().autoincrement(),
-  project_id: int("project_id"),
+export const repairRequests = pgTable("repair_requests", {
+  id: serial("id").primaryKey(),
+  project_id: integer("project_id"),
   customer_name: varchar("customer_name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),
   email: varchar("email", { length: 255 }),
   address: text("address").notNull(),
   issue_description: text("issue_description").notNull(),
-  priority: mysqlEnum("priority", ["Low", "Medium", "High", "Urgent"]).default("Medium"),
-  status: mysqlEnum("status", ["Pending", "In Progress", "Completed", "Cancelled"]).default("Pending"),
+  priority: priorityEnum("priority").default("Medium"),
+  status: repairStatusEnum("repair_status").default("Pending"),
   date_reported: varchar("date_reported", { length: 10 }).notNull(), // Store as YYYY-MM-DD string
   completion_date: varchar("completion_date", { length: 10 }), // Store as YYYY-MM-DD string
   notes: text("notes"),
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
-  updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const insertCompletedProjectSchema = createInsertSchema(completedProjects).omit({
@@ -367,35 +382,35 @@ export const EVENT_TYPES = [
 ] as const;
 
 // Sample Booklets schema
-export const sampleBooklets = mysqlTable("sample_booklets", {
-  id: int("id").primaryKey().autoincrement(),
+export const sampleBooklets = pgTable("sample_booklets", {
+  id: serial("id").primaryKey(),
   order_number: varchar("order_number", { length: 100 }).notNull(),
   customer_name: varchar("customer_name", { length: 255 }).notNull(),
   address: text("address").notNull(),
   email: varchar("email", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),
-  product_type: mysqlEnum("product_type", ["Demo Kit & Sample Booklet", "Sample Booklet Only", "Trial Kit", "Demo Kit Only"]).notNull(),
+  product_type: productTypeEnum("product_type").notNull(),
   tracking_number: varchar("tracking_number", { length: 100 }),
-  status: mysqlEnum("status", ["Pending", "Shipped", "Delivered", "Refunded"]).default("Pending"),
+  status: bookletStatusEnum("booklet_status").default("Pending"),
   date_ordered: varchar("date_ordered", { length: 10 }).notNull(), // Store as YYYY-MM-DD string
   date_shipped: varchar("date_shipped", { length: 10 }), // Store as YYYY-MM-DD string
   notes: text("notes"),
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
-  updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const installers = mysqlTable("installers", {
-  id: int("id").primaryKey().autoincrement(),
+export const installers = pgTable("installers", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 100 }),
-  status: mysqlEnum("status", ["active", "inactive"]).default("active"),
+  status: installerStatusEnum("installer_status").default("active"),
   hire_date: varchar("hire_date", { length: 10 }), // Store as YYYY-MM-DD string
-  hourly_rate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  hourly_rate: numeric("hourly_rate", { precision: 10, scale: 2 }),
   specialty: text("specialty"),
   notes: text("notes"),
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
-  updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const insertSampleBookletSchema = createInsertSchema(sampleBooklets).omit({
@@ -543,55 +558,55 @@ export const INSTALLER_STATUSES = [
 ] as const;
 
 // SMTP Settings table
-export const smtpSettings = mysqlTable("smtp_settings", {
-  id: int("id").primaryKey().autoincrement(),
+export const smtpSettings = pgTable("smtp_settings", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   host: varchar("host", { length: 255 }).notNull(),
-  port: int("port").notNull(),
+  port: integer("port").notNull(),
   secure: boolean("secure").default(false),
   username: varchar("username", { length: 255 }).notNull(),
   password: varchar("password", { length: 255 }).notNull(),
   from_email: varchar("from_email", { length: 255 }).notNull(),
   from_name: varchar("from_name", { length: 100 }).notNull(),
   is_active: boolean("is_active").default(true),
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
-  updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 // Email Templates table
-export const emailTemplates = mysqlTable("email_templates", {
-  id: int("id").primaryKey().autoincrement(),
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   subject: varchar("subject", { length: 255 }).notNull(),
   body: text("body").notNull(),
-  template_type: mysqlEnum("template_type", ["repair_notification", "follow_up", "installation_reminder", "custom"]).notNull(),
+  template_type: templateTypeEnum("template_type").notNull(),
   is_active: boolean("is_active").default(true),
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
-  updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 // Activity Logs table
-export const activityLogs = mysqlTable("activity_logs", {
-  id: int("id").primaryKey().autoincrement(),
-  user_id: int("user_id"),
+export const activityLogs = pgTable("activity_logs", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id"),
   action: varchar("action", { length: 255 }).notNull(),
   entity_type: varchar("entity_type", { length: 100 }),
   entity_id: varchar("entity_id", { length: 100 }),
   details: text("details"),
   ip_address: varchar("ip_address", { length: 45 }),
   user_agent: text("user_agent"),
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
+  created_at: timestamp("created_at").notNull().defaultNow(),
 });
 
 // WMK Colors table
-export const wmkColors = mysqlTable("wmk_colors", {
-  id: int("id").primaryKey().autoincrement(),
+export const wmkColors = pgTable("wmk_colors", {
+  id: serial("id").primaryKey(),
   code: varchar("code", { length: 20 }).notNull().unique(),
   name: varchar("name", { length: 100 }),
   description: text("description"),
   is_active: boolean("is_active").default(true),
-  created_at: timestamp("created_at").notNull().default(sql`current_timestamp()`),
-  updated_at: timestamp("updated_at").notNull().default(sql`current_timestamp()`).onUpdateNow(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 // Export schemas for validation

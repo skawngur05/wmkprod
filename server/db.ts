@@ -1,5 +1,6 @@
-import { drizzle } from 'drizzle-orm/mysql2';
-import mysql from 'mysql2/promise';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pkg from 'pg';
+const { Pool } = pkg;
 import * as schema from "@shared/schema";
 import dotenv from 'dotenv';
 
@@ -18,43 +19,24 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is required");
 }
 
-// Parse the DATABASE_URL to create proper pool config
-const dbUrl = new URL(process.env.DATABASE_URL);
-
 console.log('Database connection details:');
-console.log('Host:', dbUrl.hostname);
-console.log('Port:', parseInt(dbUrl.port) || 3306);
-console.log('User:', dbUrl.username);
-console.log('Database:', dbUrl.pathname.substring(1));
-console.log('Password length:', dbUrl.password ? dbUrl.password.length : 0);
-console.log('Decoded password length:', dbUrl.password ? decodeURIComponent(dbUrl.password).length : 0);
+console.log('DATABASE_URL:', process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@')); // Hide password
 
-// Create connection pool (only supported options)
-const connection = mysql.createPool({
-  host: dbUrl.hostname,
-  port: parseInt(dbUrl.port) || 3306,
-  user: dbUrl.username,
-  password: decodeURIComponent(dbUrl.password), // Properly decode the password
-  database: dbUrl.pathname.substring(1), // Remove leading slash
-  connectionLimit: 5,
-  queueLimit: 0
-  // ssl: undefined // Omit or set to undefined if not used
+// Create connection pool for PostgreSQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 5,
 });
 
 // Test the connection
-connection.getConnection()
-  .then(conn => {
+pool.connect()
+  .then(client => {
     console.log('✅ Database connection successful');
-    conn.release();
+    client.release();
   })
   .catch(err => {
     console.error('❌ Database connection failed:', err.message);
-    console.error('Error details:', {
-      code: err.code,
-      errno: err.errno,
-      sqlState: err.sqlState,
-      sqlMessage: err.sqlMessage
-    });
+    console.error('Error details:', err);
   });
 
-export const db = drizzle(connection, { schema, mode: 'default' });
+export const db = drizzle(pool, { schema });
