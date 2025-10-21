@@ -594,7 +594,7 @@ export default function AddLead() {
                           value={formData.project_amount}
                           onChange={(e) => handleInputChange('project_amount', e.target.value)}
                           data-testid="input-lead-amount"
-                          placeholder="0.00"
+                          placeholder="Enter amount"
                           className="h-11 pl-7"
                         />
                       </div>

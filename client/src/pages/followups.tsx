@@ -712,203 +712,208 @@ function FollowupsTable({
             }}
           >
             <Card 
-              className={`${getCardStyling(status)} cursor-pointer transform transition-all duration-300 hover:-translate-y-1 hover:shadow-md`} 
+              className={`${getCardStyling(status)} cursor-pointer transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl`} 
               onClick={() => onQuickEdit(lead)}
             >
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-              
-              {/* Lead Info - 3 columns */}
-              <div className="md:col-span-3">
-                <div className="flex items-start space-x-3">
-                  <div className="p-2 bg-blue-50 rounded-full">
-                    <User className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 text-lg">{lead.name}</h3>
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm text-gray-600 capitalize">
-                        {lead.lead_origin.replace('-', ' ')}
-                      </p>
-                      <span className="text-gray-300">•</span>
-                      <ProjectTypeBadge lead={lead} />
+              <CardContent className="p-0">
+                {/* Header Section with Lead Info */}
+                <div className="p-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start space-x-2 flex-1 min-w-0">
+                      <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded flex-shrink-0">
+                        <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-gray-900 dark:text-white text-base mb-1 truncate">{lead.name}</h3>
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                            {lead.lead_origin.replace('-', ' ')}
+                          </Badge>
+                          <ProjectTypeBadge lead={lead} />
+                          {lead.remarks && getStatusBadge(lead.remarks)}
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Created: {lead.date_created ? formatDate(lead.date_created) : 'N/A'}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-700 font-medium mt-1">
-                      Created: {lead.date_created ? formatDate(lead.date_created) : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Info - 2 columns */}
-              <div className="md:col-span-2">
-                <div className="space-y-2">
-                  <div className="group flex items-center text-sm text-gray-700">
-                    <Phone className="h-4 w-4 mr-2 text-green-600" />
-                    <span className="flex-1">{lead.phone}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (lead.phone) {
-                          copyToClipboard(lead.phone, 'phone');
-                        }
-                      }}
-                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-all duration-200 opacity-50 hover:opacity-100"
-                      title="Copy phone number"
-                    >
-                      <Copy className="h-3 w-3 text-gray-500 hover:text-gray-700" />
-                    </button>
-                  </div>
-                  {lead.email && (
-                    <div className="group flex items-center text-sm text-gray-700">
-                      <Mail className="h-4 w-4 mr-2 text-blue-600" />
-                      <span className="flex-1 truncate">{lead.email}</span>
-                      <button
+                    <div className="flex-shrink-0">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-8 px-3 text-xs font-medium border-gray-300 dark:border-gray-600 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (lead.email) {
-                            copyToClipboard(lead.email, 'email');
-                          }
+                          onQuickEdit(lead);
                         }}
-                        className="ml-2 p-1 hover:bg-gray-100 rounded transition-all duration-200 opacity-50 hover:opacity-100"
-                        title="Copy email address"
+                        data-testid={`button-view-${lead.id}`}
                       >
-                        <Copy className="h-3 w-3 text-gray-500 hover:text-gray-700" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Status & Payment - 2 columns */}
-              <div className="md:col-span-2">
-                <div className="flex flex-col gap-2">
-                  {lead.remarks && getStatusBadge(lead.remarks)}
-                  {getPaymentStatusBadge(lead)}
-                </div>
-              </div>
-
-              {/* Follow-up Date - 2 columns */}
-              <div className="md:col-span-2">
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-orange-600" />
-                    <div>
-                      <p className="text-xs text-gray-500">Next Follow-up</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {formatDate(lead.next_followup_date?.toString() || null)}
-                      </p>
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
                     </div>
                   </div>
-                  {(lead as any).pickup_date && (
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-purple-600" />
-                      <div>
-                        <p className="text-xs text-gray-500">Pickup Date</p>
-                        <p className="text-sm font-medium text-purple-700">
-                          {formatDate((lead as any).pickup_date?.toString() || null)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {lead.installation_date && (
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-xs text-gray-500">Installation</p>
-                        <p className="text-sm font-medium text-blue-700">
-                          {formatDate(lead.installation_date?.toString() || null)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
 
-              {/* Project Amount & Assigned - 2 columns */}
-              <div className="md:col-span-2">
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-semibold text-green-700">
-                      {formatCurrency(lead.project_amount)}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600 capitalize">
-                      {lead.assigned_to || 'Unassigned'}
-                    </span>
-                  </div>
-                  {/* Selected Colors */}
-                  {(lead as any).selected_colors && Array.isArray((lead as any).selected_colors) && (lead as any).selected_colors.length > 0 && (
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <div className="h-3 w-3 bg-gradient-to-r from-red-400 to-blue-400 rounded-full"></div>
-                        <span className="text-xs font-medium text-gray-700">Selected Colors:</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {(lead as any).selected_colors.map((colorCode: string) => {
-                          const colorData = wmkColorsData?.find((color: any) => color.code === colorCode);
-                          return (
-                            <Badge 
-                              key={colorCode} 
-                              variant="outline" 
-                              className="text-xs px-1.5 py-0.5 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 text-blue-800"
+                {/* Content Grid Section */}
+                <div className="p-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    
+                    {/* Contact Information */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Contact</h4>
+                      <div className="space-y-1.5">
+                        <div className="group flex items-center text-sm">
+                          <div className="p-1 bg-green-100 dark:bg-green-900/30 rounded mr-2 flex-shrink-0">
+                            <Phone className="h-3 w-3 text-green-600 dark:text-green-400" />
+                          </div>
+                          <span className="flex-1 text-gray-700 dark:text-gray-300 font-medium truncate text-xs">{lead.phone}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (lead.phone) {
+                                copyToClipboard(lead.phone, 'phone');
+                              }
+                            }}
+                            className="ml-1 p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-all duration-200 opacity-0 group-hover:opacity-100"
+                            title="Copy phone"
+                          >
+                            <Copy className="h-2.5 w-2.5 text-gray-400" />
+                          </button>
+                        </div>
+                        {lead.email && (
+                          <div className="group flex items-center text-sm">
+                            <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded mr-2 flex-shrink-0">
+                              <Mail className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <span className="flex-1 text-gray-700 dark:text-gray-300 truncate text-xs">{lead.email}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (lead.email) {
+                                  copyToClipboard(lead.email, 'email');
+                                }
+                              }}
+                              className="ml-1 p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-all duration-200 opacity-0 group-hover:opacity-100"
+                              title="Copy email"
                             >
-                              {colorData ? colorData.name : colorCode}
-                            </Badge>
-                          );
-                        })}
+                              <Copy className="h-2.5 w-2.5 text-gray-400" />
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex items-center text-sm">
+                          <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded mr-2 flex-shrink-0">
+                            <User className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <span className="text-gray-700 dark:text-gray-300 capitalize text-xs">{lead.assigned_to || 'Unassigned'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dates & Schedule */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Schedule</h4>
+                      <div className="space-y-1.5">
+                        <div className="flex items-start">
+                          <div className="p-1 bg-orange-100 dark:bg-orange-900/30 rounded mr-2 flex-shrink-0">
+                            <Calendar className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Follow-up</p>
+                            <p className="text-xs font-semibold text-gray-900 dark:text-white">
+                              {formatDate(lead.next_followup_date?.toString() || null)}
+                            </p>
+                          </div>
+                        </div>
+                        {(lead as any).pickup_date && (
+                          <div className="flex items-start">
+                            <div className="p-1 bg-violet-100 dark:bg-violet-900/30 rounded mr-2 flex-shrink-0">
+                              <Calendar className="h-3 w-3 text-violet-600 dark:text-violet-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Pickup</p>
+                              <p className="text-xs font-semibold text-violet-700 dark:text-violet-400">
+                                {formatDate((lead as any).pickup_date?.toString() || null)}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        {lead.installation_date && (
+                          <div className="flex items-start">
+                            <div className="p-1 bg-teal-100 dark:bg-teal-900/30 rounded mr-2 flex-shrink-0">
+                              <Calendar className="h-3 w-3 text-teal-600 dark:text-teal-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Install</p>
+                              <p className="text-xs font-semibold text-teal-700 dark:text-teal-400">
+                                {formatDate(lead.installation_date?.toString() || null)}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Project Details */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Details</h4>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center">
+                          <div className="p-1 bg-green-100 dark:bg-green-900/30 rounded mr-2 flex-shrink-0">
+                            <DollarSign className="h-3 w-3 text-green-600 dark:text-green-400" />
+                          </div>
+                          <span className="text-sm font-bold text-green-700 dark:text-green-400">
+                            {formatCurrency(lead.project_amount)}
+                          </span>
+                        </div>
+                        {getPaymentStatusBadge(lead)}
+                        {(lead as any).selected_colors && Array.isArray((lead as any).selected_colors) && (lead as any).selected_colors.length > 0 && (
+                          <div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
+                              <div className="h-1.5 w-1.5 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full"></div>
+                              Colors
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {(lead as any).selected_colors.map((colorCode: string) => {
+                                const colorData = wmkColorsData?.find((color: any) => color.code === colorCode);
+                                return (
+                                  <Badge 
+                                    key={colorCode} 
+                                    variant="outline" 
+                                    className="text-xs px-1.5 py-0 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300"
+                                  >
+                                    {colorData ? colorData.name : colorCode}
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notes Section */}
+                  {lead.notes && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-start space-x-2">
+                        <div className="p-1 bg-gray-100 dark:bg-gray-700 rounded flex-shrink-0">
+                          <Eye className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-0.5">Latest Note</p>
+                          <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
+                            {(() => {
+                              const notes = lead.notes.split('\n').filter(line => line.trim());
+                              if (notes.length === 0) return lead.notes;
+                              return notes[notes.length - 1];
+                            })()}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Actions - 1 column */}
-              <div className="md:col-span-1">
-                <div className="flex justify-center">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="w-full h-10 text-xs font-medium border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md px-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onQuickEdit(lead);
-                    }}
-                    data-testid={`button-view-${lead.id}`}
-                    title="Edit Lead"
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Notes Section - Full Width */}
-            {lead.notes && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex items-start space-x-2">
-                  <div className="p-1 bg-gray-50 rounded">
-                    <Eye className="h-3 w-3 text-gray-500" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-700 mb-1">Notes:</p>
-                    <p className="text-sm text-gray-600 line-clamp-2">
-                      {(() => {
-                        const notes = lead.notes.split('\n').filter(line => line.trim());
-                        if (notes.length === 0) return lead.notes;
-                        // Get the most recent note (last in the array)
-                        return notes[notes.length - 1];
-                      })()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
 
           </CardContent>
         </Card>
