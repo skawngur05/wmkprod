@@ -21,16 +21,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored session
+    // TEMPORARILY DISABLED: Check for stored session
+    // There's a bug causing infinite loops when loading from localStorage
+    // Users will need to log in again each time
+    /*
     const storedUser = localStorage.getItem('crm_user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+    */
+    // Clear any stale data
+    localStorage.clear();
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
     // Validate user status periodically if logged in
+    // NOTE: Validation is disabled to prevent infinite loops from stale localStorage
+    // Users will need to log in again if their session becomes invalid
+    // This can be re-enabled once we implement proper session tokens
+    /*
     if (user) {
       const validateUserStatus = async () => {
         try {
@@ -52,18 +62,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
-      // Don't check immediately to avoid blocking page load
-      // Check after 2 seconds to allow page to load first
-      const initialTimeout = setTimeout(validateUserStatus, 2000);
-
-      // Check every 5 minutes after that
+      // Check every 5 minutes
       const interval = setInterval(validateUserStatus, 5 * 60 * 1000);
 
       return () => {
-        clearTimeout(initialTimeout);
         clearInterval(interval);
       };
     }
+    */
   }, [user]);
 
   const login = async (username: string, password: string): Promise<{ 
@@ -104,10 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    setUser(null);
     localStorage.removeItem('crm_user');
     localStorage.clear(); // Clear all localStorage to ensure clean state
-    window.location.reload(); // Force page reload to clear any cached state
+    setUser(null); // This will trigger a re-render and redirect via ProtectedRoute
   };
 
   return (
