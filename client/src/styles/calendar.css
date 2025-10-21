@@ -26,7 +26,7 @@
 /* Header Styling */
 .fc .fc-toolbar {
   padding: 1.25rem 1.5rem;
-  background: linear-gradient(to bottom, #ffffff, #fafafa);
+  background: #ffffff !important;
   border-bottom: 1px solid #e5e7eb;
   margin-bottom: 0;
 }

@@ -89,7 +89,7 @@ export function BusinessCalendar({ mode = 'full', height = '700px' }: BusinessCa
   const [addEventModalOpen, setAddEventModalOpen] = useState(false);
   const [editEventModalOpen, setEditEventModalOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
-  const [currentView, setCurrentView] = useState('dayGridMonth');
+  const [currentView, setCurrentView] = useState('timeGridWeek');
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -414,7 +414,7 @@ export function BusinessCalendar({ mode = 'full', height = '700px' }: BusinessCa
       <div className="calendar-container bg-white dark:bg-gray-900 rounded-b-lg" style={{ height }}>
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView={isMobileView ? 'dayGridMonth' : 'dayGridMonth'}
+          initialView={isMobileView ? 'dayGridMonth' : 'timeGridWeek'}
           headerToolbar={{
             left: 'prev,next today',
             center: 'title',
