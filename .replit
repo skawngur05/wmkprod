@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "postgresql-16"]
+modules = ["nodejs-20", "web"]
 [agent]
 expertMode = true
 
@@ -33,6 +33,10 @@ externalPort = 80
 [[ports]]
 localPort = 33465
 externalPort = 3002
+
+[[ports]]
+localPort = 37959
+externalPort = 3003
 
 [[ports]]
 localPort = 39311
