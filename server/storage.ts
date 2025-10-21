@@ -192,8 +192,273 @@ export class MemStorage implements IStorage {
       this.users.set(id, user);
     });
 
-    // Note: All mockup leads and sample booklets data has been removed.
-    // Only user accounts are retained for authentication purposes.
+    // Create mockup leads data
+    const today = new Date();
+    const getDateString = (daysOffset: number = 0) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() + daysOffset);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const mockLeads = [
+      {
+        name: "John Smith",
+        phone: "555-0101",
+        email: "john.smith@email.com",
+        lead_origin: "Facebook",
+        project_type: "Residential",
+        date_created: getDateString(-30),
+        next_followup_date: getDateString(2),
+        remarks: "New",
+        assigned_to: "Patrick",
+        notes: "Interested in kitchen renovation",
+        project_amount: "5000.00",
+        address: "123 Main St, Miami, FL 33101"
+      },
+      {
+        name: "Sarah Johnson",
+        phone: "555-0102",
+        email: "sarah.j@email.com",
+        lead_origin: "Google Text",
+        project_type: "Residential",
+        date_created: getDateString(-25),
+        next_followup_date: getDateString(5),
+        remarks: "In Progress",
+        assigned_to: "Lina",
+        notes: "Looking for bathroom wall installation. Follow up needed.",
+        project_amount: "3500.00",
+        deposit_paid: true,
+        address: "456 Oak Ave, Miami, FL 33102"
+      },
+      {
+        name: "Miami Office Center",
+        phone: "555-0103",
+        email: "facilities@miamicenter.com",
+        lead_origin: "Commercial",
+        project_type: "Commercial",
+        commercial_subcategory: "Walls",
+        market: "Office Space",
+        date_created: getDateString(-20),
+        next_followup_date: getDateString(7),
+        remarks: "In Progress",
+        assigned_to: "Kim",
+        notes: "Large commercial project - office renovation. Needs quote for 2000 sq ft.",
+        project_amount: "25000.00",
+        deposit_paid: true,
+        address: "789 Business Blvd, Miami, FL 33103"
+      },
+      {
+        name: "Robert Martinez",
+        phone: "555-0104",
+        email: "r.martinez@email.com",
+        lead_origin: "Instagram",
+        project_type: "Residential",
+        date_created: getDateString(-18),
+        remarks: "Sold",
+        assigned_to: "Patrick",
+        notes: "Completed installation last week. Very satisfied customer.",
+        project_amount: "7500.00",
+        deposit_paid: true,
+        balance_paid: true,
+        installation_date: getDateString(-7),
+        installation_end_date: getDateString(-5),
+        assigned_installer: "Angel",
+        address: "321 Palm Dr, Miami, FL 33104"
+      },
+      {
+        name: "Lisa Chen",
+        phone: "555-0105",
+        email: "lisa.chen@email.com",
+        lead_origin: "Referral",
+        project_type: "Residential",
+        date_created: getDateString(-15),
+        next_followup_date: getDateString(1),
+        remarks: "New",
+        assigned_to: "Lina",
+        notes: "Referred by Robert Martinez. Interested in similar project.",
+        project_amount: "6000.00",
+        address: "654 Beach St, Miami, FL 33105"
+      },
+      {
+        name: "Tech Startup LLC",
+        phone: "555-0106",
+        email: "admin@techstartup.com",
+        lead_origin: "Website",
+        project_type: "Commercial",
+        commercial_subcategory: "Walls",
+        market: "Office Space",
+        date_created: getDateString(-12),
+        next_followup_date: getDateString(3),
+        remarks: "In Progress",
+        assigned_to: "Kim",
+        notes: "New office space setup. Interested in modern wall designs.",
+        project_amount: "15000.00",
+        deposit_paid: true,
+        pickup_date: getDateString(10),
+        address: "987 Innovation Way, Miami, FL 33106"
+      },
+      {
+        name: "Michael Brown",
+        phone: "555-0107",
+        email: "mbrown@email.com",
+        lead_origin: "Trade Show",
+        project_type: "Residential",
+        date_created: getDateString(-10),
+        remarks: "Not Interested",
+        assigned_to: "Patrick",
+        notes: "Met at trade show. Budget constraints, not moving forward.",
+        project_amount: "0.00",
+        address: "111 Sunset Blvd, Miami, FL 33107"
+      },
+      {
+        name: "Grand Hotel Miami",
+        phone: "555-0108",
+        email: "purchasing@grandhotel.com",
+        lead_origin: "Commercial",
+        project_type: "Commercial",
+        commercial_subcategory: "Walls",
+        market: "Hospitality",
+        date_created: getDateString(-8),
+        next_followup_date: getDateString(14),
+        remarks: "In Progress",
+        assigned_to: "Kim",
+        notes: "Hotel lobby renovation. Large project, multiple areas.",
+        project_amount: "45000.00",
+        address: "222 Luxury Lane, Miami, FL 33108"
+      },
+      {
+        name: "Jennifer Williams",
+        phone: "555-0109",
+        email: "jen.w@email.com",
+        lead_origin: "WhatsApp",
+        project_type: "Residential",
+        date_created: getDateString(-7),
+        next_followup_date: getDateString(0),
+        remarks: "New",
+        assigned_to: "Lina",
+        notes: "Quick inquiry via WhatsApp. Needs follow up today.",
+        project_amount: "4000.00",
+        address: "333 Garden View, Miami, FL 33109"
+      },
+      {
+        name: "David Lee",
+        phone: "555-0110",
+        email: "david.lee@email.com",
+        lead_origin: "Cold Call",
+        project_type: "Residential",
+        date_created: getDateString(-5),
+        remarks: "Sold",
+        assigned_to: "Patrick",
+        notes: "Installation scheduled for next week.",
+        project_amount: "5500.00",
+        deposit_paid: true,
+        installation_date: getDateString(7),
+        assigned_installer: "Brian",
+        address: "444 River Rd, Miami, FL 33110"
+      },
+      {
+        name: "Retail Store Chain",
+        phone: "555-0111",
+        email: "properties@retailchain.com",
+        lead_origin: "Commercial",
+        project_type: "Commercial",
+        commercial_subcategory: "Walls",
+        market: "Retail",
+        date_created: getDateString(-4),
+        next_followup_date: getDateString(10),
+        remarks: "In Progress",
+        assigned_to: "Kim",
+        notes: "Multiple locations potential. Starting with flagship store.",
+        project_amount: "35000.00",
+        address: "555 Shopping Plaza, Miami, FL 33111"
+      },
+      {
+        name: "Amanda Garcia",
+        phone: "555-0112",
+        email: "agarcia@email.com",
+        lead_origin: "Facebook",
+        project_type: "Residential",
+        date_created: getDateString(-3),
+        remarks: "Not Service Area",
+        assigned_to: "Lina",
+        notes: "Outside our service area. Provided referral to partner.",
+        project_amount: "0.00",
+        address: "666 Far Away St, Orlando, FL 32801"
+      },
+      {
+        name: "Dr. James Wilson",
+        phone: "555-0113",
+        email: "dr.wilson@clinic.com",
+        lead_origin: "Google Text",
+        project_type: "Commercial",
+        commercial_subcategory: "Walls",
+        market: "Healthcare",
+        date_created: getDateString(-2),
+        next_followup_date: getDateString(5),
+        remarks: "New",
+        assigned_to: "Kim",
+        notes: "Medical clinic renovation. Health code compliance required.",
+        project_amount: "18000.00",
+        address: "777 Medical Center Dr, Miami, FL 33112"
+      },
+      {
+        name: "Maria Rodriguez",
+        phone: "555-0114",
+        email: "maria.r@email.com",
+        lead_origin: "Instagram",
+        project_type: "Residential",
+        date_created: getDateString(-1),
+        next_followup_date: getDateString(4),
+        remarks: "In Progress",
+        assigned_to: "Patrick",
+        notes: "Saw our Instagram posts. Very interested in modern designs.",
+        project_amount: "6500.00",
+        address: "888 Coral Way, Miami, FL 33113"
+      },
+      {
+        name: "Thomas Anderson",
+        phone: "555-0115",
+        email: "t.anderson@email.com",
+        lead_origin: "Referral",
+        project_type: "Residential",
+        date_created: getDateString(0),
+        next_followup_date: getDateString(2),
+        remarks: "New",
+        assigned_to: "Lina",
+        notes: "Just received today. First contact pending.",
+        project_amount: "4500.00",
+        address: "999 Sunset Ct, Miami, FL 33114"
+      }
+    ];
+
+    mockLeads.forEach((leadData, index) => {
+      const id = (index + 1).toString();
+      const lead: Lead = {
+        ...leadData,
+        id,
+        commercial_subcategory: leadData.commercial_subcategory || null,
+        market: leadData.market || null,
+        email: leadData.email || null,
+        phone: leadData.phone || null,
+        next_followup_date: leadData.next_followup_date || null,
+        notes: leadData.notes || null,
+        additional_notes: null,
+        created_at: new Date(leadData.date_created),
+        updated_at: new Date(leadData.date_created),
+        deposit_paid: leadData.deposit_paid || false,
+        balance_paid: leadData.balance_paid || false,
+        pickup_date: leadData.pickup_date || null,
+        installation_date: leadData.installation_date || null,
+        installation_end_date: leadData.installation_end_date || null,
+        assigned_installer: leadData.assigned_installer || null,
+        address: leadData.address || null,
+        selected_colors: null
+      };
+      this.leads.set(id, lead);
+    });
   }
 
   async getUser(id: string): Promise<User | undefined> {
