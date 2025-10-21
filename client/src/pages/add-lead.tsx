@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, User, Phone, Mail, Share2, Flag, Users, DollarSign, Calendar, FileText, Save, X, Loader2, HardHat, Palette, Building2, Target } from 'lucide-react';
 import { enrichFromDatabase, type InternalEnrichmentData } from '@/lib/internal-enrichment';
 import { EnrichmentModal } from '@/components/enrichment-modal';
@@ -325,272 +325,335 @@ export default function AddLead() {
         </div>
 
         <form onSubmit={handleSubmit} data-testid="add-lead-form" className="space-y-6">
-          {/* Contact Information Card */}
+          {/* Main Unified Card - Contact, Lead Management, Additional Info */}
           <Card className="shadow-lg border-0 dark:bg-gray-800">
-            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white">
-              <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Contact Information
-              </CardTitle>
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 text-white">
+              <CardTitle className="text-2xl font-bold">Lead Information</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="flex items-center gap-2 font-medium text-sm">
-                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    Full Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    required
-                    data-testid="input-lead-name"
-                    placeholder="Enter customer's full name"
-                    className="h-11"
-                  />
+            <CardContent className="p-8">
+              <div className="space-y-10">
+                
+                {/* Contact Information Section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                      <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Contact Information</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Customer's basic details</p>
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="flex items-center gap-2 font-medium text-sm">
+                        <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        Full Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        required
+                        data-testid="input-lead-name"
+                        placeholder="Enter customer's full name"
+                        className="h-11"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="flex items-center gap-2 font-medium text-sm">
+                        <Phone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        Phone Number <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        required
+                        data-testid="input-lead-phone"
+                        placeholder="(555) 123-4567"
+                        className="h-11"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="flex items-center gap-2 font-medium text-sm">
+                        <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        Email Address
+                        {isEnriching && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        data-testid="input-lead-email"
+                        placeholder="customer@example.com"
+                        className="h-11"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lead_origin" className="flex items-center gap-2 font-medium text-sm">
+                        <Share2 className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                        Lead Source <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.lead_origin}
+                        onValueChange={(value) => handleInputChange('lead_origin', value)}
+                      >
+                        <SelectTrigger data-testid="select-lead-origin" className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LEAD_ORIGINS.map(origin => (
+                            <SelectItem key={origin} value={origin}>
+                              {origin.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="date_created" className="flex items-center gap-2 font-medium text-sm">
+                        <Calendar className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                        Date Created <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="date_created"
+                        type="date"
+                        value={formData.date_created}
+                        onChange={(e) => handleInputChange('date_created', e.target.value)}
+                        required
+                        data-testid="input-date-created"
+                        className="h-11"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="flex items-center gap-2 font-medium text-sm">
-                    <Phone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    Phone Number <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    required
-                    data-testid="input-lead-phone"
-                    placeholder="(555) 123-4567"
-                    className="h-11"
-                  />
+                <Separator className="my-8" />
+
+                {/* Lead Management Section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                      <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Lead Management</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Project details and assignment</p>
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Project Type */}
+                    <div className="space-y-2">
+                      <Label htmlFor="project_type" className="flex items-center gap-2 font-medium text-sm">
+                        <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                        Project Type <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.project_type}
+                        onValueChange={(value) => handleInputChange('project_type', value)}
+                      >
+                        <SelectTrigger data-testid="select-project-type" className="h-11">
+                          <SelectValue placeholder="Select project type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROJECT_TYPES
+                            .filter(type => {
+                              // Commercial users can only create Commercial leads
+                              if (user?.role === 'commercial_sales') {
+                                return type === 'Commercial';
+                              }
+                              // All other users can create any type
+                              return true;
+                            })
+                            .map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Commercial Subcategory - Only shown when Commercial is selected */}
+                    {formData.project_type === 'Commercial' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="commercial_subcategory" className="flex items-center gap-2 font-medium text-sm">
+                          <HardHat className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                          Applications <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.commercial_subcategory}
+                          onValueChange={(value) => handleInputChange('commercial_subcategory', value)}
+                        >
+                          <SelectTrigger data-testid="select-commercial-subcategory" className="h-11">
+                            <SelectValue placeholder="Select application" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {COMMERCIAL_SUBCATEGORIES.map(category => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Markets - Only shown when Commercial is selected */}
+                    {formData.project_type === 'Commercial' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="market" className="flex items-center gap-2 font-medium text-sm">
+                          <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          Market Segment <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.market}
+                          onValueChange={(value) => handleInputChange('market', value)}
+                        >
+                          <SelectTrigger data-testid="select-market" className="h-11">
+                            <SelectValue placeholder="Select market type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MARKETS.map(market => (
+                              <SelectItem key={market} value={market}>
+                                {market}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Lead Status */}
+                    <div className="space-y-2">
+                      <Label htmlFor="status" className="flex items-center gap-2 font-medium text-sm">
+                        <Flag className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                        Lead Status
+                      </Label>
+                      <Select
+                        value={formData.remarks}
+                        onValueChange={(value) => handleInputChange('remarks', value)}
+                      >
+                        <SelectTrigger data-testid="select-lead-status" className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LEAD_STATUSES.map(status => (
+                            <SelectItem key={status} value={status}>
+                              {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Assigned To */}
+                    <div className="space-y-2">
+                      <Label htmlFor="assigned_to" className="flex items-center gap-2 font-medium text-sm">
+                        <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                        Assign To
+                      </Label>
+                      <Select
+                        value={formData.assigned_to}
+                        onValueChange={(value) => handleInputChange('assigned_to', value)}
+                      >
+                        <SelectTrigger data-testid="select-lead-assigned" className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeUsers.map((user: any) => (
+                            <SelectItem key={user.id} value={user.full_name || user.username}>
+                              {user.full_name || user.username}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Project Amount */}
+                    <div className="space-y-2">
+                      <Label htmlFor="project_amount" className="flex items-center gap-2 font-medium text-sm">
+                        <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        Estimated Amount
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">$</span>
+                        <Input
+                          id="project_amount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.project_amount}
+                          onChange={(e) => handleInputChange('project_amount', e.target.value)}
+                          data-testid="input-lead-amount"
+                          placeholder="0.00"
+                          className="h-11 pl-7"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="flex items-center gap-2 font-medium text-sm">
-                    <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    Email Address
-                    {isEnriching && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    data-testid="input-lead-email"
-                    placeholder="customer@example.com"
-                    className="h-11"
-                  />
+                <Separator className="my-8" />
+
+                {/* Additional Information Section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
+                      <FileText className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Additional Information</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Follow-up and notes</p>
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="next_followup_date" className="flex items-center gap-2 font-medium text-sm">
+                        <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        Next Follow-up Date
+                      </Label>
+                      <Input
+                        id="next_followup_date"
+                        type="date"
+                        value={formData.next_followup_date}
+                        onChange={(e) => handleInputChange('next_followup_date', e.target.value)}
+                        data-testid="input-lead-followup"
+                        className="h-11"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="notes" className="flex items-center gap-2 font-medium text-sm">
+                        <FileText className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                        Initial Notes
+                      </Label>
+                      <Textarea
+                        id="notes"
+                        rows={4}
+                        value={formData.notes}
+                        onChange={(e) => handleInputChange('notes', e.target.value)}
+                        data-testid="textarea-lead-notes"
+                        placeholder="Enter any initial notes about this lead..."
+                        className="resize-none"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="lead_origin" className="flex items-center gap-2 font-medium text-sm">
-                    <Share2 className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                    Lead Source <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.lead_origin}
-                    onValueChange={(value) => handleInputChange('lead_origin', value)}
-                  >
-                    <SelectTrigger data-testid="select-lead-origin" className="h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LEAD_ORIGINS.map(origin => (
-                        <SelectItem key={origin} value={origin}>
-                          {origin.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="date_created" className="flex items-center gap-2 font-medium text-sm">
-                    <Calendar className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
-                    Date Created <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="date_created"
-                    type="date"
-                    value={formData.date_created}
-                    onChange={(e) => handleInputChange('date_created', e.target.value)}
-                    required
-                    data-testid="input-date-created"
-                    className="h-11"
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Lead Management Card - All in One Container */}
-          <Card className="shadow-lg border-0 dark:bg-gray-800">
-            <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 text-white">
-              <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Lead Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Lead Status */}
-                <div className="space-y-2">
-                  <Label htmlFor="status" className="flex items-center gap-2 font-medium text-sm">
-                    <Flag className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                    Lead Status
-                  </Label>
-                  <Select
-                    value={formData.remarks}
-                    onValueChange={(value) => handleInputChange('remarks', value)}
-                  >
-                    <SelectTrigger data-testid="select-lead-status" className="h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LEAD_STATUSES.map(status => (
-                        <SelectItem key={status} value={status}>
-                          {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Assigned To */}
-                <div className="space-y-2">
-                  <Label htmlFor="assigned_to" className="flex items-center gap-2 font-medium text-sm">
-                    <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                    Assign To
-                  </Label>
-                  <Select
-                    value={formData.assigned_to}
-                    onValueChange={(value) => handleInputChange('assigned_to', value)}
-                  >
-                    <SelectTrigger data-testid="select-lead-assigned" className="h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeUsers.map((user: any) => (
-                        <SelectItem key={user.id} value={user.full_name || user.username}>
-                          {user.full_name || user.username}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Project Type */}
-                <div className="space-y-2">
-                  <Label htmlFor="project_type" className="flex items-center gap-2 font-medium text-sm">
-                    <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                    Project Type <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.project_type}
-                    onValueChange={(value) => handleInputChange('project_type', value)}
-                  >
-                    <SelectTrigger data-testid="select-project-type" className="h-11">
-                      <SelectValue placeholder="Select project type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PROJECT_TYPES
-                        .filter(type => {
-                          // Commercial users can only create Commercial leads
-                          if (user?.role === 'commercial_sales') {
-                            return type === 'Commercial';
-                          }
-                          // All other users can create any type
-                          return true;
-                        })
-                        .map(type => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Commercial Subcategory - Only shown when Commercial is selected */}
-                {formData.project_type === 'Commercial' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="commercial_subcategory" className="flex items-center gap-2 font-medium text-sm">
-                      <HardHat className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                      Applications <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={formData.commercial_subcategory}
-                      onValueChange={(value) => handleInputChange('commercial_subcategory', value)}
-                    >
-                      <SelectTrigger data-testid="select-commercial-subcategory" className="h-11">
-                        <SelectValue placeholder="Select application" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COMMERCIAL_SUBCATEGORIES.map(category => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Markets - Only shown when Commercial is selected */}
-                {formData.project_type === 'Commercial' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="market" className="flex items-center gap-2 font-medium text-sm">
-                      <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      Market Segment <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={formData.market}
-                      onValueChange={(value) => handleInputChange('market', value)}
-                    >
-                      <SelectTrigger data-testid="select-market" className="h-11">
-                        <SelectValue placeholder="Select market type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MARKETS.map(market => (
-                          <SelectItem key={market} value={market}>
-                            {market}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Project Amount */}
-                <div className="space-y-2">
-                  <Label htmlFor="project_amount" className="flex items-center gap-2 font-medium text-sm">
-                    <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    Estimated Amount
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">$</span>
-                    <Input
-                      id="project_amount"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.project_amount}
-                      onChange={(e) => handleInputChange('project_amount', e.target.value)}
-                      data-testid="input-lead-amount"
-                      placeholder="0.00"
-                      className="h-11 pl-7"
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Installation & Payment Section (Only for Sold Status) */}
+          {/* Installation & Payment Section (Only for Sold Status) - Separate Card */}
           {formData.remarks === 'Sold' && (
             <Card className="shadow-lg border-0 dark:bg-gray-800">
               <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 dark:from-teal-600 dark:to-teal-700 text-white">
@@ -826,50 +889,6 @@ export default function AddLead() {
               </CardContent>
             </Card>
           )}
-
-          {/* Additional Information Card */}
-          <Card className="shadow-lg border-0 dark:bg-gray-800">
-            <CardHeader className="bg-gradient-to-r from-rose-500 to-rose-600 dark:from-rose-600 dark:to-rose-700 text-white">
-              <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Additional Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="next_followup_date" className="flex items-center gap-2 font-medium text-sm">
-                    <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    Next Follow-up Date
-                  </Label>
-                  <Input
-                    id="next_followup_date"
-                    type="date"
-                    value={formData.next_followup_date}
-                    onChange={(e) => handleInputChange('next_followup_date', e.target.value)}
-                    data-testid="input-lead-followup"
-                    className="h-11"
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="notes" className="flex items-center gap-2 font-medium text-sm">
-                    <FileText className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                    Initial Notes
-                  </Label>
-                  <Textarea
-                    id="notes"
-                    rows={4}
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    data-testid="textarea-lead-notes"
-                    placeholder="Enter any initial notes about this lead..."
-                    className="resize-none"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-4 pt-4">
