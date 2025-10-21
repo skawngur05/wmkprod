@@ -427,7 +427,7 @@ export default function AddLead() {
             </CardContent>
           </Card>
 
-          {/* Lead Management Card - Redesigned */}
+          {/* Lead Management Card - All in One Container */}
           <Card className="shadow-lg border-0 dark:bg-gray-800">
             <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 text-white">
               <CardTitle className="text-xl font-semibold flex items-center gap-2">
@@ -436,177 +436,154 @@ export default function AddLead() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* Left Column - Status & Assignment */}
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-5 rounded-xl border border-blue-100 dark:border-blue-800">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                      <Flag className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      Status & Assignment
-                    </h4>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="status" className="flex items-center gap-2 font-medium text-sm">
-                          <Flag className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                          Lead Status
-                        </Label>
-                        <Select
-                          value={formData.remarks}
-                          onValueChange={(value) => handleInputChange('remarks', value)}
-                        >
-                          <SelectTrigger data-testid="select-lead-status" className="h-11 bg-white dark:bg-gray-900">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {LEAD_STATUSES.map(status => (
-                              <SelectItem key={status} value={status}>
-                                {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="assigned_to" className="flex items-center gap-2 font-medium text-sm">
-                          <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                          Assign To
-                        </Label>
-                        <Select
-                          value={formData.assigned_to}
-                          onValueChange={(value) => handleInputChange('assigned_to', value)}
-                        >
-                          <SelectTrigger data-testid="select-lead-assigned" className="h-11 bg-white dark:bg-gray-900">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {activeUsers.map((user: any) => (
-                              <SelectItem key={user.id} value={user.full_name || user.username}>
-                                {user.full_name || user.username}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-5 rounded-xl border border-green-100 dark:border-green-800">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      Project Value
-                    </h4>
-                    <div className="space-y-2">
-                      <Label htmlFor="project_amount" className="flex items-center gap-2 font-medium text-sm">
-                        <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        Estimated Amount
-                      </Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">$</span>
-                        <Input
-                          id="project_amount"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={formData.project_amount}
-                          onChange={(e) => handleInputChange('project_amount', e.target.value)}
-                          data-testid="input-lead-amount"
-                          placeholder="0.00"
-                          className="h-11 pl-7 bg-white dark:bg-gray-900"
-                        />
-                      </div>
-                    </div>
-                  </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Lead Status */}
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="flex items-center gap-2 font-medium text-sm">
+                    <Flag className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                    Lead Status
+                  </Label>
+                  <Select
+                    value={formData.remarks}
+                    onValueChange={(value) => handleInputChange('remarks', value)}
+                  >
+                    <SelectTrigger data-testid="select-lead-status" className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LEAD_STATUSES.map(status => (
+                        <SelectItem key={status} value={status}>
+                          {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {/* Right Column - Project Details */}
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 p-5 rounded-xl border border-violet-100 dark:border-violet-800">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                      <HardHat className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                      Project Details
-                    </h4>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="project_type" className="flex items-center gap-2 font-medium text-sm">
-                          <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                          Project Type <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={formData.project_type}
-                          onValueChange={(value) => handleInputChange('project_type', value)}
-                        >
-                          <SelectTrigger data-testid="select-project-type" className="h-11 bg-white dark:bg-gray-900">
-                            <SelectValue placeholder="Select project type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PROJECT_TYPES
-                              .filter(type => {
-                                // Commercial users can only create Commercial leads
-                                if (user?.role === 'commercial_sales') {
-                                  return type === 'Commercial';
-                                }
-                                // All other users can create any type
-                                return true;
-                              })
-                              .map(type => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                {/* Assigned To */}
+                <div className="space-y-2">
+                  <Label htmlFor="assigned_to" className="flex items-center gap-2 font-medium text-sm">
+                    <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    Assign To
+                  </Label>
+                  <Select
+                    value={formData.assigned_to}
+                    onValueChange={(value) => handleInputChange('assigned_to', value)}
+                  >
+                    <SelectTrigger data-testid="select-lead-assigned" className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeUsers.map((user: any) => (
+                        <SelectItem key={user.id} value={user.full_name || user.username}>
+                          {user.full_name || user.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                      {/* Commercial Specific Fields */}
-                      {formData.project_type === 'Commercial' && (
-                        <div className="space-y-4 pt-4 border-t border-violet-200 dark:border-violet-700">
-                          <div className="space-y-2">
-                            <Label htmlFor="commercial_subcategory" className="flex items-center gap-2 font-medium text-sm">
-                              <HardHat className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                              Applications <span className="text-red-500">*</span>
-                            </Label>
-                            <Select
-                              value={formData.commercial_subcategory}
-                              onValueChange={(value) => handleInputChange('commercial_subcategory', value)}
-                            >
-                              <SelectTrigger data-testid="select-commercial-subcategory" className="h-11 bg-white dark:bg-gray-900">
-                                <SelectValue placeholder="Select application" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {COMMERCIAL_SUBCATEGORIES.map(category => (
-                                  <SelectItem key={category} value={category}>
-                                    {category}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                {/* Project Type */}
+                <div className="space-y-2">
+                  <Label htmlFor="project_type" className="flex items-center gap-2 font-medium text-sm">
+                    <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                    Project Type <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.project_type}
+                    onValueChange={(value) => handleInputChange('project_type', value)}
+                  >
+                    <SelectTrigger data-testid="select-project-type" className="h-11">
+                      <SelectValue placeholder="Select project type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROJECT_TYPES
+                        .filter(type => {
+                          // Commercial users can only create Commercial leads
+                          if (user?.role === 'commercial_sales') {
+                            return type === 'Commercial';
+                          }
+                          // All other users can create any type
+                          return true;
+                        })
+                        .map(type => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="market" className="flex items-center gap-2 font-medium text-sm">
-                              <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                              Market Segment <span className="text-red-500">*</span>
-                            </Label>
-                            <Select
-                              value={formData.market}
-                              onValueChange={(value) => handleInputChange('market', value)}
-                            >
-                              <SelectTrigger data-testid="select-market" className="h-11 bg-white dark:bg-gray-900">
-                                <SelectValue placeholder="Select market type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {MARKETS.map(market => (
-                                  <SelectItem key={market} value={market}>
-                                    {market}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                {/* Commercial Subcategory - Only shown when Commercial is selected */}
+                {formData.project_type === 'Commercial' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="commercial_subcategory" className="flex items-center gap-2 font-medium text-sm">
+                      <HardHat className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                      Applications <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={formData.commercial_subcategory}
+                      onValueChange={(value) => handleInputChange('commercial_subcategory', value)}
+                    >
+                      <SelectTrigger data-testid="select-commercial-subcategory" className="h-11">
+                        <SelectValue placeholder="Select application" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COMMERCIAL_SUBCATEGORIES.map(category => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Markets - Only shown when Commercial is selected */}
+                {formData.project_type === 'Commercial' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="market" className="flex items-center gap-2 font-medium text-sm">
+                      <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      Market Segment <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={formData.market}
+                      onValueChange={(value) => handleInputChange('market', value)}
+                    >
+                      <SelectTrigger data-testid="select-market" className="h-11">
+                        <SelectValue placeholder="Select market type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MARKETS.map(market => (
+                          <SelectItem key={market} value={market}>
+                            {market}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Project Amount */}
+                <div className="space-y-2">
+                  <Label htmlFor="project_amount" className="flex items-center gap-2 font-medium text-sm">
+                    <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    Estimated Amount
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">$</span>
+                    <Input
+                      id="project_amount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.project_amount}
+                      onChange={(e) => handleInputChange('project_amount', e.target.value)}
+                      data-testid="input-lead-amount"
+                      placeholder="0.00"
+                      className="h-11 pl-7"
+                    />
                   </div>
                 </div>
               </div>
