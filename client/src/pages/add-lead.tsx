@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, User, Phone, Mail, Share2, Flag, Users, DollarSign, Calendar, FileText, Save, X, Loader2, HardHat, Palette } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, Share2, Flag, Users, DollarSign, Calendar, FileText, Save, X, Loader2, HardHat, Palette, Building2, Target } from 'lucide-react';
 import { enrichFromDatabase, type InternalEnrichmentData } from '@/lib/internal-enrichment';
 import { EnrichmentModal } from '@/components/enrichment-modal';
 
@@ -303,8 +303,8 @@ export default function AddLead() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
@@ -318,295 +318,323 @@ export default function AddLead() {
               Back to Leads
             </Button>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
             Add New Lead
           </h1>
-          <p className="text-gray-600">Create a new lead and start building your pipeline</p>
+          <p className="text-gray-600 dark:text-gray-400">Create a new lead and start building your pipeline</p>
         </div>
 
-        {/* Form Card */}
-        <div className="max-w-4xl mx-auto">
-          <Card className="shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+        <form onSubmit={handleSubmit} data-testid="add-lead-form" className="space-y-6">
+          {/* Contact Information Card */}
+          <Card className="shadow-lg border-0 dark:bg-gray-800">
+            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white">
               <CardTitle className="text-xl font-semibold flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Lead Information
+                Contact Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-8">
-              <form onSubmit={handleSubmit} data-testid="add-lead-form" className="space-y-8">
-                
-                {/* Basic Information Section */}
-                <div>
-                  <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
-                    <User className="h-5 w-5 text-blue-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
-                  </div>
-                  
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="flex items-center gap-2 font-medium">
-                        <User className="h-4 w-4 text-blue-600" />
-                        Full Name *
-                      </Label>
-                      <Input
-                        id="name"
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        required
-                        data-testid="input-lead-name"
-                        placeholder="Enter customer's full name"
-                        className="h-11"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="flex items-center gap-2 font-medium">
-                        <Phone className="h-4 w-4 text-emerald-600" />
-                        Phone Number *
-                      </Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        required
-                        data-testid="input-lead-phone"
-                        placeholder="(555) 123-4567"
-                        className="h-11"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="flex items-center gap-2 font-medium">
-                        <Mail className="h-4 w-4 text-green-600" />
-                        Email Address
-                        {isEnriching && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
-                      </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        data-testid="input-lead-email"
-                        placeholder="customer@example.com"
-                        className="h-11"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="lead_origin" className="flex items-center gap-2 font-medium">
-                        <Share2 className="h-4 w-4 text-orange-600" />
-                        Lead Origin *
-                      </Label>
-                      <Select
-                        value={formData.lead_origin}
-                        onValueChange={(value) => handleInputChange('lead_origin', value)}
-                      >
-                        <SelectTrigger data-testid="select-lead-origin" className="h-11">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LEAD_ORIGINS.map(origin => (
-                            <SelectItem key={origin} value={origin}>
-                              {origin.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="date_created" className="flex items-center gap-2 font-medium">
-                        <Calendar className="h-4 w-4 text-cyan-600" />
-                        Date Created *
-                      </Label>
-                      <Input
-                        id="date_created"
-                        type="date"
-                        value={formData.date_created}
-                        onChange={(e) => handleInputChange('date_created', e.target.value)}
-                        required
-                        data-testid="input-date-created"
-                        className="h-11"
-                      />
-                      <p className="text-xs text-gray-500">
-                        Date when this lead was first created (for historical records)
-                      </p>
-                    </div>
-                  </div>
+            <CardContent className="p-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="flex items-center gap-2 font-medium text-sm">
+                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    Full Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    required
+                    data-testid="input-lead-name"
+                    placeholder="Enter customer's full name"
+                    className="h-11"
+                  />
                 </div>
 
-                {/* Lead Management Section */}
-                <div>
-                  <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
-                    <Flag className="h-5 w-5 text-red-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Lead Management</h3>
-                  </div>
-                  
-                  <div className="grid md:grid-cols-4 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="status" className="flex items-center gap-2 font-medium">
-                        <Flag className="h-4 w-4 text-yellow-600" />
-                        Status
-                      </Label>
-                      <Select
-                        value={formData.remarks}
-                        onValueChange={(value) => handleInputChange('remarks', value)}
-                      >
-                        <SelectTrigger data-testid="select-lead-status" className="h-11">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LEAD_STATUSES.map(status => (
-                            <SelectItem key={status} value={status}>
-                              {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="flex items-center gap-2 font-medium text-sm">
+                    <Phone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    Phone Number <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    required
+                    data-testid="input-lead-phone"
+                    placeholder="(555) 123-4567"
+                    className="h-11"
+                  />
+                </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="assigned_to" className="flex items-center gap-2 font-medium">
-                        <Users className="h-4 w-4 text-purple-600" />
-                        Assigned To
-                      </Label>
-                      <Select
-                        value={formData.assigned_to}
-                        onValueChange={(value) => handleInputChange('assigned_to', value)}
-                      >
-                        <SelectTrigger data-testid="select-lead-assigned" className="h-11">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {activeUsers.map((user: any) => (
-                            <SelectItem key={user.id} value={user.full_name || user.username}>
-                              {user.full_name || user.username}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="flex items-center gap-2 font-medium text-sm">
+                    <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    Email Address
+                    {isEnriching && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    data-testid="input-lead-email"
+                    placeholder="customer@example.com"
+                    className="h-11"
+                  />
+                </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="project_type" className="flex items-center gap-2 font-medium">
-                        <HardHat className="h-4 w-4 text-indigo-600" />
-                        Project Type
-                        <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={formData.project_type}
-                        onValueChange={(value) => handleInputChange('project_type', value)}
-                      >
-                        <SelectTrigger data-testid="select-project-type" className="h-11">
-                          <SelectValue placeholder="Select project type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PROJECT_TYPES
-                            .filter(type => {
-                              // Commercial users can only create Commercial leads
-                              if (user?.role === 'commercial_sales') {
-                                return type === 'Commercial';
-                              }
-                              // All other users can create any type
-                              return true;
-                            })
-                            .map(type => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lead_origin" className="flex items-center gap-2 font-medium text-sm">
+                    <Share2 className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    Lead Source <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.lead_origin}
+                    onValueChange={(value) => handleInputChange('lead_origin', value)}
+                  >
+                    <SelectTrigger data-testid="select-lead-origin" className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LEAD_ORIGINS.map(origin => (
+                        <SelectItem key={origin} value={origin}>
+                          {origin.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                    {/* Commercial Subcategory - Only shown when Commercial is selected */}
-                    {formData.project_type === 'Commercial' && (
+                <div className="space-y-2">
+                  <Label htmlFor="date_created" className="flex items-center gap-2 font-medium text-sm">
+                    <Calendar className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                    Date Created <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="date_created"
+                    type="date"
+                    value={formData.date_created}
+                    onChange={(e) => handleInputChange('date_created', e.target.value)}
+                    required
+                    data-testid="input-date-created"
+                    className="h-11"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Lead Management Card - Redesigned */}
+          <Card className="shadow-lg border-0 dark:bg-gray-800">
+            <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 text-white">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Lead Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* Left Column - Status & Assignment */}
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-5 rounded-xl border border-blue-100 dark:border-blue-800">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                      <Flag className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      Status & Assignment
+                    </h4>
+                    <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="commercial_subcategory" className="flex items-center gap-2 font-medium">
-                          <HardHat className="h-4 w-4 text-slate-600" />
-                          Applications
-                          <span className="text-red-500">*</span>
+                        <Label htmlFor="status" className="flex items-center gap-2 font-medium text-sm">
+                          <Flag className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                          Lead Status
                         </Label>
                         <Select
-                          value={formData.commercial_subcategory}
-                          onValueChange={(value) => handleInputChange('commercial_subcategory', value)}
+                          value={formData.remarks}
+                          onValueChange={(value) => handleInputChange('remarks', value)}
                         >
-                          <SelectTrigger data-testid="select-commercial-subcategory" className="h-11">
-                            <SelectValue placeholder="Select commercial category" />
+                          <SelectTrigger data-testid="select-lead-status" className="h-11 bg-white dark:bg-gray-900">
+                            <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {COMMERCIAL_SUBCATEGORIES.map(category => (
-                              <SelectItem key={category} value={category}>
-                                {category}
+                            {LEAD_STATUSES.map(status => (
+                              <SelectItem key={status} value={status}>
+                                {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-                    )}
 
-                    {/* Markets - Only shown when Commercial is selected */}
-                    {formData.project_type === 'Commercial' && (
                       <div className="space-y-2">
-                        <Label htmlFor="market" className="flex items-center gap-2 font-medium">
-                          <HardHat className="h-4 w-4 text-blue-600" />
-                          Markets
-                          <span className="text-red-500">*</span>
+                        <Label htmlFor="assigned_to" className="flex items-center gap-2 font-medium text-sm">
+                          <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          Assign To
                         </Label>
                         <Select
-                          value={formData.market}
-                          onValueChange={(value) => handleInputChange('market', value)}
+                          value={formData.assigned_to}
+                          onValueChange={(value) => handleInputChange('assigned_to', value)}
                         >
-                          <SelectTrigger data-testid="select-market" className="h-11">
-                            <SelectValue placeholder="Select market type" />
+                          <SelectTrigger data-testid="select-lead-assigned" className="h-11 bg-white dark:bg-gray-900">
+                            <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {MARKETS.map(market => (
-                              <SelectItem key={market} value={market}>
-                                {market}
+                            {activeUsers.map((user: any) => (
+                              <SelectItem key={user.id} value={user.full_name || user.username}>
+                                {user.full_name || user.username}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-                    )}
+                    </div>
+                  </div>
 
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-5 rounded-xl border border-green-100 dark:border-green-800">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      Project Value
+                    </h4>
                     <div className="space-y-2">
-                      <Label htmlFor="project_amount" className="flex items-center gap-2 font-medium">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        Project Amount
+                      <Label htmlFor="project_amount" className="flex items-center gap-2 font-medium text-sm">
+                        <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        Estimated Amount
                       </Label>
-                      <Input
-                        id="project_amount"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.project_amount}
-                        onChange={(e) => handleInputChange('project_amount', e.target.value)}
-                        data-testid="input-lead-amount"
-                        placeholder="0.00"
-                        className="h-11"
-                      />
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">$</span>
+                        <Input
+                          id="project_amount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.project_amount}
+                          onChange={(e) => handleInputChange('project_amount', e.target.value)}
+                          data-testid="input-lead-amount"
+                          placeholder="0.00"
+                          className="h-11 pl-7 bg-white dark:bg-gray-900"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Installation & Payment Section (Only for Sold Status) */}
-                {formData.remarks === 'Sold' && (
+                {/* Right Column - Project Details */}
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 p-5 rounded-xl border border-violet-100 dark:border-violet-800">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                      <HardHat className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                      Project Details
+                    </h4>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="project_type" className="flex items-center gap-2 font-medium text-sm">
+                          <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                          Project Type <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.project_type}
+                          onValueChange={(value) => handleInputChange('project_type', value)}
+                        >
+                          <SelectTrigger data-testid="select-project-type" className="h-11 bg-white dark:bg-gray-900">
+                            <SelectValue placeholder="Select project type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PROJECT_TYPES
+                              .filter(type => {
+                                // Commercial users can only create Commercial leads
+                                if (user?.role === 'commercial_sales') {
+                                  return type === 'Commercial';
+                                }
+                                // All other users can create any type
+                                return true;
+                              })
+                              .map(type => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Commercial Specific Fields */}
+                      {formData.project_type === 'Commercial' && (
+                        <div className="space-y-4 pt-4 border-t border-violet-200 dark:border-violet-700">
+                          <div className="space-y-2">
+                            <Label htmlFor="commercial_subcategory" className="flex items-center gap-2 font-medium text-sm">
+                              <HardHat className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                              Applications <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                              value={formData.commercial_subcategory}
+                              onValueChange={(value) => handleInputChange('commercial_subcategory', value)}
+                            >
+                              <SelectTrigger data-testid="select-commercial-subcategory" className="h-11 bg-white dark:bg-gray-900">
+                                <SelectValue placeholder="Select application" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {COMMERCIAL_SUBCATEGORIES.map(category => (
+                                  <SelectItem key={category} value={category}>
+                                    {category}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="market" className="flex items-center gap-2 font-medium text-sm">
+                              <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              Market Segment <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                              value={formData.market}
+                              onValueChange={(value) => handleInputChange('market', value)}
+                            >
+                              <SelectTrigger data-testid="select-market" className="h-11 bg-white dark:bg-gray-900">
+                                <SelectValue placeholder="Select market type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {MARKETS.map(market => (
+                                  <SelectItem key={market} value={market}>
+                                    {market}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Installation & Payment Section (Only for Sold Status) */}
+          {formData.remarks === 'Sold' && (
+            <Card className="shadow-lg border-0 dark:bg-gray-800">
+              <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 dark:from-teal-600 dark:to-teal-700 text-white">
+                <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                  <HardHat className="h-5 w-5" />
+                  Installation & Payment Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-8">
+                  {/* Installation Dates */}
                   <div>
-                    <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
-                      <HardHat className="h-5 w-5 text-teal-600" />
-                      <h3 className="text-lg font-semibold text-gray-900">Installation & Payment Details</h3>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-3 gap-6">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                      Installation Schedule
+                    </h4>
+                    <div className="grid md:grid-cols-3 gap-4">
                       {formData.deposit_paid && (
                         <div className="space-y-2">
-                          <Label htmlFor="pickup_date" className="flex items-center gap-2 font-medium">
-                            <Calendar className="h-4 w-4 text-violet-600" />
+                          <Label htmlFor="pickup_date" className="flex items-center gap-2 font-medium text-sm">
+                            <Calendar className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                             Pickup Date
                           </Label>
                           <Input
@@ -621,9 +649,9 @@ export default function AddLead() {
                       )}
                       
                       <div className="space-y-2">
-                        <Label htmlFor="installation_date" className="flex items-center gap-2 font-medium">
-                          <Calendar className="h-4 w-4 text-blue-600" />
-                          Installation Start Date
+                        <Label htmlFor="installation_date" className="flex items-center gap-2 font-medium text-sm">
+                          <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          Installation Start
                         </Label>
                         <Input
                           id="installation_date"
@@ -636,9 +664,9 @@ export default function AddLead() {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="installation_end_date" className="flex items-center gap-2 font-medium">
-                          <Calendar className="h-4 w-4 text-amber-600" />
-                          Installation End Date
+                        <Label htmlFor="installation_end_date" className="flex items-center gap-2 font-medium text-sm">
+                          <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                          Installation End
                         </Label>
                         <Input
                           id="installation_end_date"
@@ -648,253 +676,256 @@ export default function AddLead() {
                           data-testid="input-installation-end-date"
                           className="h-11"
                         />
-                        <p className="text-xs text-gray-500">Leave empty for single-day installations</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Leave empty for single-day installations</p>
                       </div>
                     </div>
+                  </div>
 
-                    <div className="grid md:grid-cols-1 gap-6">
-                      <div className="space-y-3">
-                        <Label className="flex items-center gap-2 font-medium">
-                          <Users className="h-4 w-4 text-teal-600" />
-                          Assigned Installers
-                        </Label>
-                        <Select
-                          value=""
-                          onValueChange={(installer) => {
-                            if (installer && !formData.assigned_installer.includes(installer)) {
-                              setFormData({
-                                ...formData,
-                                assigned_installer: [...formData.assigned_installer, installer]
-                              });
-                            }
-                          }}
-                        >
-                          <SelectTrigger data-testid="select-installer" className="h-11 text-base">
-                            <SelectValue placeholder="Select installer to add..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {installersData.filter((installerObj: Installer) => !formData.assigned_installer.includes(installerObj.name)).map((installerObj: Installer) => (
-                              <SelectItem key={installerObj.name} value={installerObj.name}>
-                                {installerObj.name.charAt(0).toUpperCase() + installerObj.name.slice(1)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {formData.assigned_installer.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {formData.assigned_installer.map((installer) => (
-                              <Badge 
-                                key={installer} 
-                                variant="secondary" 
-                                className="flex items-center gap-1 px-2 py-1"
-                              >
-                                {installer.charAt(0).toUpperCase() + installer.slice(1)}
-                                <X 
-                                  className="h-3 w-3 cursor-pointer hover:text-red-500" 
-                                  onClick={() => {
-                                    setFormData({
-                                      ...formData,
-                                      assigned_installer: formData.assigned_installer.filter(i => i !== installer)
-                                    });
-                                  }}
-                                  data-testid={`remove-installer-${installer}`}
-                                />
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
+                  {/* Installers */}
+                  <div>
+                    <Label className="flex items-center gap-2 font-medium text-sm mb-3">
+                      <Users className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                      Assigned Installers
+                    </Label>
+                    <Select
+                      value=""
+                      onValueChange={(installer) => {
+                        if (installer && !formData.assigned_installer.includes(installer)) {
+                          setFormData({
+                            ...formData,
+                            assigned_installer: [...formData.assigned_installer, installer]
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-installer" className="h-11 text-base">
+                        <SelectValue placeholder="Select installer to add..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {installersData.filter((installerObj: Installer) => !formData.assigned_installer.includes(installerObj.name)).map((installerObj: Installer) => (
+                          <SelectItem key={installerObj.name} value={installerObj.name}>
+                            {installerObj.name.charAt(0).toUpperCase() + installerObj.name.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formData.assigned_installer.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {formData.assigned_installer.map((installer) => (
+                          <Badge 
+                            key={installer} 
+                            variant="secondary" 
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm"
+                          >
+                            {installer.charAt(0).toUpperCase() + installer.slice(1)}
+                            <X 
+                              className="h-3 w-3 cursor-pointer hover:text-red-500" 
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  assigned_installer: formData.assigned_installer.filter(i => i !== installer)
+                                });
+                              }}
+                              data-testid={`remove-installer-${installer}`}
+                            />
+                          </Badge>
+                        ))}
                       </div>
+                    )}
+                  </div>
 
-                      {/* Payment Status */}
-                      <div className="md:col-span-2 space-y-3 pt-2 border-t border-gray-200">
-                        <Label className="text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                          Payment Status
-                        </Label>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div 
-                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                              formData.deposit_paid 
-                                ? 'border-green-500 bg-green-50 shadow-sm' 
-                                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                            }`}
-                            onClick={() => setFormData(prev => ({ ...prev, deposit_paid: !prev.deposit_paid }))}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                formData.deposit_paid ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                              }`}>
-                                {formData.deposit_paid && (
-                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-gray-900">Deposit Paid</p>
-                                <p className="text-xs text-gray-600">Initial payment received</p>
-                              </div>
-                            </div>
+                  {/* Payment Status */}
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      Payment Status
+                    </h4>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div 
+                        className={`p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                          formData.deposit_paid 
+                            ? 'border-green-500 bg-green-50 dark:bg-green-900/20 shadow-sm' 
+                            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        onClick={() => setFormData(prev => ({ ...prev, deposit_paid: !prev.deposit_paid }))}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center ${
+                            formData.deposit_paid ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-600'
+                          }`}>
+                            {formData.deposit_paid && (
+                              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
                           </div>
-
-                          <div 
-                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                              formData.balance_paid 
-                                ? 'border-green-500 bg-green-50 shadow-sm' 
-                                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                            }`}
-                            onClick={() => setFormData(prev => ({ ...prev, balance_paid: !prev.balance_paid }))}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                formData.balance_paid ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                              }`}>
-                                {formData.balance_paid && (
-                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-gray-900">Balance Paid</p>
-                                <p className="text-xs text-gray-600">Final payment received</p>
-                              </div>
-                            </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Deposit Paid</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">Initial payment received</p>
                           </div>
                         </div>
                       </div>
 
-                      {/* Color Selection Section */}
-                      <div className="md:col-span-2 space-y-3 pt-4 border-t border-gray-200">
-                        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                          <Palette className="h-4 w-4 text-pink-600" />
-                          COLOR SELECTION (Typically 2 colors)
-                        </Label>
-                        <Select
-                          value=""
-                          onValueChange={(color) => {
-                            if (color && !formData.selected_colors.includes(color)) {
-                              setFormData({
-                                ...formData,
-                                selected_colors: [...formData.selected_colors, color]
-                              });
-                            }
-                          }}
-                        >
-                          <SelectTrigger data-testid="select-color" className="h-11 text-base">
-                            <SelectValue placeholder="Select color to add..." />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60">
-                            {wmkColors.filter((colorObj: any) => !formData.selected_colors.includes(colorObj.code)).map((colorObj: any) => (
-                              <SelectItem key={colorObj.code} value={colorObj.code}>
-                                {colorObj.code}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {formData.selected_colors.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {formData.selected_colors.map((color) => (
-                              <Badge 
-                                key={color} 
-                                variant="outline" 
-                                className="flex items-center gap-1 px-2 py-1 border-purple-200 text-purple-700"
-                              >
-                                {color}
-                                <X 
-                                  className="h-3 w-3 cursor-pointer hover:text-red-500" 
-                                  onClick={() => {
-                                    setFormData({
-                                      ...formData,
-                                      selected_colors: formData.selected_colors.filter(c => c !== color)
-                                    });
-                                  }}
-                                  data-testid={`remove-color-${color}`}
-                                />
-                              </Badge>
-                            ))}
+                      <div 
+                        className={`p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                          formData.balance_paid 
+                            ? 'border-green-500 bg-green-50 dark:bg-green-900/20 shadow-sm' 
+                            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        onClick={() => setFormData(prev => ({ ...prev, balance_paid: !prev.balance_paid }))}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center ${
+                            formData.balance_paid ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-600'
+                          }`}>
+                            {formData.balance_paid && (
+                              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
                           </div>
-                        )}
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Balance Paid</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">Final payment received</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                )}
 
-                {/* Additional Information Section */}
-                <div>
-                  <div className="flex items-center gap-2 mb-6 pb-2 border-b border-gray-200">
-                    <Calendar className="h-5 w-5 text-rose-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
-                  </div>
-                  
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="next_followup_date" className="flex items-center gap-2 font-medium">
-                        <Calendar className="h-4 w-4 text-blue-600" />
-                        Next Follow-up Date
-                      </Label>
-                      <Input
-                        id="next_followup_date"
-                        type="date"
-                        value={formData.next_followup_date}
-                        onChange={(e) => handleInputChange('next_followup_date', e.target.value)}
-                        data-testid="input-lead-followup"
-                        className="h-11"
-                      />
-                    </div>
-
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="notes" className="flex items-center gap-2 font-medium">
-                        <FileText className="h-4 w-4 text-slate-600" />
-                        Initial Notes
-                      </Label>
-                      <Textarea
-                        id="notes"
-                        rows={4}
-                        value={formData.notes}
-                        onChange={(e) => handleInputChange('notes', e.target.value)}
-                        data-testid="textarea-lead-notes"
-                        placeholder="Enter any initial notes about this lead..."
-                        className="resize-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
-                  <Button 
-                    type="button" 
-                    variant="outline"
-                    onClick={handleCancel}
-                    data-testid="button-cancel-add-lead"
-                    className="flex items-center gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createLeadMutation.isPending || !formData.name || !formData.phone}
-                    data-testid="button-submit-add-lead"
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                  >
-                    {createLeadMutation.isPending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Creating Lead...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" />
-                        Create Lead
-                      </>
+                  {/* Color Selection */}
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                      <Palette className="h-4 w-4 text-pink-600 dark:text-pink-400" />
+                      Color Selection (Typically 2 colors)
+                    </Label>
+                    <Select
+                      value=""
+                      onValueChange={(color) => {
+                        if (color && !formData.selected_colors.includes(color)) {
+                          setFormData({
+                            ...formData,
+                            selected_colors: [...formData.selected_colors, color]
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-color" className="h-11 text-base">
+                        <SelectValue placeholder="Select color to add..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60">
+                        {wmkColors.filter((colorObj: any) => !formData.selected_colors.includes(colorObj.code)).map((colorObj: any) => (
+                          <SelectItem key={colorObj.code} value={colorObj.code}>
+                            {colorObj.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formData.selected_colors.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {formData.selected_colors.map((color) => (
+                          <Badge 
+                            key={color} 
+                            variant="outline" 
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300"
+                          >
+                            {color}
+                            <X 
+                              className="h-3 w-3 cursor-pointer hover:text-red-500" 
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  selected_colors: formData.selected_colors.filter(c => c !== color)
+                                });
+                              }}
+                              data-testid={`remove-color-${color}`}
+                            />
+                          </Badge>
+                        ))}
+                      </div>
                     )}
-                  </Button>
+                  </div>
                 </div>
-              </form>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Additional Information Card */}
+          <Card className="shadow-lg border-0 dark:bg-gray-800">
+            <CardHeader className="bg-gradient-to-r from-rose-500 to-rose-600 dark:from-rose-600 dark:to-rose-700 text-white">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Additional Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="next_followup_date" className="flex items-center gap-2 font-medium text-sm">
+                    <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    Next Follow-up Date
+                  </Label>
+                  <Input
+                    id="next_followup_date"
+                    type="date"
+                    value={formData.next_followup_date}
+                    onChange={(e) => handleInputChange('next_followup_date', e.target.value)}
+                    data-testid="input-lead-followup"
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="notes" className="flex items-center gap-2 font-medium text-sm">
+                    <FileText className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                    Initial Notes
+                  </Label>
+                  <Textarea
+                    id="notes"
+                    rows={4}
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    data-testid="textarea-lead-notes"
+                    placeholder="Enter any initial notes about this lead..."
+                    className="resize-none"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
-        </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-4 pt-4">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={handleCancel}
+              data-testid="button-cancel-add-lead"
+              className="flex items-center gap-2 h-11 px-6"
+            >
+              <X className="h-4 w-4" />
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={createLeadMutation.isPending || !formData.name || !formData.phone}
+              data-testid="button-submit-add-lead"
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 h-11 px-8 shadow-lg"
+            >
+              {createLeadMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Creating Lead...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Create Lead
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </div>
       
       {/* Enrichment Modal */}
