@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Lead, Installer, LEAD_ORIGINS, LEAD_STATUSES, PROJECT_TYPES, COMMERCIAL_SUBCATEGORIES } from '@shared/schema';
+import { Lead, Installer, LEAD_ORIGINS, LEAD_STATUSES, PROJECT_TYPES, COMMERCIAL_SUBCATEGORIES, MARKETS } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useLeadFormChanges } from '@/hooks/use-form-changes';
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { X, User, Phone, Mail, MapPin, Calendar, DollarSign, Building2, Tag, FileText, Users, Palette } from 'lucide-react';
+import { X, User, Phone, Mail, MapPin, Calendar, DollarSign, Building2, Tag, FileText, Users, Palette, Eye } from 'lucide-react';
 
 interface QuickEditModalProps {
   lead: Lead | null;
@@ -46,6 +46,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     lead_origin: '',
     project_type: '',
     commercial_subcategory: '',
+    market: '',
     remarks: '',
     assigned_to: '',
     customer_address: '',
@@ -131,6 +132,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         lead_origin: lead.lead_origin || '',
         project_type: (lead as any).project_type || 'Residential',
         commercial_subcategory: (lead as any).commercial_subcategory || '',
+        market: (lead as any).market || '',
         remarks: lead.remarks || '',
         assigned_to: lead.assigned_to || '', // Use the actual assigned_to value
         customer_address: (lead as any).customer_address || '',
@@ -215,6 +217,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       email: formData.email || null,
       lead_origin: formData.lead_origin,
       project_type: formData.project_type || 'Residential', // Ensure project_type is never undefined
+      market: formData.project_type === 'Commercial' ? formData.market : null,
       commercial_subcategory: formData.commercial_subcategory || null,
       remarks: formData.remarks,
       assigned_to: mapAssignedTo(typeof formData.assigned_to === 'string' ? formData.assigned_to : ''), // Ensure it's a valid string
@@ -240,10 +243,27 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     <Dialog open={show} onOpenChange={onHide}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col" data-testid="quick-edit-modal">
         <DialogHeader className="pb-4 flex-shrink-0">
-          <DialogTitle>Edit Lead</DialogTitle>
-          <DialogDescription className="sr-only">
-            Edit lead information including contact details, status, payment information, and project assignments.
-          </DialogDescription>
+          <div className="flex flex-col items-center mb-2">
+            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Eye className="h-5 w-5 text-blue-600" /> 
+              View & Edit Lead Details
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 mt-1 text-center">
+              View lead details and make changes to contact information, status, and project information
+            </DialogDescription>
+          </div>
+          <div className="flex justify-end items-center">
+            <div className="flex items-center text-xs text-gray-500">
+              <Calendar className="h-3 w-3 text-gray-400 mr-1" />
+              <span>
+                Created: {formatDateForInput(lead.date_created) ? new Date(lead.date_created).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                }) : 'Unknown'}
+              </span>
+            </div>
+          </div>
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto pr-2">
@@ -338,7 +358,14 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                 </Label>
                 <Select
                   value={formData.project_type}
-                  onValueChange={(value) => setFormData({...formData, project_type: value})}
+                  onValueChange={(value) => {
+                    setFormData({
+                      ...formData, 
+                      project_type: value,
+                      // Clear market field if changing from Commercial to something else
+                      market: value === 'Commercial' ? formData.market : ''
+                    });
+                  }}
                 >
                   <SelectTrigger data-testid="select-edit-project-type" className="h-11 text-base">
                     <SelectValue placeholder="Select project type" />
@@ -353,8 +380,29 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                 </Select>
               </div>
 
-              {/* Commercial Subcategory - Only show when Commercial is selected */}
+              {/* Market & Commercial Subcategory - Only show when Commercial is selected */}
               {formData.project_type === 'Commercial' && (
+                <>
+                <div className="space-y-1">
+                  <Label htmlFor="market" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                    <MapPin className="h-3 w-3 text-green-600" />
+                    MARKET <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.market}
+                    onValueChange={(value) => setFormData({...formData, market: value})}
+                  >
+                    <SelectTrigger data-testid="select-edit-market" className="h-11 text-base">
+                      <SelectValue placeholder="Select market" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MARKETS.map(market => (
+                        <SelectItem key={market} value={market}>{market}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
                 <div className="space-y-1">
                   <Label htmlFor="commercial_subcategory" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
                     <Building2 className="h-3 w-3 text-slate-600" />
@@ -376,6 +424,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
                     </SelectContent>
                   </Select>
                 </div>
+                </>
               )}
               
               {/* Customer Address - Only show when status is sold */}

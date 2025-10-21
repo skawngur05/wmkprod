@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo, useRef, memo, createElement } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, memo, createElement } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Lead, LEAD_STATUSES } from '@shared/schema';
@@ -59,7 +59,7 @@ const initializePermanentSearchElement = () => {
     const target = e.target as HTMLInputElement;
     const value = target.value;
 
-    console.log('≡ƒöì Search input changed:', value);
+    console.log('🔍 Search input changed:', value);
 
     // Clear existing timeout
     if (globalDebounceTimeout) {
@@ -68,7 +68,7 @@ const initializePermanentSearchElement = () => {
 
     // Set new timeout
     globalDebounceTimeout = setTimeout(() => {
-      console.log('≡ƒöì Dispatching global search event with:', value);
+      console.log('🔍 Dispatching global search event with:', value);
       
       const searchChangeEvent = new CustomEvent('globalSearchChange', { 
         detail: value,
@@ -134,14 +134,14 @@ const positionPermanentSearchElement = (placeholderElement: HTMLElement) => {
 
 // Timezone-safe date formatting function
 const UltraStableSearchInput = memo(() => {
-  console.log('∩┐╜ UltraStableSearchInput render');
+  console.log('🔍 UltraStableSearchInput render');
   const [searchValue, setSearchValue] = useState('');
   const debounceTimeoutRef = useRef<NodeJS.Timeout>();
   const inputRef = useRef<HTMLInputElement>(null);
   
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    console.log('∩┐╜ UltraStableSearchInput onChange:', value);
+    console.log('🔍 UltraStableSearchInput onChange:', value);
     setSearchValue(value);
 
     // Clear existing timeout
@@ -149,20 +149,23 @@ const UltraStableSearchInput = memo(() => {
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    // Set new timeout
+    // Set new timeout - dispatch custom event
     debounceTimeoutRef.current = setTimeout(() => {
-      console.log('≡ƒöÑ Calling global callback with:', value);
-      if (globalSearchCallback) {
-        globalSearchCallback(value);
-      }
+      console.log('🔥 Dispatching search change event:', value);
+      const searchChangeEvent = new CustomEvent('searchChange', { 
+        detail: value,
+        bubbles: true,
+        cancelable: true
+      });
+      window.dispatchEvent(searchChangeEvent);
     }, 300);
   }, []);
 
   // Cleanup timeout on unmount
   useEffect(() => {
-    console.log('∩┐╜ UltraStableSearchInput mounted');
+    console.log('🔍 UltraStableSearchInput mounted');
     return () => {
-      console.log('∩┐╜ UltraStableSearchInput cleanup');
+      console.log('🔍 UltraStableSearchInput cleanup');
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
@@ -181,8 +184,8 @@ const UltraStableSearchInput = memo(() => {
         autoComplete="off"
         data-testid="input-search-leads"
         className="w-full"
-        onFocus={() => console.log('∩┐╜ UltraStableSearchInput FOCUSED')}
-        onBlur={() => console.log('∩┐╜ UltraStableSearchInput LOST FOCUS')}
+        onFocus={() => console.log('🔍 UltraStableSearchInput FOCUSED')}
+        onBlur={() => console.log('🔍 UltraStableSearchInput LOST FOCUS')}
       />
     </div>
   );
@@ -207,7 +210,7 @@ const FocusPreservingSearchInput = memo(({ currentSearch }: { currentSearch: str
 
     // Set new timeout - dispatch custom event
     debounceTimeoutRef.current = setTimeout(() => {
-      console.log('≡ƒöì Dispatching search event:', value);
+      console.log('🔍 Dispatching search event:', value);
       
       const searchChangeEvent = new CustomEvent('globalSearchChange', { 
         detail: value,
@@ -350,7 +353,7 @@ export default function Leads() {
   useEffect(() => {
     const handleSearchChange = (event: CustomEvent) => {
       const searchValue = event.detail;
-      console.log('∩┐╜ Received search change event:', searchValue);
+      console.log('🔍 Received search change event:', searchValue);
       setFilters(prev => ({ ...prev, search: searchValue }));
       setCurrentPage(1);
     };
@@ -366,7 +369,7 @@ export default function Leads() {
   useEffect(() => {
     const handleGlobalSearchChange = (event: CustomEvent) => {
       const searchValue = event.detail;
-      console.log('≡ƒîì Received global search event:', searchValue);
+      console.log('🌍 Received global search event:', searchValue);
       setFilters(prev => ({ ...prev, search: searchValue }));
       setCurrentPage(1);
     };
@@ -698,7 +701,7 @@ export default function Leads() {
               <Table data-testid="leads-table">
                   <TableHeader>
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
-                      <TableHead className="font-semibold text-gray-900" style={{ width: '100px', minWidth: '100px' }}>Date</TableHead>
+                     
                       <TableHead className="font-semibold text-gray-900" style={{ width: '150px', minWidth: '150px' }}>Name</TableHead>
                       <TableHead className="font-semibold text-gray-900" style={{ width: '160px', minWidth: '160px' }}>Contact Info</TableHead>
                       <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Origin</TableHead>

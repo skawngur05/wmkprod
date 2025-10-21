@@ -392,26 +392,42 @@ export class GoogleCalendarService {
         return [];
       }
 
+      const actualStartDate = startDate || new Date().toISOString();
+      console.log(`📡 Google Calendar API request params:`, {
+        calendarId: 'primary',
+        timeMin: actualStartDate,
+        timeMax: endDate,
+        maxResults: 2500,
+        singleEvents: true,
+        orderBy: 'startTime',
+      });
+      console.log(`📅 Requesting events from ${actualStartDate} to ${endDate}`);
+
       const response = await this.calendar.events.list({
         calendarId: 'primary',
-        timeMin: startDate || new Date().toISOString(),
+        timeMin: actualStartDate,
         timeMax: endDate,
+        maxResults: 2500, // Increase limit to get all events
         singleEvents: true,
         orderBy: 'startTime',
       });
 
+      console.log(`📡 Google Calendar API returned ${response.data.items?.length || 0} events`);
+
       const events: CalendarEvent[] = response.data.items?.map((event: any) => {
         const colorId = event.colorId;
         const hexColor = this.getColorFromColorId(colorId);
+        const eventStart = event.start?.dateTime || event.start?.date;
+        const eventEnd = event.end?.dateTime || event.end?.date;
         
-        console.log(`🎨 Event "${event.summary}" colorId: ${colorId} -> ${hexColor}`);
+        console.log(`🎨 Event "${event.summary}" (${eventStart} to ${eventEnd}) colorId: ${colorId} -> ${hexColor}`);
         
         return {
           id: event.id,
           title: event.summary || 'Untitled Event',
           description: event.description,
-          start: event.start?.dateTime || event.start?.date,
-          end: event.end?.dateTime || event.end?.date,
+          start: eventStart,
+          end: eventEnd,
           location: event.location,
           attendees: event.attendees?.map((attendee: any) => attendee.email).filter(Boolean),
           colorId: colorId,

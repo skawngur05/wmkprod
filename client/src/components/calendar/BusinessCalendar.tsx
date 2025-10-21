@@ -202,6 +202,29 @@ interface CalendarEventDisplay {
 }
 
 export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCalendarProps) {
+  console.log('🚀 BusinessCalendar component starting to load...');
+  
+  // Add error boundary to catch any React errors
+  useEffect(() => {
+    console.log('📍 BusinessCalendar useEffect hook running...');
+    
+    const errorHandler = (error: ErrorEvent) => {
+      console.error('🚨 JavaScript Error in Calendar:', error.error, error.message);
+    };
+    
+    const rejectionHandler = (event: PromiseRejectionEvent) => {
+      console.error('🚨 Promise Rejection in Calendar:', event.reason);
+    };
+    
+    window.addEventListener('error', errorHandler);
+    window.addEventListener('unhandledrejection', rejectionHandler);
+    
+    return () => {
+      window.removeEventListener('error', errorHandler);
+      window.removeEventListener('unhandledrejection', rejectionHandler);
+    };
+  }, []);
+  
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [addEventModalOpen, setAddEventModalOpen] = useState(false);
@@ -436,12 +459,28 @@ export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCa
   // Fetch installations (already in database)
   const { data: installations = [], isLoading: installationsLoading } = useQuery<Lead[]>({
     queryKey: ['/api/installations'],
+    queryFn: async () => {
+      console.log('🔄 Fetching installations API...');
+      const response = await fetch('/api/installations', {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch installations');
+      const data = await response.json();
+      console.log('✅ Installations API response:', data.length, 'items');
+      return data;
+    },
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   // Fetch calendar events from the API
   const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
     queryKey: ['/api/calendar/events'],
     queryFn: async () => {
+      console.log('🔄 Fetching calendar events API...');
       const response = await fetch('/api/calendar/events', {
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -449,7 +488,9 @@ export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCa
         }
       });
       if (!response.ok) throw new Error('Failed to fetch events');
-      return response.json();
+      const data = await response.json();
+      console.log('✅ Calendar events API response:', data.length, 'events');
+      return data;
     },
     staleTime: 0, // Always consider data stale
     refetchOnWindowFocus: true, // Refetch when window gains focus
@@ -627,7 +668,33 @@ export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCa
     ...getUSHolidays(currentYear + 1)
   ];
 
-  const allEventsForCalendar = [...otherEvents, ...pickupEvents, ...usHolidays];
+  const allEventsForCalendar = [...otherEvents, ...installationEvents, ...pickupEvents, ...usHolidays];
+
+  // Debug logging to understand what data we have
+  console.log('📊 Calendar Debug Info:');
+  console.log('- Loading states - events:', isLoading, 'installations:', installationsLoading);
+  console.log('- Raw events from API:', events?.length || 0, events);
+  console.log('- Raw installations from API:', installations?.length || 0, installations);
+  console.log('- Processed otherEvents:', otherEvents.length);
+  console.log('- Processed installationEvents:', installationEvents.length);
+  console.log('- Processed pickupEvents:', pickupEvents.length);
+  console.log('- US Holidays:', usHolidays.length);
+  console.log('- Total allEventsForCalendar:', allEventsForCalendar.length);
+  console.log('- Sample events:', allEventsForCalendar.slice(0, 3));
+  
+  // Additional debugging for event structure
+  if (allEventsForCalendar.length > 0) {
+    console.log('🔍 First Google Calendar event:', allEventsForCalendar.find(e => e.extendedProps?.type === 'imported'));
+    console.log('🔍 First installation event:', allEventsForCalendar.find(e => e.extendedProps?.type === 'installation'));
+    console.log('🔍 First holiday event:', allEventsForCalendar.find(e => e.extendedProps?.type === 'us-holiday'));
+    console.log('🔍 Events by type:', {
+      imported: allEventsForCalendar.filter(e => e.extendedProps?.type === 'imported').length,
+      installation: allEventsForCalendar.filter(e => e.extendedProps?.type === 'installation').length,
+      pickup: allEventsForCalendar.filter(e => e.extendedProps?.type === 'pickup').length,
+      holidays: allEventsForCalendar.filter(e => e.extendedProps?.type === 'us-holiday').length,
+      other: allEventsForCalendar.filter(e => !['imported', 'installation', 'pickup', 'us-holiday'].includes(e.extendedProps?.type || '')).length
+    });
+  }
 
   // Helper function to format date for datetime-local input
   const formatDateTimeForInput = (date: Date | string | null | undefined): string => {
@@ -758,20 +825,22 @@ export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCa
                 <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${syncFromGoogle.isPending ? 'animate-spin' : ''}`} />
                 {syncFromGoogle.isPending ? 'Syncing...' : 'Sync with Google'}
               </Button>
+              <Button 
+                onClick={() => {
+                  console.log('Force Sync button clicked');
+                  setAuthError(null); // Clear any previous auth errors
+                  syncFromGoogle.mutate('?force=true');
+                }} 
+                variant="destructive" 
+                className="flex items-center gap-2 text-xs sm:text-sm"
+                size="sm"
+                disabled={syncFromGoogle.isPending}
+              >
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${syncFromGoogle.isPending ? 'animate-spin' : ''}`} />
+                {syncFromGoogle.isPending ? 'Force Syncing...' : 'Force Sync'}
+              </Button>
             </>
           )}
-          <Button 
-            onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
-              toast({ title: 'Calendar Refreshed', description: 'Calendar events have been updated.' });
-            }}
-            variant="outline" 
-            className="flex items-center gap-2 text-xs sm:text-sm"
-            size="sm"
-          >
-            <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
-            Refresh Calendar
-          </Button>
           <Button 
             onClick={() => {
               resetForm();
@@ -857,6 +926,19 @@ export function BusinessCalendar({ mode = 'full', height = '500px' }: BusinessCa
         editable={true}
         selectable={true}
         nowIndicator={true}
+        eventDidMount={(info) => {
+          console.log('🎯 FullCalendar mounted event:', info.event.title, 'Start:', info.event.start, 'End:', info.event.end);
+        }}
+        eventWillUnmount={(info) => {
+          console.log('🗑️ FullCalendar unmounting event:', info.event.title);
+        }}
+        datesSet={(dateInfo) => {
+          console.log('📅 FullCalendar dates changed:', dateInfo.startStr, 'to', dateInfo.endStr);
+          console.log('📊 Events in current view range:', allEventsForCalendar.filter(event => {
+            const eventDate = new Date(event.start);
+            return eventDate >= dateInfo.start && eventDate <= dateInfo.end;
+          }).length);
+        }}
       />
 
       {/* Event Details Modal */}

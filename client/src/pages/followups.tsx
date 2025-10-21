@@ -1,7 +1,9 @@
+import '@/utils/browser-polyfill';
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
+import { forceRefreshData, noCacheHeaders, addCacheBuster } from '@/lib/cache-control';
 import { Lead, LEAD_STATUSES } from '@shared/schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -89,6 +91,7 @@ function QuickEditForm({ lead, onClose, wmkColors, installersData, activeUsers, 
       queryClient.invalidateQueries({ queryKey: ['/api/installations', user?.username] });
       queryClient.invalidateQueries({ queryKey: ['/api/leads', user?.username] });
       queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats', user?.username] }); // Update dashboard stats
       
       // Show success toast
       const wasFollowupDateChanged = lead.next_followup_date?.toString() !== formData.next_followup_date;
@@ -168,6 +171,8 @@ function QuickEditForm({ lead, onClose, wmkColors, installersData, activeUsers, 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Removing centered lead creation date display */}
+
       {/* Two Column Layout */}
       <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem'}}>
         {/* Left Column */}
@@ -922,19 +927,25 @@ export default function Followups() {
   console.log('[Followups] Current user:', user);
   console.log('[Followups] Username for API:', user?.username);
   
+  // Force refresh data when component mounts
+  useEffect(() => {
+    // Clear all cached data to ensure fresh data
+    forceRefreshData(user?.username);
+  }, [user?.username]);
+  
   const { data: followupsData, isLoading, refetch: refetchFollowups } = useQuery<FollowupsData>({
     queryKey: ['/api/followups', user?.username],
     queryFn: () => {
-      const url = `/api/followups?username=${encodeURIComponent(user?.username || '')}`;
+      const url = addCacheBuster(`/api/followups?username=${encodeURIComponent(user?.username || '')}`);
       console.log('[Followups] Making API call to:', url);
       return fetch(url, {
-        cache: 'no-cache'
+        headers: noCacheHeaders
       }).then(res => res.json());
     },
     staleTime: 0, // Always consider data stale
     gcTime: 0, // Don't cache data
     refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 15000, // Refetch more frequently - every 15 seconds
   });
   
   const { data: installations = [] } = useQuery<Lead[]>({
@@ -1142,7 +1153,17 @@ export default function Followups() {
   };
 
   const handleQuickEdit = (lead: Lead) => {
-    setSelectedLead(lead);
+    if (!lead) {
+      console.warn('Attempted to edit a null or undefined lead');
+      return;
+    }
+    // Ensure lead has required properties
+    const safetyCheckedLead = {
+      ...lead,
+      date_created: lead.date_created || null
+    };
+    
+    setSelectedLead(safetyCheckedLead);
     setIsEditModalOpen(true);
   };
 
@@ -1561,15 +1582,32 @@ export default function Followups() {
         )}
 
         {/* Modals */}
-        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Lead Details</DialogTitle>
-              <DialogDescription>
-                Update lead information, status, and follow-up details
-              </DialogDescription>
-            </DialogHeader>
-            {selectedLead && (
+        {selectedLead && isEditModalOpen && (
+          <Dialog open={true} onOpenChange={setIsEditModalOpen}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <div className="flex flex-col items-center mb-2">
+                  <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <Eye className="h-5 w-5 text-blue-600" /> 
+                    View & Edit Lead Details
+                  </DialogTitle>
+                  <DialogDescription className="text-gray-600 mt-1 text-center">
+                    View lead details and make changes to contact information, status, and project information
+                  </DialogDescription>
+                </div>
+                <div className="flex justify-end items-center">
+                  <div className="flex items-center text-xs text-gray-500">
+                    <Calendar className="h-3 w-3 text-gray-400 mr-1" />
+                    <span>
+                      Created: {selectedLead.date_created ? new Date(selectedLead.date_created).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      }) : 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+              </DialogHeader>
               <QuickEditForm 
                 lead={selectedLead} 
                 onClose={() => setIsEditModalOpen(false)} 
@@ -1578,9 +1616,9 @@ export default function Followups() {
                 activeUsers={activeUsers}
                 user={user}
               />
-            )}
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        )}
 
         <QuickFollowupModal
           lead={selectedFollowupLead}

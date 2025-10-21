@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
-import { LEAD_ORIGINS, LEAD_STATUSES, PROJECT_TYPES, COMMERCIAL_SUBCATEGORIES, type Installer } from '@shared/schema';
+import { LEAD_ORIGINS, LEAD_STATUSES, PROJECT_TYPES, COMMERCIAL_SUBCATEGORIES, MARKETS, type Installer } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -73,6 +73,7 @@ export default function AddLead() {
     lead_origin: 'facebook',
     project_type: getDefaultProjectType(),
     commercial_subcategory: 'ALL products',
+    market: '',
     remarks: 'New', // Fixed: capital N to match enum
     assigned_to: '', // Will be set when users load
     project_amount: '',
@@ -161,7 +162,17 @@ export default function AddLead() {
   });
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Reset commercial-specific fields when project type changes from Commercial
+      if (field === 'project_type' && value !== 'Commercial') {
+        updated.commercial_subcategory = '';
+        updated.market = '';
+      }
+      
+      return updated;
+    });
   };
 
   // Internal enrichment effect
@@ -241,6 +252,16 @@ export default function AddLead() {
       });
       return;
     }
+
+    // Validate market if project type is Commercial
+    if (formData.project_type === 'Commercial' && !formData.market) {
+      toast({ 
+        title: "Validation Error", 
+        description: "Market is required for Commercial projects.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
       const leadData = {
@@ -250,6 +271,7 @@ export default function AddLead() {
         lead_origin: formData.lead_origin,
         project_type: formData.project_type,
         commercial_subcategory: formData.project_type === 'Commercial' ? formData.commercial_subcategory : null,
+        market: formData.project_type === 'Commercial' ? formData.market : null,
         remarks: formData.remarks,
         assigned_to: formData.assigned_to,
         project_amount: formData.project_amount ? formData.project_amount : "0.00", // Keep as string for decimal
@@ -505,7 +527,7 @@ export default function AddLead() {
                       <div className="space-y-2">
                         <Label htmlFor="commercial_subcategory" className="flex items-center gap-2 font-medium">
                           <HardHat className="h-4 w-4 text-slate-600" />
-                          Commercial Category
+                          Applications
                           <span className="text-red-500">*</span>
                         </Label>
                         <Select
@@ -519,6 +541,32 @@ export default function AddLead() {
                             {COMMERCIAL_SUBCATEGORIES.map(category => (
                               <SelectItem key={category} value={category}>
                                 {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Markets - Only shown when Commercial is selected */}
+                    {formData.project_type === 'Commercial' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="market" className="flex items-center gap-2 font-medium">
+                          <HardHat className="h-4 w-4 text-blue-600" />
+                          Markets
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.market}
+                          onValueChange={(value) => handleInputChange('market', value)}
+                        >
+                          <SelectTrigger data-testid="select-market" className="h-11">
+                            <SelectValue placeholder="Select market type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MARKETS.map(market => (
+                              <SelectItem key={market} value={market}>
+                                {market}
                               </SelectItem>
                             ))}
                           </SelectContent>

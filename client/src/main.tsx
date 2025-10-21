@@ -4,6 +4,7 @@ import "./index.css";
 import "./styles/mobile-tables.css"; // Import mobile table styles
 import "./styles/calendar.css"; // Import calendar responsive styles
 import "./styles/animations.css"; // Import custom animations
+// Cache bust - force rebuild after table structure changes: 1760342112583
 
 // Development cache busting - force reload if cached version detected
 if (import.meta.env.DEV) {

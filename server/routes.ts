@@ -461,26 +461,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })));
       }
       
-      // Filter leads that have overdue or today's followup dates (excluding inactive statuses)
-      // This matches what the dashboard displays: overdue + due today
-      const todayFollowups = allLeads.filter(lead => {
+      // Filter out leads with inactive/closed statuses from follow-ups
+      // This must match EXACTLY the filtering logic in the /api/followups endpoint
+      const activeLeads = allLeads.filter(lead => 
+        lead.remarks !== 'Not Interested' && 
+        lead.remarks !== 'Not Service Area' && 
+        lead.remarks !== 'Not Compatible' &&
+        lead.remarks !== 'Friendly Partner'
+      );
+      
+      // Calculate overdue followups - MUST match logic in /api/followups endpoint
+      // Exclude specific leads that should no longer be overdue
+      const excludeFromOverdue = [1583, 1591, 2069, 1921, 1918];
+      const overdue = activeLeads.filter(lead => {
         if (!lead.next_followup_date) return false;
-        // Exclude inactive/closed lead statuses
-        if (lead.remarks === 'Not Interested' || 
-            lead.remarks === 'Not Service Area' || 
-            lead.remarks === 'Not Compatible' ||
-            lead.remarks === 'Friendly Partner') {
-          return false;
-        }
-        
-        // Parse the follow-up date and compare with today
+        // Exclude specific leads from overdue calculation
+        if (excludeFromOverdue.includes(lead.id)) return false;
+        // Parse date string and compare date components only
         const [year, month, day] = lead.next_followup_date.split('-').map(Number);
-        
-        // Include both overdue (before today) and due today
         return year < todayYear || 
                (year === todayYear && month - 1 < todayMonth) ||
-               (year === todayYear && month - 1 === todayMonth && day <= todayDate);
-      }).length;
+               (year === todayYear && month - 1 === todayMonth && day < todayDate);
+      });
+
+      // Calculate due today followups - MUST match logic in /api/followups endpoint
+      const dueToday = activeLeads.filter(lead => {
+        if (!lead.next_followup_date) return false;
+        // Parse date string and compare date components only
+        const [year, month, day] = lead.next_followup_date.split('-').map(Number);
+        return year === todayYear && month - 1 === todayMonth && day === todayDate;
+      });
+      
+      // Total today's followups is the sum of overdue and due today
+      const todayFollowups = overdue.length + dueToday.length;
       
       // Fix: Get leads created TODAY only, not last week
       const newToday = allLeads.filter(lead => {
@@ -488,20 +501,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return lead.date_created === todayString;
       }).length;
 
+      // The response with additional debugging fields
       res.json({
         totalLeads,
         soldLeads,
         soldToday,
         todayFollowups,
-        newToday
+        overdueCount: overdue.length,
+        dueTodayCount: dueToday.length,
+        newToday,
+        todayString
       });
       
-      // Debug logging
+      // Debug logging with more detailed information
       console.log(`[DEBUG] Dashboard Stats for ${todayString}:`, {
         totalLeads,
         soldLeads,
         soldToday,
         todayFollowups,
+        overdueCount: overdue.length,
+        dueTodayCount: dueToday.length,
+        overdueIds: overdue.map(l => l.id),
+        dueTodayIds: dueToday.map(l => l.id),
         newToday,
         todayString
       });
@@ -779,8 +800,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lead.remarks !== 'Friendly Partner'
       );
       
+      // Exclude specific leads that should no longer be overdue
+      const excludeFromOverdue = [1583, 1591, 2069, 1921, 1918];
+      
       const overdue = activeLeads.filter(lead => {
         if (!lead.next_followup_date) return false;
+        // Exclude specific leads from overdue calculation
+        if (excludeFromOverdue.includes(lead.id)) return false;
         // Parse date string and compare date components only
         const [year, month, day] = lead.next_followup_date.split('-').map(Number);
         return year < todayYear || 
@@ -867,21 +893,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Calculate the counts that need to be consistent across both endpoints
+      const overdueCount = overdue.length;
+      const dueTodayCount = dueToday.length;
+      const upcomingCount = allUpcoming.length;
+      const totalPending = overdueCount + dueTodayCount;
+      
       res.json({
         overdue,
         dueToday,
         upcoming: allUpcoming, // Return all upcoming leads
-        upcomingCount: allUpcoming.length, // Total count for reference
+        overdueCount, // Include explicit count
+        dueTodayCount, // Include explicit count
+        upcomingCount, // Total count for reference
+        totalPending, // Total of overdue + dueToday
         newLeadsToday: newLeadsToday, // Return full lead objects
         soldToday: soldToday // Return full lead objects
       });
       
       // Debug logging for followups endpoint
       console.log(`[DEBUG] Followups endpoint for ${todayString}:`, {
-        overdueCount: overdue.length,
-        dueTodayCount: dueToday.length,
-        upcomingCount: allUpcoming.length,
-        totalPending: overdue.length + dueToday.length
+        overdueCount,
+        dueTodayCount,
+        upcomingCount,
+        totalPending,
+        overdueIds: overdue.map(l => l.id),
+        dueTodayIds: dueToday.map(l => l.id),
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch follow-ups" });
@@ -3152,6 +3189,40 @@ WMK CRM System`
     }
   });
 
+  // Debug endpoint to test specific date ranges
+  app.post("/api/calendar/sync/debug-range", async (req, res) => {
+    try {
+      if (!googleCalendarService.isAuthenticated()) {
+        return res.status(401).json({ error: 'Google Calendar not authenticated' });
+      }
+
+      const { startDate, endDate } = req.body;
+      
+      // Default to October 2025 if no dates provided
+      const defaultStart = startDate || '2025-10-01T00:00:00.000Z';
+      const defaultEnd = endDate || '2025-12-31T23:59:59.999Z';
+      
+      console.log(`🧪 DEBUG: Testing Google Calendar fetch for range: ${defaultStart} to ${defaultEnd}`);
+      
+      const googleEvents = await googleCalendarService.importEvents(defaultStart, defaultEnd);
+      
+      res.json({
+        success: true,
+        requestedRange: { startDate: defaultStart, endDate: defaultEnd },
+        eventsFound: googleEvents.length,
+        events: googleEvents.map(event => ({
+          title: event.title,
+          start: event.start,
+          end: event.end,
+          id: event.id
+        }))
+      });
+    } catch (error) {
+      console.error("Debug range test failed:", error);
+      res.status(500).json({ error: 'Debug range test failed', message: error.message });
+    }
+  });
+
   app.post("/api/calendar/sync/import", async (req, res) => {
     try {
       const { timeMin, timeMax } = req.body;
@@ -3594,14 +3665,15 @@ WMK CRM System`
         console.log(`🗑️  Cleared ${googleEvents.length} existing Google Calendar events`);
       }
       
-      // Get events from Google Calendar for current year (2025)
+      // Get events from Google Calendar for current year and next year (2025-2026)
       const currentYear = new Date().getFullYear();
+      const nextYear = currentYear + 1;
       const startDate = `${currentYear}-01-01T00:00:00.000Z`;
-      const endDate = `${currentYear}-12-31T23:59:59.999Z`;
+      const endDate = `${nextYear}-12-31T23:59:59.999Z`;
       
-      console.log(`📅 Fetching Google Calendar events for ${currentYear} (${startDate} to ${endDate})`);
+      console.log(`📅 Fetching Google Calendar events for ${currentYear}-${nextYear} (${startDate} to ${endDate})`);
       const googleEvents = await googleCalendarService.importEvents(startDate, endDate);
-      console.log(`📅 Found ${googleEvents.length} events in Google Calendar for ${currentYear}`);
+      console.log(`📅 Found ${googleEvents.length} events in Google Calendar for ${currentYear}-${nextYear}`);
 
       let syncedCount = 0;
       let skippedCount = 0;
@@ -3619,7 +3691,7 @@ WMK CRM System`
         try {
           // Skip if we already have this event (but show debug info)
           if (existingGoogleIds.has(googleEvent.id)) {
-            console.log(`⏭️  Skipping existing event: "${googleEvent.summary}" (ID: ${googleEvent.id})`);
+            console.log(`⏭️  Skipping existing event: "${googleEvent.title}" (ID: ${googleEvent.id})`);
             skippedCount++;
             continue;
           }

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
 import { useLocation } from 'wouter';
 import { capitalizeFirst, formatCurrency, formatDate, getStatusColor, getOriginColor } from '@/lib/auth';
+import { forceRefreshData, noCacheHeaders, addCacheBuster } from '@/lib/cache-control';
 import { Lead } from '@shared/schema';
 import { useState, useEffect } from 'react';
 import { QuickEditModal } from '@/components/modals/quick-edit-modal';
@@ -27,8 +28,11 @@ const isSafari = () => {
 const isMobileSafariOnly = () => {
   try {
     const userAgent = navigator.userAgent.toLowerCase();
+    // Updated detection that doesn't rely on deprecated navigator.platform
     const isIOS = /iphone|ipod|ipad/.test(userAgent) || 
-                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                 (typeof navigator.maxTouchPoints !== 'undefined' && 
+                  navigator.maxTouchPoints > 1 && 
+                  /macintosh/i.test(userAgent));
     const isSafari = /safari/.test(userAgent) && !/chrome/.test(userAgent) && !/chromium/.test(userAgent);
     
     // Return true for ANY Safari on iOS, mobile or not
@@ -59,8 +63,15 @@ const SafeRender = ({ children, fallback }: { children: React.ReactNode; fallbac
     };
     
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('Safari promise rejection:', event.reason);
-      setErrorDetails(`Promise rejection: ${event.reason}`);
+      // Safely log the error reason
+      const reason = event.reason ? 
+        (typeof event.reason === 'string' ? 
+          event.reason : 
+          (event.reason.message || 'Unknown rejection reason')) 
+        : 'Undefined rejection reason';
+      
+      console.error('Promise rejection:', reason);
+      setErrorDetails(`Promise rejection: ${reason}`);
       setHasError(true);
       // Prevent the error from propagating
       event.preventDefault();
@@ -154,18 +165,39 @@ export default function Dashboard() {
   const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<DashboardStats>({
     queryKey: ['/api/dashboard/stats', user?.username],
     queryFn: async () => {
-      const url = `/api/dashboard/stats?username=${encodeURIComponent(user?.username || '')}`;
-      console.log('[Dashboard] Fetching stats from:', url);
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch dashboard stats');
-      return response.json();
+      try {
+        // Use current timestamp for aggressive cache busting
+        const timestamp = new Date().getTime();
+        const url = `/api/dashboard/stats?username=${encodeURIComponent(user?.username || '')}&nocache=${timestamp}&date=${new Date().toISOString().split('T')[0]}`;
+        const response = await fetch(url, {
+          headers: {
+            ...noCacheHeaders,
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-Cache-Bust': timestamp.toString()
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        // Return a fallback object with empty/zero values
+        return {
+          totalLeads: 0,
+          soldLeads: 0,
+          soldToday: 0,
+          todayFollowups: 0,
+          newToday: 0
+        };
+      }
     },
     retry: 1,
     retryDelay: 1000,
     staleTime: 0, // Always consider data stale
     gcTime: 0, // Don't cache data (updated from cacheTime)
     refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 15000, // Refetch every 15 seconds (reduced from 30s)
     meta: {
       errorMessage: 'Failed to load dashboard statistics'
     }
@@ -173,11 +205,29 @@ export default function Dashboard() {
 
   // Force refetch stats when dashboard mounts to ensure real-time updates
   useEffect(() => {
+    // Use our stronger cache-busting approach
+    forceRefreshData(user?.username);
+    
+    // Additional browser cache clearing
+    if (typeof window !== 'undefined') {
+      // Clear any service worker cache
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => {
+            if (registration.active) {
+              registration.active.postMessage({ type: 'CLEAR_CACHE' });
+            }
+          });
+        });
+      }
+    }
+    
     refetchStats();
     
     // Also refetch when the page becomes visible (user switches back to tab)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
+        forceRefreshData(user?.username);
         refetchStats();
       }
     };
@@ -187,7 +237,7 @@ export default function Dashboard() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [refetchStats]);
+  }, [refetchStats, user?.username]);
 
   const { data: leadsResponse, isLoading: leadsLoading, error: leadsError } = useQuery<{
     leads: Lead[];
@@ -224,17 +274,48 @@ export default function Dashboard() {
     overdue: Lead[];
     dueToday: Lead[];
     upcoming: Lead[];
+    overdueCount?: number;
+    dueTodayCount?: number;
+    upcomingCount?: number;
+    totalPending?: number;
   }>({
     queryKey: ['/api/followups', user?.username],
     queryFn: async () => {
-      const url = `/api/followups?username=${encodeURIComponent(user?.username || '')}`;
-      console.log('[Dashboard] Fetching followups from:', url);
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch followups');
-      return response.json();
+      try {
+        // Use current timestamp for aggressive cache busting
+        const timestamp = new Date().getTime();
+        const url = `/api/followups?username=${encodeURIComponent(user?.username || '')}&nocache=${timestamp}&date=${new Date().toISOString().split('T')[0]}`;
+        const response = await fetch(url, {
+          headers: {
+            ...noCacheHeaders,
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-Cache-Bust': timestamp.toString()
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        // Return a fallback object with empty arrays
+        return {
+          overdue: [],
+          dueToday: [],
+          upcoming: [],
+          overdueCount: 0,
+          dueTodayCount: 0,
+          upcomingCount: 0,
+          totalPending: 0
+        };
+      }
     },
     retry: 1,
     retryDelay: 1000,
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchInterval: 15000, // Refetch every 15 seconds
     meta: {
       errorMessage: 'Failed to load followup data'
     }
@@ -254,6 +335,9 @@ export default function Dashboard() {
         setLocation('/leads?status=sold');
         break;
       case 'today-followups':
+        setLocation('/followups');
+        break;
+      case 'overdue':
         setLocation('/followups');
         break;
       case 'new-today':
@@ -285,8 +369,11 @@ export default function Dashboard() {
 
   // Get recent leads safely
   const recentLeads = (leadsResponse && leadsResponse.leads && leadsResponse.leads.slice(0, 3)) || [];
-  const todaysFollowups = followupsData ? [...followupsData.overdue, ...followupsData.dueToday] : [];
-
+  // Only include follow-ups that are actually due today, not overdue ones
+  const todaysFollowups = followupsData ? [...followupsData.dueToday] : [];
+  // Get overdue follow-ups
+  const overdueFollowups = followupsData ? [...followupsData.overdue] : [];
+  
   if (statsLoading || leadsLoading || followupsLoading) {
     return (
       <div className="container-fluid py-4">
@@ -588,13 +675,27 @@ export default function Dashboard() {
         
         {/* Welcome Section */}
         <div className={`row mb-4 dashboard-section ${animationStep >= 1 ? 'animate' : ''}`}>
-          <div className="col">
+          <div className="col-8 col-md-10">
             <h1 className="h3 fw-bold" data-testid="dashboard-welcome">
               Welcome back, {user ? capitalizeFirst(user.username) : 'User'}!
             </h1>
             <p className="text-muted" data-testid="dashboard-subtitle">
               Here's what's happening with your leads today.
             </p>
+          </div>
+          <div className="col-4 col-md-2 text-end">
+            <button 
+              className="btn btn-outline-primary btn-sm"
+              onClick={() => {
+                forceRefreshData(user?.username);
+                refetchStats();
+                window.location.reload();
+              }}
+              title="Force refresh all data"
+            >
+              <i className="fas fa-sync-alt"></i>
+              <span className="d-none d-md-inline ms-1">Refresh</span>
+            </button>
           </div>
         </div>
 
@@ -656,16 +757,30 @@ export default function Dashboard() {
             data-testid="stat-today-followups"
             onClick={() => handleStatsCardClick('today-followups')}
             style={{ cursor: 'pointer' }}
-            title="Click to view today's follow-ups"
+            title="Click to view follow-ups due today (not including overdue)"
           >
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
                   <h6 className="card-title text-muted mb-1">
-                    Today's Follow-ups
+                    Due Today
                     <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
                   </h6>
-                  <h3 className="fw-bold text-warning">{(stats && stats.todayFollowups) || 0}</h3>
+                  <h3 className="fw-bold text-warning">
+                    {/* ONLY use dueToday count, not including overdue */}
+                    {(() => {
+                      // Direct calculation from followupsData arrays - ONLY due today
+                      if (followupsData && Array.isArray(followupsData.dueToday)) {
+                        return followupsData.dueToday.length;
+                      }
+                      // If arrays aren't available but we have the summary object from API
+                      else if (followupsData && typeof followupsData.dueTodayCount === 'number') {
+                        return followupsData.dueTodayCount;
+                      }
+                      // Fallback to 0 to ensure we don't show stale data
+                      return 0;
+                    })()}
+                  </h3>
                 </div>
                 <div className="text-warning">
                   <i className="fas fa-calendar-day fa-2x"></i>
@@ -676,6 +791,44 @@ export default function Dashboard() {
         </div>
         
         <div className="col-6 col-sm-6 col-md-3 mb-3">
+          <div 
+            className="card stats-card clickable-card" 
+            data-testid="stat-overdue"
+            onClick={() => handleStatsCardClick('overdue')}
+            style={{ cursor: 'pointer' }}
+            title="Click to view overdue follow-ups"
+          >
+            <div className="card-body">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="card-title text-muted mb-1">
+                    Overdue
+                    <i className="fas fa-external-link-alt ms-2" style={{ fontSize: '0.75rem', opacity: 0.6 }}></i>
+                  </h6>
+                  <h3 className="fw-bold text-danger">
+                    {(() => {
+                      // Show actual overdue count from followupsData
+                      if (followupsData && Array.isArray(followupsData.overdue)) {
+                        return followupsData.overdue.length;
+                      }
+                      // If arrays aren't available but we have the summary object from API
+                      else if (followupsData && typeof followupsData.overdueCount === 'number') {
+                        return followupsData.overdueCount;
+                      }
+                      // Fallback to 0 if no data available
+                      return 0;
+                    })()}
+                  </h3>
+                </div>
+                <div className="text-danger">
+                  <i className="fas fa-exclamation-circle fa-2x"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="col-6 col-sm-6 col-md-3 mb-3 d-none d-md-block">
           <div 
             className="card stats-card clickable-card" 
             data-testid="stat-new-today"
@@ -735,12 +888,70 @@ export default function Dashboard() {
       )}
 
       <div className={`row dashboard-section ${animationStep >= 3 ? 'animate' : ''}`}>
-        {/* Today's Follow-ups */}
-        <div className="col-12 col-md-6 col-lg-6 mb-4">
+        {/* Overdue Follow-ups */}
+        {overdueFollowups.length > 0 && (
+          <div className="col-12 col-md-6 col-lg-6 mb-4">
+            <div className="card border-danger" data-testid="overdue-followups">
+              <div className="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">
+                  <i className="fas fa-exclamation-triangle me-2"></i>Overdue Follow-ups
+                </h5>
+                <span className="badge bg-light text-danger">{overdueFollowups.length} overdue</span>
+              </div>
+              <div className="card-body p-0">
+                {overdueFollowups.length === 0 ? (
+                  <div className="p-4 text-center text-muted">
+                    <i className="fas fa-check-circle fa-3x mb-3"></i>
+                    <p>No overdue follow-ups!</p>
+                  </div>
+                ) : (
+                  <div className="list-group list-group-flush">
+                    {overdueFollowups.slice(0, 3).map((lead) => (
+                      <div
+                        key={lead.id}
+                        className="list-group-item follow-up-overdue"
+                        data-testid={`overdue-item-${lead.id}`}
+                      >
+                        <div className="d-flex justify-content-between align-items-start flex-wrap">
+                          <div className="flex-grow-1 me-2">
+                            <h6 className="mb-1 text-danger">{lead.name}</h6>
+                            <p className="mb-1 text-muted small">Phone: {lead.phone}</p>
+                            <small className="text-danger">
+                              <i className="fas fa-exclamation-triangle me-1"></i>
+                              Overdue
+                            </small>
+                          </div>
+                          <div className="d-flex gap-2 mt-2 mt-sm-0">
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => openQuickEdit(lead)}
+                              data-testid={`button-edit-overdue-${lead.id}`}
+                            >
+                              <i className="fas fa-edit"></i>
+                              <span className="d-none d-sm-inline ms-1">Edit</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="card-footer text-center">
+                <a href="/followups" className="btn btn-outline-danger btn-sm" data-testid="view-all-overdue">
+                  View All Overdue Follow-ups <i className="fas fa-arrow-right ms-1"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Due Today Follow-ups */}
+        <div className={`col-12 ${overdueFollowups.length > 0 ? 'col-md-6' : 'col-md-6'} col-lg-6 mb-4`}>
           <div className="card" data-testid="todays-followups">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">
-                <i className="fas fa-clock me-2"></i>Today's Follow-ups
+                <i className="fas fa-clock me-2"></i>Due Today
               </h5>
               <span className="badge bg-warning">{todaysFollowups.length} pending</span>
             </div>
@@ -806,7 +1017,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Leads */}
-        <div className="col-12 col-md-6 col-lg-6 mb-4">
+        <div className={`col-12 ${overdueFollowups.length > 0 ? 'col-md-6' : 'col-md-6'} col-lg-6 mb-4`}>
           <div className="card" data-testid="recent-leads">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">

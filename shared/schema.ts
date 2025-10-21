@@ -53,6 +53,7 @@ export const leads = mysqlTable("leads", {
   assigned_installer: varchar("assigned_installer", { length: 100 }), // Single installer name
   address: text("address"),
   selected_colors: text("selected_colors"), // JSON string of selected WMK colors
+  market: varchar("market", { length: 50 }), // Commercial market type
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -255,6 +256,7 @@ export const LEAD_STATUSES = [
 export const INSTALLERS = ["Angel", "Brian", "Luis"] as const;
 export const PROJECT_TYPES = ["Residential", "Commercial"] as const;
 export const COMMERCIAL_SUBCATEGORIES = ["ALL products", "Furnitures", "Walls", "Ceilings", "Flooring", "Signage"] as const;
+export const MARKETS = ["Office Space", "Hospitality", "Healthcare", "Retail", "Marine", "Signage"] as const;
 
 // Calendar Events schema
 export const calendarEvents = mysqlTable("calendar_events", {

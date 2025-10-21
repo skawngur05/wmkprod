@@ -1,4 +1,5 @@
 import { Switch, Route, Redirect, useLocation } from "wouter";
+import "@/utils/browser-polyfill"; // Import the polyfill to fix platform detection issues
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,6 +11,7 @@ import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { hasPermission } from "@/lib/permissions";
 import React, { useState, useEffect, lazy, Suspense } from "react";
 
+// CACHE BUST: DATE AND ORIGIN COLUMNS REMOVED - v${Date.now()}
 // Lazy load the mobile dashboard for better performance
 const MobileDashboard = lazy(() => import("@/pages/mobile-dashboard-new"));
 
@@ -124,9 +126,11 @@ function AppRouter() {
     try {
       const ua = navigator.userAgent.toLowerCase();
       
-      // Improved detection for Safari on iOS
+      // Improved detection for Safari on iOS that doesn't rely on deprecated navigator.platform
       const isIOS = /iphone|ipod|ipad/.test(ua) || 
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                    (typeof navigator.maxTouchPoints !== 'undefined' && 
+                     navigator.maxTouchPoints > 1 && 
+                     /macintosh/i.test(ua));
       
       // Safari detection
       const isSafari = /safari/.test(ua) && !/chrome/.test(ua) && !/chromium/.test(ua);

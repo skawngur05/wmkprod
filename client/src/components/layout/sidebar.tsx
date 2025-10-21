@@ -22,20 +22,24 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-// Custom hook to detect mobile devices
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+// Custom hook to detect mobile and small screen devices
+const useIsSmallScreen = () => {
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth <= 1024); // Increasing breakpoint to 1024px
   
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
+      setIsSmallScreen(window.innerWidth <= 1024);
     };
     
+    // Initial check
+    handleResize();
+    
+    // Add event listener
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  return isMobile;
+  return isSmallScreen;
 };
 
 // Map FontAwesome classes to Lucide icons
@@ -59,13 +63,13 @@ const iconMap = {
 export function Sidebar() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
-  const isMobile = useIsMobile();
-  const [isCollapsed, setIsCollapsed] = useState(isMobile);
+  const isSmallScreen = useIsSmallScreen();
+  const [isCollapsed, setIsCollapsed] = useState(isSmallScreen);
 
-  // Auto-collapse on mobile when screen size changes
+  // Auto-collapse when screen size changes
   useEffect(() => {
-    setIsCollapsed(isMobile);
-  }, [isMobile]);
+    setIsCollapsed(isSmallScreen);
+  }, [isSmallScreen]);
   
   // Update body class based on sidebar state
   useEffect(() => {
@@ -91,7 +95,7 @@ export function Sidebar() {
 
   return (
     <div className="sidebar-container">
-      {isMobile && !isCollapsed && (
+      {isSmallScreen && !isCollapsed && (
         <div 
           className="sidebar-overlay" 
           onClick={() => setIsCollapsed(true)}
@@ -136,7 +140,7 @@ export function Sidebar() {
                 href={item.path} 
                 className={`nav-item-modern ${isActive(item.path) ? 'active' : ''}`}
                 data-testid={item.testId}
-                onClick={() => isMobile && setIsCollapsed(true)}
+                onClick={() => isSmallScreen && setIsCollapsed(true)}
               >
                 <div className="nav-item-content">
                   <IconComponent className="nav-icon" size={20} />
@@ -159,7 +163,7 @@ export function Sidebar() {
                   href={item.path} 
                   className={`nav-item-modern ${isActive(item.path) ? 'active' : ''}`}
                   data-testid={item.testId}
-                  onClick={() => isMobile && setIsCollapsed(true)}
+                  onClick={() => isSmallScreen && setIsCollapsed(true)}
                 >
                   <div className="nav-item-content">
                     <IconComponent className="nav-icon" size={20} />
