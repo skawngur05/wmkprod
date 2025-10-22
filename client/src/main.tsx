@@ -6,10 +6,10 @@ import "./styles/calendar.css"; // Import calendar responsive styles
 import "./styles/animations.css"; // Import custom animations
 // Cache bust - force rebuild after table structure changes: 1760342112583
 
-// Development cache busting - force reload if cached version detected
+// Development cache busting - force reload if schema version changes
 if (import.meta.env.DEV) {
   const devCacheKey = 'dev-cache-buster';
-  const currentVersion = Date.now().toString();
+  const currentVersion = '1.0.0'; // Increment this to force a cache clear
   const cachedVersion = localStorage.getItem(devCacheKey);
   
   if (cachedVersion && cachedVersion !== currentVersion) {
@@ -24,11 +24,15 @@ if (import.meta.env.DEV) {
       });
     }
     
+    // Save new version before reload to prevent loop
+    localStorage.setItem(devCacheKey, currentVersion);
+    
     // Force a hard reload
     window.location.reload();
+  } else if (!cachedVersion) {
+    // First load, just save the version
+    localStorage.setItem(devCacheKey, currentVersion);
   }
-  
-  localStorage.setItem(devCacheKey, currentVersion);
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

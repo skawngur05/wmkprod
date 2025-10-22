@@ -110,8 +110,8 @@ app.use(
     cookie: {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true, // Always use secure cookies in Replit (uses HTTPS)
+      sameSite: 'none', // Required for Replit iframe/webview
     },
   })
 );
