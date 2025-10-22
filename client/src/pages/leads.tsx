@@ -291,6 +291,8 @@ export default function Leads() {
     origin: 'all',
     assigned_to: 'all'
   });
+  const [searchInput, setSearchInput] = useState('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const [currentPage, setCurrentPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -618,15 +620,16 @@ export default function Leads() {
                 <Input
                   type="text"
                   placeholder="Search by name, phone, or email..."
-                  defaultValue={filters.search}
+                  value={searchInput}
                   onChange={(e) => {
                     const value = e.target.value;
-                    // Clear previous timeout
-                    if ((window as any).searchDebounceTimeout) {
-                      clearTimeout((window as any).searchDebounceTimeout);
+                    setSearchInput(value);
+                    
+                    if (searchTimeoutRef.current) {
+                      clearTimeout(searchTimeoutRef.current);
                     }
-                    // Set new debounced update
-                    (window as any).searchDebounceTimeout = setTimeout(() => {
+                    
+                    searchTimeoutRef.current = setTimeout(() => {
                       setFilters(prev => ({ ...prev, search: value }));
                       setCurrentPage(1);
                     }, 500);
