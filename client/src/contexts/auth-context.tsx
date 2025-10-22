@@ -21,18 +21,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TEMPORARILY DISABLED: Check for stored session
-    // There's a bug causing infinite loops when loading from localStorage
-    // Users will need to log in again each time
-    /*
-    const storedUser = localStorage.getItem('crm_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    */
-    // Clear any stale data
-    localStorage.clear();
-    setIsLoading(false);
+    // Check for existing session on mount
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include', // Include cookies
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        } else {
+          // No valid session
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSession();
   }, []);
 
   useEffect(() => {
@@ -85,13 +96,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include cookies for session
         body: JSON.stringify({ username, password }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
-        localStorage.setItem('crm_user', JSON.stringify(data.user));
         return { success: true };
       } else {
         const errorData = await response.json();
@@ -109,10 +120,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('crm_user');
-    localStorage.clear(); // Clear all localStorage to ensure clean state
-    setUser(null); // This will trigger a re-render and redirect via ProtectedRoute
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include', // Include cookies
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null); // Clear user state regardless of API response
+    }
   };
 
   return (

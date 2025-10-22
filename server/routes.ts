@@ -333,15 +333,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `User ${user.username} logged in successfully`
       );
 
-      // Simple session - in production use proper session management
-      res.json({ 
-        user: { 
-          id: user.id, 
-          username: user.username, 
-          role: user.role,
-          permissions: permissions
-        } 
+      // Store user in session
+      const userSession = { 
+        id: user.id, 
+        username: user.username, 
+        role: user.role,
+        permissions: permissions,
+        fullName: user.full_name
+      };
+      
+      (req.session as any).user = userSession;
+      
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
       });
+
+      console.log("✅ Session saved successfully");
+
+      res.json({ user: userSession });
     } catch (error) {
       console.error("Login validation error:", error);
       if (error instanceof z.ZodError) {
@@ -349,6 +361,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid request data", errors: error.errors });
       }
       res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  // Get current session
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      const user = (req.session as any).user;
+      
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      // Verify user still exists and is active
+      const dbUser = await storage.getUserByUsername(user.username.toLowerCase());
+      if (!dbUser || !dbUser.is_active) {
+        // Clear invalid session
+        req.session.destroy(() => {});
+        return res.status(401).json({ message: "Session invalid" });
+      }
+
+      res.json({ user });
+    } catch (error) {
+      console.error("Session check error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Logout endpoint
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      const user = (req.session as any).user;
+      
+      if (user) {
+        // Log logout activity
+        await storage.logActivity(
+          user.id.toString(),
+          'LOGOUT',
+          'AUTH',
+          user.id.toString(),
+          `User ${user.username} logged out`
+        );
+      }
+
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destruction error:", err);
+          return res.status(500).json({ message: "Logout failed" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: "Logged out successfully" });
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Server error" });
     }
   });
 

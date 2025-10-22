@@ -4,6 +4,9 @@ import { trackingScheduler } from "./tracking-scheduler";
 import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
+import session from "express-session";
+import  connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 
 // Load environment variables
 dotenv.config();
@@ -87,6 +90,31 @@ async function loadViteInDevelopment() {
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Session configuration
+const PgSession = connectPgSimple(session);
+const sessionPool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+app.use(
+  session({
+    store: new PgSession({
+      pool: sessionPool,
+      tableName: 'session',
+      createTableIfMissing: true,
+    }),
+    secret: process.env.SESSION_SECRET || 'wmk-crm-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    },
+  })
+);
 
 // Development cache-busting middleware
 if (process.env.NODE_ENV === 'development') {
