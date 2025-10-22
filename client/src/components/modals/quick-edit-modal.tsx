@@ -5,6 +5,8 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useLeadFormChanges } from '@/hooks/use-form-changes';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { X, User, Phone, Mail, MapPin, Calendar, DollarSign, Building2, Tag, FileText, Users, Palette, Eye } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { User, Phone, Mail, MapPin, Calendar, DollarSign, Building2, Tag, FileText, Users, Palette, Eye, Wrench, TrendingUp, Clock, CheckCircle2 } from 'lucide-react';
 
 interface QuickEditModalProps {
   lead: Lead | null;
@@ -22,17 +25,13 @@ interface QuickEditModalProps {
 }
 
 export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalProps) {
-  // Helper function to format date without timezone issues
   const formatDateForInput = (dateValue: string | Date | null) => {
     if (!dateValue) return '';
-    // If it's already a string in YYYY-MM-DD format, return as-is
     if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
       return dateValue;
     }
-    // If it's a Date object or other format, convert to YYYY-MM-DD
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return '';
-    // Use local time methods since we're storing as simple strings
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -67,13 +66,9 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Track form changes to disable save button when no changes
   const { shouldDisableSave } = useLeadFormChanges(formData, originalFormData);
-  
-  // Include newNote in the disable logic - if there's a new note, enable the save button
   const shouldDisableSaveButton = shouldDisableSave && !newNote.trim();
 
-  // Fetch WMK colors
   const { data: wmkColors = [] } = useQuery({
     queryKey: ['/api/wmk-colors'],
     queryFn: async () => {
@@ -83,7 +78,6 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     }
   });
 
-  // Fetch active users for assignment
   const { data: activeUsers = [] } = useQuery({
     queryKey: ['/api/users/active'],
     queryFn: async () => {
@@ -93,7 +87,6 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     }
   });
 
-  // Fetch installers
   const { data: installersData = [] } = useQuery<Installer[]>({
     queryKey: ['/api/admin/installers'],
     queryFn: async () => {
@@ -111,9 +104,8 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Lead updated successfully!" });
-      // Invalidate multiple query patterns to ensure all lead-related data refreshes
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
-      queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
+      queryClient.invalidateQueries({ queryKey: ['leads-page'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/followups'] });
       onSave();
@@ -134,7 +126,7 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         commercial_subcategory: (lead as any).commercial_subcategory || '',
         market: (lead as any).market || '',
         remarks: lead.remarks || '',
-        assigned_to: lead.assigned_to || '', // Use the actual assigned_to value
+        assigned_to: lead.assigned_to || '',
         customer_address: (lead as any).customer_address || '',
         project_amount: lead.project_amount ? lead.project_amount.toString() : '',
         next_followup_date: formatDateForInput(lead.next_followup_date),
@@ -152,14 +144,13 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         selected_colors: (lead as any).selected_colors || []
       };
       setFormData(initialData);
-      setOriginalFormData(initialData); // Store original for comparison
+      setOriginalFormData(initialData);
     }
   }, [lead]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Handle new note addition and color selection note
     let updatedNotes = formData.notes || '';
     if (newNote.trim()) {
       const today = new Date();
@@ -170,7 +161,6 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       updatedNotes = updatedNotes ? `${updatedNotes}\n${newNoteWithTimestamp}` : newNoteWithTimestamp;
     }
     
-    // Add installer assignment note if installers are assigned
     if (formData.remarks === 'Sold' && formData.assigned_installer.length > 0) {
       const today = new Date();
       const timestamp = today.getFullYear() + '-' + 
@@ -180,7 +170,6 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       updatedNotes = updatedNotes ? `${updatedNotes}\n${installerNote}` : installerNote;
     }
     
-    // Add color selection note after payment status if colors are selected
     if (formData.remarks === 'Sold' && formData.selected_colors.length > 0 && (formData.deposit_paid || formData.balance_paid)) {
       const today = new Date();
       const timestamp = today.getFullYear() + '-' + 
@@ -190,7 +179,6 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       updatedNotes = updatedNotes ? `${updatedNotes}\n${colorNote}` : colorNote;
     }
 
-    // PRODUCTION BULLETPROOF FIX: Ensure all dates are strings
     const ensureDateString = (dateValue: any): string | null => {
       if (!dateValue) return null;
       if (typeof dateValue === 'string') return dateValue;
@@ -198,16 +186,13 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
         const year = dateValue.getFullYear();
         const month = String(dateValue.getMonth() + 1).padStart(2, '0');
         const day = String(dateValue.getDate()).padStart(2, '0');
-        const result = `${year}-${month}-${day}`;
-        return result;
+        return `${year}-${month}-${day}`;
       }
       return String(dateValue);
     };
 
-    // Map assigned_to values to ensure consistency with user data
     const mapAssignedTo = (value: string): string => {
       if (!value || value === '') return '';
-      // Return the value as-is since we now accept any valid user
       return value;
     };
 
@@ -216,11 +201,11 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
       phone: formData.phone,
       email: formData.email || null,
       lead_origin: formData.lead_origin,
-      project_type: formData.project_type || 'Residential', // Ensure project_type is never undefined
+      project_type: formData.project_type || 'Residential',
       market: formData.project_type === 'Commercial' ? formData.market : null,
       commercial_subcategory: formData.commercial_subcategory || null,
       remarks: formData.remarks,
-      assigned_to: mapAssignedTo(typeof formData.assigned_to === 'string' ? formData.assigned_to : ''), // Ensure it's a valid string
+      assigned_to: mapAssignedTo(typeof formData.assigned_to === 'string' ? formData.assigned_to : ''),
       customer_address: formData.customer_address || null,
       project_amount: formData.project_amount ? parseFloat(formData.project_amount) : null,
       next_followup_date: ensureDateString(formData.next_followup_date),
@@ -239,594 +224,603 @@ export function QuickEditModal({ lead, show, onHide, onSave }: QuickEditModalPro
 
   if (!lead) return null;
 
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      'New': 'bg-blue-100 text-blue-800 border-blue-200',
+      'In Progress': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'Sold': 'bg-green-100 text-green-800 border-green-200',
+      'Not Interested': 'bg-red-100 text-red-800 border-red-200',
+      'Not Service Area': 'bg-gray-100 text-gray-800 border-gray-200',
+      'Not Compatible': 'bg-orange-100 text-orange-800 border-orange-200',
+      'Friendly Partner': 'bg-purple-100 text-purple-800 border-purple-200',
+      'Franchise Request': 'bg-pink-100 text-pink-800 border-pink-200'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+  };
+
   return (
     <Dialog open={show} onOpenChange={onHide}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col" data-testid="quick-edit-modal">
-        <DialogHeader className="pb-4 flex-shrink-0">
-          <div className="flex flex-col items-center mb-2">
-            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Eye className="h-5 w-5 text-blue-600" /> 
-              View & Edit Lead Details
-            </DialogTitle>
-            <DialogDescription className="text-gray-600 mt-1 text-center">
-              View lead details and make changes to contact information, status, and project information
-            </DialogDescription>
-          </div>
-          <div className="flex justify-end items-center">
-            <div className="flex items-center text-xs text-gray-500">
-              <Calendar className="h-3 w-3 text-gray-400 mr-1" />
-              <span>
-                Created: {formatDateForInput(lead.date_created) ? new Date(lead.date_created).toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'short', 
-                  day: 'numeric' 
-                }) : 'Unknown'}
-              </span>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0" data-testid="quick-edit-modal">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Eye className="h-6 w-6 text-blue-600" />
+                </div>
+                {lead.name}
+              </DialogTitle>
+              <DialogDescription className="text-gray-600 mt-2 flex items-center gap-4">
+                <Badge variant="outline" className={`${getStatusColor(formData.remarks)} border px-3 py-1`}>
+                  {formData.remarks}
+                </Badge>
+                <span className="flex items-center text-sm">
+                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                  Created: {formatDateForInput(lead.date_created) ? new Date(lead.date_created).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  }) : 'Unknown'}
+                </span>
+              </DialogDescription>
             </div>
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto pr-2">
-          <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Two Column Layout - Always two columns */}
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem'}}>
-            {/* Left Column */}
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="name" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <User className="h-3 w-3 text-blue-600" />
-                  NAME <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  data-testid="input-edit-name"
-                  className="h-11 text-base"
-                  placeholder="Enter customer name"
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <Label htmlFor="email" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <Mail className="h-3 w-3 text-green-600" />
-                  EMAIL
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  data-testid="input-edit-email"
-                  className="h-11 text-base"
-                  placeholder="Enter email address"
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <Label htmlFor="assigned_to" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <Users className="h-3 w-3 text-purple-600" />
-                  ASSIGNED TO: <span className="text-blue-600 font-normal normal-case">
-                    {(lead?.assigned_to && lead.assigned_to !== 'undefined' && lead.assigned_to !== 'null') ? 
-                      lead.assigned_to.charAt(0).toUpperCase() + lead.assigned_to.slice(1) : 
-                      'No one assigned'}
-                  </span>
-                </Label>
-                <Select
-                  value={formData.assigned_to}
-                  onValueChange={(value) => setFormData({...formData, assigned_to: value})}
-                >
-                  <SelectTrigger data-testid="select-edit-assigned" className="h-11 text-base">
-                    <SelectValue placeholder="Select assignee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activeUsers.map((user: any) => (
-                      <SelectItem key={user.username} value={user.full_name || user.username}>
-                        {(user.full_name || user.username).charAt(0).toUpperCase() + (user.full_name || user.username).slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+          <Tabs defaultValue="basic" className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="mx-6 mt-4 grid w-auto grid-cols-4 bg-gray-100">
+              <TabsTrigger value="basic" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Basic Info</span>
+              </TabsTrigger>
+              <TabsTrigger value="project" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Project Details</span>
+              </TabsTrigger>
+              <TabsTrigger value="installation" className="flex items-center gap-2">
+                <Wrench className="h-4 w-4" />
+                <span className="hidden sm:inline">Installation</span>
+              </TabsTrigger>
+              <TabsTrigger value="notes" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Notes</span>
+              </TabsTrigger>
+            </TabsList>
 
-              <div className="space-y-1">
-                <Label htmlFor="lead_origin" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <Tag className="h-3 w-3 text-orange-600" />
-                  LEAD ORIGIN
-                </Label>
-                <Select
-                  value={formData.lead_origin}
-                  onValueChange={(value) => setFormData({...formData, lead_origin: value})}
-                >
-                  <SelectTrigger data-testid="select-edit-lead-origin" className="h-11 text-base">
-                    <SelectValue placeholder="Select lead origin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LEAD_ORIGINS.map(origin => (
-                      <SelectItem key={origin} value={origin}>
-                        {origin.charAt(0).toUpperCase() + origin.slice(1).replace(/([A-Z])/g, ' $1').trim()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {/* Basic Info Tab */}
+              <TabsContent value="basic" className="mt-0 space-y-4">
+                <Card className="border-blue-200 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <User className="h-5 w-5 text-blue-600" />
+                      Contact Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-sm font-medium flex items-center gap-2">
+                        Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        data-testid="input-edit-name"
+                        className="h-10"
+                        placeholder="Enter customer name"
+                      />
+                    </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="project_type" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <Building2 className="h-3 w-3 text-indigo-600" />
-                  PROJECT TYPE <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.project_type}
-                  onValueChange={(value) => {
-                    setFormData({
-                      ...formData, 
-                      project_type: value,
-                      // Clear market field if changing from Commercial to something else
-                      market: value === 'Commercial' ? formData.market : ''
-                    });
-                  }}
-                >
-                  <SelectTrigger data-testid="select-edit-project-type" className="h-11 text-base">
-                    <SelectValue placeholder="Select project type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PROJECT_TYPES.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-emerald-600" />
+                        Phone <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        data-testid="input-edit-phone"
+                        className="h-10"
+                        placeholder="Enter phone number"
+                      />
+                    </div>
 
-              {/* Market & Commercial Subcategory - Only show when Commercial is selected */}
-              {formData.project_type === 'Commercial' && (
-                <>
-                <div className="space-y-1">
-                  <Label htmlFor="market" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                    <MapPin className="h-3 w-3 text-green-600" />
-                    MARKET <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.market}
-                    onValueChange={(value) => setFormData({...formData, market: value})}
-                  >
-                    <SelectTrigger data-testid="select-edit-market" className="h-11 text-base">
-                      <SelectValue placeholder="Select market" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MARKETS.map(market => (
-                        <SelectItem key={market} value={market}>{market}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-1">
-                  <Label htmlFor="commercial_subcategory" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                    <Building2 className="h-3 w-3 text-slate-600" />
-                    COMMERCIAL CATEGORY <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.commercial_subcategory}
-                    onValueChange={(value) => setFormData({...formData, commercial_subcategory: value})}
-                  >
-                    <SelectTrigger data-testid="select-edit-commercial-subcategory" className="h-11 text-base">
-                      <SelectValue placeholder="Select commercial category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COMMERCIAL_SUBCATEGORIES.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                </>
-              )}
-              
-              {/* Customer Address - Only show when status is sold */}
-              {formData.remarks === 'Sold' && (
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="customer_address" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                      <MapPin className="h-3 w-3 text-red-600" />
-                      CUSTOMER ADDRESS FOR INSTALLATION
-                    </Label>
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-green-600" />
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        data-testid="input-edit-email"
+                        className="h-10"
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-purple-200 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-purple-600" />
+                      Lead Management
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="assigned_to" className="text-sm font-medium flex items-center gap-2">
+                        <Users className="h-4 w-4 text-purple-600" />
+                        Assigned To
+                      </Label>
+                      <Select
+                        value={formData.assigned_to}
+                        onValueChange={(value) => setFormData({...formData, assigned_to: value})}
+                      >
+                        <SelectTrigger data-testid="select-edit-assigned" className="h-10">
+                          <SelectValue placeholder="Select assignee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeUsers.map((user: any) => (
+                            <SelectItem key={user.username} value={user.full_name || user.username}>
+                              {(user.full_name || user.username).charAt(0).toUpperCase() + (user.full_name || user.username).slice(1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="status" className="text-sm font-medium flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-yellow-600" />
+                        Status <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.remarks}
+                        onValueChange={(value) => setFormData({...formData, remarks: value})}
+                      >
+                        <SelectTrigger data-testid="select-edit-status" className="h-10">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LEAD_STATUSES.map(status => (
+                            <SelectItem key={status} value={status}>
+                              {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lead_origin" className="text-sm font-medium flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-orange-600" />
+                        Lead Origin
+                      </Label>
+                      <Select
+                        value={formData.lead_origin}
+                        onValueChange={(value) => setFormData({...formData, lead_origin: value})}
+                      >
+                        <SelectTrigger data-testid="select-edit-lead-origin" className="h-10">
+                          <SelectValue placeholder="Select lead origin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LEAD_ORIGINS.map(origin => (
+                            <SelectItem key={origin} value={origin}>
+                              {origin.charAt(0).toUpperCase() + origin.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="next_followup_date" className="text-sm font-medium flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-cyan-600" />
+                        Next Follow-up
+                      </Label>
+                      <Input
+                        id="next_followup_date"
+                        type="date"
+                        value={formData.next_followup_date}
+                        onChange={(e) => setFormData({...formData, next_followup_date: e.target.value})}
+                        data-testid="input-edit-next-followup"
+                        className="h-10"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Project Details Tab */}
+              <TabsContent value="project" className="mt-0 space-y-4">
+                <Card className="border-indigo-200 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-indigo-600" />
+                      Project Type
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="project_type" className="text-sm font-medium">
+                        Project Type <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.project_type}
+                        onValueChange={(value) => {
+                          setFormData({
+                            ...formData, 
+                            project_type: value,
+                            market: value === 'Commercial' ? formData.market : ''
+                          });
+                        }}
+                      >
+                        <SelectTrigger data-testid="select-edit-project-type" className="h-10">
+                          <SelectValue placeholder="Select project type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROJECT_TYPES.map(type => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {formData.project_type === 'Commercial' && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="market" className="text-sm font-medium">
+                            Market <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={formData.market}
+                            onValueChange={(value) => setFormData({...formData, market: value})}
+                          >
+                            <SelectTrigger data-testid="select-edit-market" className="h-10">
+                              <SelectValue placeholder="Select market" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {MARKETS.map(market => (
+                                <SelectItem key={market} value={market}>{market}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2 col-span-2">
+                          <Label htmlFor="commercial_subcategory" className="text-sm font-medium">
+                            Commercial Category <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={formData.commercial_subcategory}
+                            onValueChange={(value) => setFormData({...formData, commercial_subcategory: value})}
+                          >
+                            <SelectTrigger data-testid="select-edit-commercial-subcategory" className="h-10">
+                              <SelectValue placeholder="Select commercial category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COMMERCIAL_SUBCATEGORIES.map(category => (
+                                <SelectItem key={category} value={category}>{category}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-green-200 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <DollarSign className="h-5 w-5 text-green-600" />
+                      Financial Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="project_amount" className="text-sm font-medium">
+                        Project Amount
+                      </Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="project_amount"
+                          type="number"
+                          step="0.01"
+                          value={formData.project_amount}
+                          onChange={(e) => setFormData({...formData, project_amount: e.target.value})}
+                          data-testid="input-edit-project-amount"
+                          className="h-10 pl-10"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    {formData.remarks === 'Sold' && (
+                      <div className="grid grid-cols-2 gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="deposit_paid"
+                            checked={formData.deposit_paid}
+                            onCheckedChange={(checked) => setFormData({...formData, deposit_paid: checked as boolean})}
+                            data-testid="checkbox-deposit-paid"
+                          />
+                          <Label htmlFor="deposit_paid" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            Deposit Paid
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="balance_paid"
+                            checked={formData.balance_paid}
+                            onCheckedChange={(checked) => setFormData({...formData, balance_paid: checked as boolean})}
+                            data-testid="checkbox-balance-paid"
+                          />
+                          <Label htmlFor="balance_paid" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            Balance Paid
+                          </Label>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Installation Tab */}
+              <TabsContent value="installation" className="mt-0 space-y-4">
+                {formData.remarks === 'Sold' ? (
+                  <>
+                    <Card className="border-cyan-200 shadow-sm">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <MapPin className="h-5 w-5 text-cyan-600" />
+                          Installation Address
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="customer_address" className="text-sm font-medium">
+                            Customer Address
+                          </Label>
+                          <Textarea
+                            id="customer_address"
+                            value={formData.customer_address}
+                            onChange={(e) => setFormData({...formData, customer_address: e.target.value})}
+                            data-testid="textarea-edit-customer-address"
+                            className="min-h-[80px] resize-none"
+                            placeholder="Enter installation address"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-orange-200 shadow-sm">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Calendar className="h-5 w-5 text-orange-600" />
+                          Installation Schedule
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="installation_date" className="text-sm font-medium">
+                            Installation Start
+                          </Label>
+                          <Input
+                            id="installation_date"
+                            type="date"
+                            value={formData.installation_date}
+                            onChange={(e) => setFormData({...formData, installation_date: e.target.value})}
+                            data-testid="input-edit-installation-date"
+                            className="h-10"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="installation_end_date" className="text-sm font-medium">
+                            Installation End
+                          </Label>
+                          <Input
+                            id="installation_end_date"
+                            type="date"
+                            value={formData.installation_end_date}
+                            onChange={(e) => setFormData({...formData, installation_end_date: e.target.value})}
+                            data-testid="input-edit-installation-end-date"
+                            className="h-10"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="pickup_date" className="text-sm font-medium">
+                            Pickup Date
+                          </Label>
+                          <Input
+                            id="pickup_date"
+                            type="date"
+                            value={formData.pickup_date}
+                            onChange={(e) => setFormData({...formData, pickup_date: e.target.value})}
+                            data-testid="input-edit-pickup-date"
+                            className="h-10"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-purple-200 shadow-sm">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Wrench className="h-5 w-5 text-purple-600" />
+                          Installer Assignment
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex flex-wrap gap-2">
+                          {installersData.map((installer) => (
+                            <div
+                              key={installer.id}
+                              onClick={() => {
+                                const isSelected = formData.assigned_installer.includes(installer.name);
+                                setFormData({
+                                  ...formData,
+                                  assigned_installer: isSelected
+                                    ? formData.assigned_installer.filter(name => name !== installer.name)
+                                    : [...formData.assigned_installer, installer.name]
+                                });
+                              }}
+                              className={`px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                                formData.assigned_installer.includes(installer.name)
+                                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                  : 'border-gray-200 bg-white hover:border-purple-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {formData.assigned_installer.includes(installer.name) && (
+                                  <CheckCircle2 className="h-4 w-4 text-purple-600" />
+                                )}
+                                <span className="font-medium">{installer.name}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-pink-200 shadow-sm">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Palette className="h-5 w-5 text-pink-600" />
+                          Color Selection
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex flex-wrap gap-2">
+                          {wmkColors.map((color: any) => (
+                            <div
+                              key={color.id}
+                              onClick={() => {
+                                const isSelected = formData.selected_colors.includes(color.color_name);
+                                setFormData({
+                                  ...formData,
+                                  selected_colors: isSelected
+                                    ? formData.selected_colors.filter(name => name !== color.color_name)
+                                    : [...formData.selected_colors, color.color_name]
+                                });
+                              }}
+                              className={`px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                                formData.selected_colors.includes(color.color_name)
+                                  ? 'border-pink-500 bg-pink-50 text-pink-700'
+                                  : 'border-gray-200 bg-white hover:border-pink-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {formData.selected_colors.includes(color.color_name) && (
+                                  <CheckCircle2 className="h-4 w-4 text-pink-600" />
+                                )}
+                                <span className="font-medium">{color.color_name}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                ) : (
+                  <Card className="border-gray-200">
+                    <CardContent className="py-12 text-center">
+                      <Wrench className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                      <p className="text-gray-500 font-medium">
+                        Installation details will be available once the lead status is set to "Sold"
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Notes Tab */}
+              <TabsContent value="notes" className="mt-0 space-y-4">
+                <Card className="border-blue-200 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                      Add New Note
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <Textarea
-                      id="customer_address"
-                      value={formData.customer_address}
-                      onChange={(e) => setFormData({...formData, customer_address: e.target.value})}
-                      data-testid="textarea-edit-customer-address"
-                      className="min-h-[60px] text-base resize-none"
-                      placeholder="Enter installation address"
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      data-testid="textarea-new-note"
+                      placeholder="Add a new note or update..."
+                      className="min-h-[100px] resize-none"
                     />
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <Label htmlFor="installation_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                      <Calendar className="h-3 w-3 text-cyan-600" />
-                      INSTALLATION DATE
-                    </Label>
-                    <Input
-                      id="installation_date"
-                      type="date"
-                      value={formData.installation_date}
-                      onChange={(e) => setFormData({...formData, installation_date: e.target.value})}
-                      data-testid="input-edit-installation-date"
-                      className="h-11 text-base"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+                  </CardContent>
+                </Card>
 
-            {/* Right Column */}
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="phone" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <Phone className="h-3 w-3 text-emerald-600" />
-                  PHONE <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  data-testid="input-edit-phone"
-                  className="h-11 text-base"
-                  placeholder="Enter phone number"
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <Label htmlFor="status" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <Tag className="h-3 w-3 text-yellow-600" />
-                  STATUS <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.remarks}
-                  onValueChange={(value) => setFormData({...formData, remarks: value})}
-                >
-                  <SelectTrigger data-testid="select-edit-status" className="h-11 text-base">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LEAD_STATUSES.map(status => (
-                      <SelectItem key={status} value={status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-1">
-                <Label htmlFor="project_amount" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <DollarSign className="h-3 w-3 text-green-600" />
-                  PROJECT AMOUNT
-                </Label>
-                <Input
-                  id="project_amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.project_amount}
-                  onChange={(e) => setFormData({...formData, project_amount: e.target.value})}
-                  data-testid="input-edit-amount"
-                  className="h-11 text-base"
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <Label htmlFor="next_followup_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <Calendar className="h-3 w-3 text-blue-600" />
-                  NEXT FOLLOW-UP DATE
-                </Label>
-                <Input
-                  id="next_followup_date"
-                  type="date"
-                  value={formData.next_followup_date}
-                  onChange={(e) => {
-                    setFormData({...formData, next_followup_date: e.target.value});
-                  }}
-                  data-testid="input-edit-followup-date"
-                  className="h-11 text-base"
-                />
-              </div>
-              
-              {formData.remarks === 'Sold' && formData.deposit_paid && (
-                <div className="space-y-1">
-                  <Label htmlFor="pickup_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-violet-600" />
-                    PICKUP DATE
-                  </Label>
-                  <Input
-                    id="pickup_date"
-                    type="date"
-                    value={formData.pickup_date}
-                    onChange={(e) => setFormData({...formData, pickup_date: e.target.value})}
-                    data-testid="input-edit-pickup-date"
-                    className="h-11 text-base"
-                  />
-                </div>
-              )}
-              
-              {formData.remarks === 'Sold' && (
-                <div className="space-y-1">
-                  <Label htmlFor="installation_end_date" className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-amber-600" />
-                    INSTALLATION END DATE
-                  </Label>
-                  <Input
-                    id="installation_end_date"
-                    type="date"
-                    value={formData.installation_end_date}
-                    onChange={(e) => setFormData({...formData, installation_end_date: e.target.value})}
-                    data-testid="input-edit-installation-end-date"
-                    className="h-11 text-base"
-                  />
-                  <p className="text-xs text-gray-500">Leave empty for single-day installations</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Payment Status - Only for Sold Status - First Priority */}
-          {formData.remarks === 'Sold' && (
-            <div className="space-y-3 pt-2 border-t border-gray-200">
-              <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                PAYMENT STATUS
-              </Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div 
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                    formData.deposit_paid 
-                      ? 'border-green-500 bg-green-50 shadow-sm' 
-                      : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                  }`}
-                  onClick={() => setFormData({...formData, deposit_paid: !formData.deposit_paid})}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      formData.deposit_paid ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                    }`}>
-                      {formData.deposit_paid && (
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">Deposit Paid</p>
-                      <p className="text-xs text-gray-600">Initial payment received</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div 
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                    formData.balance_paid 
-                      ? 'border-green-500 bg-green-50 shadow-sm' 
-                      : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                  }`}
-                  onClick={() => setFormData({...formData, balance_paid: !formData.balance_paid})}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      formData.balance_paid ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                    }`}>
-                      {formData.balance_paid && (
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">Balance Paid</p>
-                      <p className="text-xs text-gray-600">Final payment received</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Installer Selection - Clean Dropdown */}
-              <div className="space-y-3 pt-4 border-t border-gray-200">
-                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <Users className="h-3 w-3 text-teal-600" />
-                  ASSIGNED INSTALLERS
-                </Label>
-                <Select
-                  value=""
-                  onValueChange={(installer) => {
-                    if (installer && !formData.assigned_installer.includes(installer)) {
-                      setFormData({
-                        ...formData,
-                        assigned_installer: [...formData.assigned_installer, installer]
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger data-testid="select-installer" className="h-11 text-base">
-                    <SelectValue placeholder="Select installer to add..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {installersData.filter((installerObj: Installer) => !formData.assigned_installer.includes(installerObj.name)).map((installerObj: Installer) => (
-                      <SelectItem key={installerObj.name} value={installerObj.name}>
-                        {installerObj.name.charAt(0).toUpperCase() + installerObj.name.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formData.assigned_installer.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {formData.assigned_installer.map((installer) => (
-                      <Badge 
-                        key={installer} 
-                        variant="secondary" 
-                        className="flex items-center gap-1 px-2 py-1"
-                      >
-                        {installer.charAt(0).toUpperCase() + installer.slice(1)}
-                        <X 
-                          className="h-3 w-3 cursor-pointer hover:text-red-500" 
-                          onClick={() => {
-                            setFormData({
-                              ...formData,
-                              assigned_installer: formData.assigned_installer.filter(i => i !== installer)
-                            });
-                          }}
-                          data-testid={`remove-installer-${installer}`}
-                        />
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Color Selection - Clean Dropdown */}
-              <div className="space-y-3 pt-4 border-t border-gray-200">
-                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                  <Palette className="h-3 w-3 text-pink-600" />
-                  COLOR SELECTION (Typically 2 colors)
-                </Label>
-                <Select
-                  value=""
-                  onValueChange={(color) => {
-                    if (color && !formData.selected_colors.includes(color)) {
-                      setFormData({
-                        ...formData,
-                        selected_colors: [...formData.selected_colors, color]
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger data-testid="select-color" className="h-11 text-base">
-                    <SelectValue placeholder="Select color to add..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {wmkColors.filter((colorObj: any) => !formData.selected_colors.includes(colorObj.code)).map((colorObj: any) => (
-                      <SelectItem key={colorObj.code} value={colorObj.code}>
-                        {colorObj.code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formData.selected_colors.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {formData.selected_colors.map((color) => (
-                      <Badge 
-                        key={color} 
-                        variant="outline" 
-                        className="flex items-center gap-1 px-2 py-1 border-purple-200 text-purple-700"
-                      >
-                        {color}
-                        <X 
-                          className="h-3 w-3 cursor-pointer hover:text-red-500" 
-                          onClick={() => {
-                            setFormData({
-                              ...formData,
-                              selected_colors: formData.selected_colors.filter(c => c !== color)
-                            });
-                          }}
-                          data-testid={`remove-color-${color}`}
-                        />
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Notes History and New Note - Full Width at Bottom */}
-          <div className="space-y-3 pt-4 border-t border-gray-200">
-            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-              <FileText className="h-3 w-3 text-slate-600" />
-              NOTES HISTORY
-            </Label>
-            
-            {/* Existing Notes History */}
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {formData.notes ? (
-                formData.notes.split('\n').filter(line => line.trim()).reverse().map((note, index) => {
-                  const match = note.match(/^\[(.+?)\]\s*(.+)$/);
-                  if (match) {
-                    const [, date, content] = match;
-                    return (
-                      <div key={index} className="flex items-start space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-green-800">[{date}] {content}</p>
-                        </div>
+                <Card className="border-gray-200 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-gray-600" />
+                      Notes History
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {formData.notes ? (
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {formData.notes.split('\n').map((note, index) => (
+                          <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{note}</p>
+                          </div>
+                        ))}
                       </div>
-                    );
-                  } else {
-                    return (
-                      <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                        <div className="w-5 h-5 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-700">{note}</p>
-                        </div>
-                      </div>
-                    );
-                  }
-                })
-              ) : (
-                <p className="text-sm text-gray-500 italic p-3 bg-gray-50 rounded-lg text-center">
-                  No notes history available
-                </p>
-              )}
+                    ) : (
+                      <p className="text-gray-400 text-center py-8">No notes available</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </div>
+          </Tabs>
 
-            {/* Add New Note */}
-            <div className="space-y-2">
-              <Label htmlFor="new-note" className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                ADD NEW NOTE
-              </Label>
-              <Textarea
-                id="new-note"
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Enter a new note..."
-                rows={2}
-                className="resize-none text-base"
-              />
-            </div>
-          </div>
-
-          {/* Action Buttons - Right Aligned */}
-          <div className="flex justify-end gap-3 pt-3 border-t">
-            <Button
-              type="button"
+          {/* Footer Actions */}
+          <div className="border-t px-6 py-4 bg-gray-50 flex items-center justify-between gap-4">
+            <Button 
+              type="button" 
               variant="outline"
               onClick={onHide}
+              className="min-w-[100px]"
               data-testid="button-cancel-edit"
-              className="px-8 h-10"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={updateLeadMutation.isPending || shouldDisableSaveButton}
+              className="min-w-[120px] bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
               data-testid="button-save-edit"
-              className="px-8 h-10 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={shouldDisableSaveButton ? "No changes to save" : ""}
             >
-              {updateLeadMutation.isPending ? 'Saving...' : 'Update Lead'}
+              {updateLeadMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
             </Button>
           </div>
-          </form>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
