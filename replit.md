@@ -228,6 +228,22 @@ The database includes default login credentials for development and testing. See
 
 ## Recent Changes
 
+### 2025-10-22: Modal Design System Improvements
+- Completely redesigned all major modals with modern shadcn UI components
+- Implemented consistent design patterns across the application:
+  - **QuickEditModal**: Tab-based navigation (Basic Info, Project Details, Installation, Notes) with card sections, gradient headers, visual installer/color selection
+  - **QuickFollowupModal**: Enhanced with card-based sections, improved status display with icons, better note preview
+  - **AddBookletModal & EditBookletModal**: Migrated from Bootstrap to shadcn Dialog, modern card-based sections with colored borders
+  - **EditRepairRequestModal**: Card-based organization for customer info, issue details, timeline, and notes
+- All modals now feature:
+  - Consistent gradient headers with status badges
+  - Card components with colored borders for visual grouping
+  - Improved spacing, typography, and accessibility
+  - Enhanced data-testid attributes for testing
+  - Better mobile responsiveness with fixed footers
+  - Modern icon usage throughout (lucide-react)
+- Architect-reviewed and approved for code quality and consistency
+
 ### 2025-10-22: Default Data & Credentials
 - Created comprehensive seed data script (`server/seed-data.ts`)
 - Added 5 default user accounts with different roles
