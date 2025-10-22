@@ -425,18 +425,18 @@ export default function Leads() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <Table data-testid="leads-table">
+              <Table data-testid="leads-table" className="table-fixed w-full">
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-900 dark:to-gray-800 hover:from-gray-100 hover:to-gray-50">
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Date</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Name</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Contact</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Origin</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Type</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Follow-up</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Status</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Amount</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white text-center">Actions</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[90px]">Date</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[140px]">Name</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[150px]">Contact</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[110px]">Origin</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[90px]">Type</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[110px]">Follow-up</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[130px]">Status</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[100px]">Amount</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white text-center w-[140px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -225,20 +225,20 @@ export default function SampleBooklets() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <Table data-testid="booklets-table">
+              <Table data-testid="booklets-table" className="table-fixed w-full">
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-900 dark:to-gray-800 hover:from-gray-100 hover:to-gray-50">
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Order #</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Partner/Designer</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Type</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Product</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Status</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Purchase Status</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Date Given</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Given By</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Tracking</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white">Notes</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white text-center">Actions</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[110px]">Order #</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[180px]">Partner/Designer</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[100px]">Type</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[140px]">Product</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[90px]">Status</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[110px]">Purchase</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[110px]">Date Given</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[100px]">Given By</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[140px]">Tracking</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[180px]">Notes</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white text-center w-[110px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
