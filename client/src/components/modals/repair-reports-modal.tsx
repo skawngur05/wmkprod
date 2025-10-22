@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Phone, Mail, MapPin, Calendar, User, AlertTriangle, Plus } from 'lucide-react';
+import { Search, Phone, Mail, MapPin, Calendar, User, AlertTriangle, Plus, Clock, CheckCircle, XCircle, Edit } from 'lucide-react';
 import { Lead } from '@shared/schema';
 
 interface RepairReportsModalProps {
@@ -155,15 +156,27 @@ export function RepairReportsModal({ show, onHide }: RepairReportsModalProps) {
 
   return (
     <Dialog open={show} onOpenChange={onHide}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="pb-4 border-b">
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <AlertTriangle className="h-6 w-6 text-orange-500" />
             Repair Reports Management
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <Tabs defaultValue="create" className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="create" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Create New Report
+            </TabsTrigger>
+            <TabsTrigger value="view" className="flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              View All Reports
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="create" className="flex-1 overflow-y-auto space-y-6 mt-0">
           {!showCreateForm ? (
             <>
               {/* Search Section */}
@@ -364,40 +377,82 @@ export function RepairReportsModal({ show, onHide }: RepairReportsModalProps) {
             </form>
           )}
 
-          {/* Existing Repair Requests */}
-          {repairRequests && repairRequests.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Recent Repair Requests</h3>
-              <div className="grid gap-3 max-h-60 overflow-y-auto">
-                {repairRequests.slice(0, 5).map((request: any) => (
-                  <Card key={request.id}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{request.customer_name}</span>
-                            <Badge className={getPriorityColor(request.priority)}>
-                              {request.priority}
-                            </Badge>
-                            <Badge className={getStatusColor(request.status)}>
-                              {request.status}
-                            </Badge>
+          </TabsContent>
+
+          <TabsContent value="view" className="flex-1 overflow-y-auto mt-0">
+            {isLoadingRepairs ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            ) : repairRequests && repairRequests.length > 0 ? (
+              <div className="space-y-3">
+                {repairRequests.map((request: any) => (
+                  <Card key={request.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-5">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-semibold text-lg text-gray-900">{request.customer_name}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge className={getPriorityColor(request.priority)}>
+                                  {request.priority}
+                                </Badge>
+                                <Badge className={getStatusColor(request.status)}>
+                                  {request.status}
+                                </Badge>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600">{request.issue_description}</p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span>📞 {request.phone}</span>
-                            {request.email && <span>✉️ {request.email}</span>}
-                            <span>📅 {request.date_reported}</span>
+                          
+                          <p className="text-sm text-gray-700 leading-relaxed">{request.issue_description}</p>
+                          
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Phone className="h-3.5 w-3.5" />
+                              <span>{request.phone}</span>
+                            </div>
+                            {request.email && (
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Mail className="h-3.5 w-3.5" />
+                                <span className="truncate">{request.email}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Calendar className="h-3.5 w-3.5" />
+                              <span>{request.date_reported}</span>
+                            </div>
+                            {request.address && (
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <MapPin className="h-3.5 w-3.5" />
+                                <span className="truncate">{request.address}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
+                        
+                        <Button variant="outline" size="sm" className="shrink-0">
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <AlertTriangle className="h-16 w-16 text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Repair Requests Found</h3>
+                <p className="text-sm text-gray-500 mb-4">Create your first repair report to get started</p>
+                <Button onClick={() => {}} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create New Report
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

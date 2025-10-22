@@ -615,7 +615,26 @@ export default function Leads() {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-4">
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Search</label>
-                <FocusPreservingSearchInput currentSearch={filters.search} />
+                <Input
+                  type="text"
+                  placeholder="Search by name, phone, or email..."
+                  defaultValue={filters.search}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Clear previous timeout
+                    if ((window as any).searchDebounceTimeout) {
+                      clearTimeout((window as any).searchDebounceTimeout);
+                    }
+                    // Set new debounced update
+                    (window as any).searchDebounceTimeout = setTimeout(() => {
+                      setFilters(prev => ({ ...prev, search: value }));
+                      setCurrentPage(1);
+                    }, 500);
+                  }}
+                  autoComplete="off"
+                  data-testid="input-search-leads"
+                  className="w-full"
+                />
               </div>
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>

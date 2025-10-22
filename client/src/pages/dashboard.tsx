@@ -855,7 +855,7 @@ export default function Dashboard() {
 
       {/* Business Calendar Section - Mobile Friendly Navigation */}
       {!isMobileSafari && (
-        <div className={`row mb-4 dashboard-section ${animationStep >= 4 ? 'animate' : ''}`}>
+        <div className={`row mb-4 dashboard-section ${animationStep >= 3 ? 'animate' : ''}`}>
           <div className="col-12">
             <div className="card" data-testid="business-calendar-section">
               <div className="card-header d-flex justify-content-between align-items-center">
@@ -886,7 +886,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className={`row dashboard-section ${animationStep >= 3 ? 'animate' : ''}`}>
+      <div className={`row dashboard-section ${animationStep >= 4 ? 'animate' : ''}`}>
         {/* Overdue Follow-ups */}
         {overdueFollowups.length > 0 && (
           <div className="col-12 col-md-6 col-lg-6 mb-4">
