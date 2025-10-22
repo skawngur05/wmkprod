@@ -14,6 +14,8 @@ export const priorityEnum = pgEnum("priority", ["Low", "Medium", "High", "Urgent
 export const repairStatusEnum = pgEnum("repair_status", ["Pending", "In Progress", "Completed", "Cancelled"]);
 export const productTypeEnum = pgEnum("product_type", ["Demo Kit & Sample Booklet", "Sample Booklet Only", "Trial Kit", "Demo Kit Only"]);
 export const bookletStatusEnum = pgEnum("booklet_status", ["Pending", "Shipped", "Delivered", "Refunded"]);
+export const bookletTypeEnum = pgEnum("booklet_type", ["Infeel", "Wrap My Kitchen"]);
+export const purchaseStatusEnum = pgEnum("purchase_status", ["Purchased", "Free", "Returned"]);
 export const installerStatusEnum = pgEnum("installer_status", ["active", "inactive"]);
 export const templateTypeEnum = pgEnum("template_type", ["repair_notification", "follow_up", "installation_reminder", "custom"]);
 
@@ -390,9 +392,13 @@ export const sampleBooklets = pgTable("sample_booklets", {
   email: varchar("email", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),
   product_type: productTypeEnum("product_type").notNull(),
+  booklet_type: bookletTypeEnum("booklet_type").default("Wrap My Kitchen"),
   tracking_number: varchar("tracking_number", { length: 100 }),
   status: bookletStatusEnum("booklet_status").default("Pending"),
+  purchase_status: purchaseStatusEnum("purchase_status").default("Free"),
   date_ordered: varchar("date_ordered", { length: 10 }).notNull(), // Store as YYYY-MM-DD string
+  date_given: varchar("date_given", { length: 10 }), // Store as YYYY-MM-DD string
+  given_by: varchar("given_by", { length: 100 }),
   date_shipped: varchar("date_shipped", { length: 10 }), // Store as YYYY-MM-DD string
   notes: text("notes"),
   created_at: timestamp("created_at").notNull().defaultNow(),

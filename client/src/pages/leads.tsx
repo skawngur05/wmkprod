@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo, useRef, memo, createElement } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Lead, LEAD_STATUSES } from '@shared/schema';
@@ -17,252 +17,13 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Download, Upload, Search, X, Phone, Mail, Calendar, Eye, Trash2, AlertTriangle, Clock, Check } from 'lucide-react';
-import { createPortal } from 'react-dom';
 
-// Global persistent search element and state
-let globalSearchElement: HTMLDivElement | null = null;
-let globalSearchInput: HTMLInputElement | null = null;
-let globalDebounceTimeout: NodeJS.Timeout | null = null;
-
-// Create and mount the search element to a permanent location
-const initializePermanentSearchElement = () => {
-  // Clean up any existing element first
-  cleanupPermanentSearchElement();
-  
-  // Create the search container
-  const container = document.createElement('div');
-  container.id = 'permanent-search-container';
-  container.style.position = 'fixed';
-  container.style.top = '120px';
-  container.style.left = '20px';
-  container.style.zIndex = '1000';
-  container.style.backgroundColor = 'white';
-  container.style.padding = '12px';
-  container.style.border = '1px solid #d1d5db';
-  container.style.borderRadius = '8px';
-  container.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
-  container.style.minWidth = '300px';
-  
-  const label = document.createElement('label');
-  label.className = 'text-sm font-medium text-gray-700 mb-2 block';
-  label.textContent = 'Search';
-  
-  const input = document.createElement('input');
-  input.id = 'permanent-search-input';
-  input.type = 'text';
-  input.placeholder = 'Search leads...';
-  input.className = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
-  input.setAttribute('data-testid', 'input-search-leads');
-  input.autocomplete = 'off';
-  
-  const handleInputChange = (e: Event) => {
-    const target = e.target as HTMLInputElement;
-    const value = target.value;
-
-    console.log('≡ƒöì Search input changed:', value);
-
-    // Clear existing timeout
-    if (globalDebounceTimeout) {
-      clearTimeout(globalDebounceTimeout);
-    }
-
-    // Set new timeout
-    globalDebounceTimeout = setTimeout(() => {
-      console.log('≡ƒöì Dispatching global search event with:', value);
-      
-      const searchChangeEvent = new CustomEvent('globalSearchChange', { 
-        detail: value,
-        bubbles: true,
-        cancelable: true
-      });
-      
-      document.dispatchEvent(searchChangeEvent);
-    }, 300);
-  };
-  
-  input.addEventListener('input', handleInputChange);
-  
-  container.appendChild(label);
-  container.appendChild(input);
-  
-  // Mount to document body permanently
-  document.body.appendChild(container);
-  
-  globalSearchElement = container;
-  globalSearchInput = input;
-};
-
-// Clean up the permanent search element
-const cleanupPermanentSearchElement = () => {
-  if (globalSearchElement && globalSearchElement.parentNode) {
-    globalSearchElement.parentNode.removeChild(globalSearchElement);
-  }
-  if (globalDebounceTimeout) {
-    clearTimeout(globalDebounceTimeout);
-    globalDebounceTimeout = undefined;
-  }
-  globalSearchElement = null;
-  globalSearchInput = null;
-};
-
-// Hide/show the permanent search element
-const togglePermanentSearchVisibility = (visible: boolean) => {
-  if (globalSearchElement) {
-    globalSearchElement.style.display = visible ? 'block' : 'none';
-  }
-};
-
-// Position the permanent search element over the placeholder
-const positionPermanentSearchElement = (placeholderElement: HTMLElement) => {
-  if (!globalSearchElement) return;
-  
-  // Preserve focus before repositioning
-  const activeElement = document.activeElement;
-  const wasFocused = activeElement === globalSearchInput;
-  
-  const rect = placeholderElement.getBoundingClientRect();
-  globalSearchElement.style.left = `${rect.left + window.scrollX}px`;
-  globalSearchElement.style.top = `${rect.top + window.scrollY}px`;
-  globalSearchElement.style.width = `${rect.width}px`;
-  globalSearchElement.style.height = `${rect.height}px`;
-  
-  // Restore focus if it was on our input
-  if (wasFocused && globalSearchInput) {
-    globalSearchInput.focus();
-  }
-};
-
-// Timezone-safe date formatting function
-const UltraStableSearchInput = memo(() => {
-  console.log('∩┐╜ UltraStableSearchInput render');
-  const [searchValue, setSearchValue] = useState('');
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
-  const inputRef = useRef<HTMLInputElement>(null);
-  
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    console.log('∩┐╜ UltraStableSearchInput onChange:', value);
-    setSearchValue(value);
-
-    // Clear existing timeout
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    // Set new timeout
-    debounceTimeoutRef.current = setTimeout(() => {
-      console.log('≡ƒöÑ Calling global callback with:', value);
-      if (globalSearchCallback) {
-        globalSearchCallback(value);
-      }
-    }, 300);
-  }, []);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    console.log('∩┐╜ UltraStableSearchInput mounted');
-    return () => {
-      console.log('∩┐╜ UltraStableSearchInput cleanup');
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  return (
-    <div className="md:col-span-4">
-      <label className="text-sm font-medium text-gray-700 mb-2 block">Search</label>
-      <Input
-        ref={inputRef}
-        type="text"
-        placeholder="Search leads..."
-        value={searchValue}
-        onChange={handleInputChange}
-        autoComplete="off"
-        data-testid="input-search-leads"
-        className="w-full"
-        onFocus={() => console.log('∩┐╜ UltraStableSearchInput FOCUSED')}
-        onBlur={() => console.log('∩┐╜ UltraStableSearchInput LOST FOCUS')}
-      />
-    </div>
-  );
-});
-
-UltraStableSearchInput.displayName = 'UltraStableSearchInput';
-
-// Focus-preserving search input component  
-const FocusPreservingSearchInput = memo(({ currentSearch }: { currentSearch: string }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [localValue, setLocalValue] = useState(currentSearch || '');
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setLocalValue(value);
-
-    // Clear existing timeout
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    // Set new timeout - dispatch custom event
-    debounceTimeoutRef.current = setTimeout(() => {
-      console.log('≡ƒöì Dispatching search event:', value);
-      
-      const searchChangeEvent = new CustomEvent('globalSearchChange', { 
-        detail: value,
-        bubbles: true,
-        cancelable: true
-      });
-      
-      document.dispatchEvent(searchChangeEvent);
-    }, 300);
-  }, []);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Sync localValue with props, but preserve focus
-  useEffect(() => {
-    if (currentSearch !== localValue) {
-      // Only update if the input is not currently focused (to avoid disrupting typing)
-      if (document.activeElement !== inputRef.current) {
-        setLocalValue(currentSearch || '');
-      }
-    }
-  }, [currentSearch, localValue]);
-
-  return (
-    <Input
-      ref={inputRef}
-      type="text"
-      placeholder="Search leads..."
-      value={localValue}
-      onChange={handleInputChange}
-      autoComplete="off"
-      data-testid="input-search-leads"
-      className="w-full"
-    />
-  );
-});
-
-FocusPreservingSearchInput.displayName = 'FocusPreservingSearchInput';
-
-// Timezone-safe date formatting function
 const formatDateTimezoneAware = (dateString: string, options: Intl.DateTimeFormatOptions) => {
   if (!dateString) return '';
   
-  // If it's a simple date string like "2025-08-29", parse it without timezone conversion
   if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
     const [year, month, day] = dateString.split('-').map(Number);
     
-    // Format without timezone conversion
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
@@ -270,16 +31,18 @@ const formatDateTimezoneAware = (dateString: string, options: Intl.DateTimeForma
       return `${monthNames[month - 1]} ${day}, ${year}`;
     }
     
-    // Handle "Sep 4" format (month short + day, no year)
+    if (options.month === 'short' && options.day === 'numeric' && options.year === '2-digit') {
+      const shortYear = String(year).slice(-2);
+      return `${monthNames[month - 1]} ${day}, '${shortYear}`;
+    }
+    
     if (options.month === 'short' && options.day === 'numeric' && !options.year) {
       return `${monthNames[month - 1]} ${day}`;
     }
     
-    // For other formats, return the simple date string
     return dateString;
   }
   
-  // Fallback for other date formats - return as string to avoid timezone conversion
   return String(dateString);
 };
 
@@ -306,7 +69,6 @@ export default function Leads() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Fetch active users for filtering
   const { data: activeUsers = [] } = useQuery({
     queryKey: ['/api/users/active'],
     queryFn: async () => {
@@ -316,7 +78,6 @@ export default function Leads() {
     }
   });
 
-  // Function to copy text to clipboard
   const copyToClipboard = async (text: string, type: 'phone' | 'email') => {
     try {
       await navigator.clipboard.writeText(text);
@@ -333,7 +94,6 @@ export default function Leads() {
     }
   };
 
-  // Read URL parameters on component mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const status = urlParams.get('status');
@@ -342,45 +102,10 @@ export default function Leads() {
     if (status === 'sold') {
       setFilters(prev => ({ ...prev, status: 'sold' }));
     } else if (filter === 'today') {
-      // For "new today" filter, we'll need to handle this in the backend query
-      // For now, we can set a special search or status value
-      setFilters(prev => ({ ...prev, status: 'all' })); // Adjust as needed based on your backend
+      setFilters(prev => ({ ...prev, status: 'all' }));
     }
-  }, []); // Only run on mount
-
-  // Listen for search changes from the StableSearchInput
-  useEffect(() => {
-    const handleSearchChange = (event: CustomEvent) => {
-      const searchValue = event.detail;
-      console.log('∩┐╜ Received search change event:', searchValue);
-      setFilters(prev => ({ ...prev, search: searchValue }));
-      setCurrentPage(1);
-    };
-
-    window.addEventListener('searchChange', handleSearchChange as EventListener);
-    
-    return () => {
-      window.removeEventListener('searchChange', handleSearchChange as EventListener);
-    };
   }, []);
 
-  // Listen for global search changes from the permanent search element
-  useEffect(() => {
-    const handleGlobalSearchChange = (event: CustomEvent) => {
-      const searchValue = event.detail;
-      console.log('≡ƒîì Received global search event:', searchValue);
-      setFilters(prev => ({ ...prev, search: searchValue }));
-      setCurrentPage(1);
-    };
-
-    document.addEventListener('globalSearchChange', handleGlobalSearchChange as EventListener);
-    
-    return () => {
-      document.removeEventListener('globalSearchChange', handleGlobalSearchChange as EventListener);
-    };
-  }, []);
-
-  // Memoize the actual filters used for the query
   const queryFilters = useMemo(() => {
     return {
       search: filters.search,
@@ -399,17 +124,14 @@ export default function Leads() {
   }>({
     queryKey: ['leads-page', queryFilters, currentPage, user?.username],
     queryFn: async () => {
-      // Build query parameters from filters and pagination
       const params = new URLSearchParams();
       if (queryFilters.search) params.append('search', queryFilters.search);
       if (queryFilters.status && queryFilters.status !== 'all') params.append('status', queryFilters.status);
       if (queryFilters.origin && queryFilters.origin !== 'all') params.append('origin', queryFilters.origin);
       if (queryFilters.assigned_to && queryFilters.assigned_to !== 'all') params.append('assigned_to', queryFilters.assigned_to);
       
-      // Add current user for role-based filtering
       if (user?.username) params.append('username', user.username);
       
-      // Add pagination parameters
       params.append('page', currentPage.toString());
       params.append('limit', '20');
       
@@ -427,15 +149,12 @@ export default function Leads() {
     retry: 3,
   });
 
-  // Extract leads and pagination info from response
   const leads = leadsResponse?.leads || [];
   const totalPages = leadsResponse?.totalPages || 1;
   const total = leadsResponse?.total || 0;
 
-  // Helper function to update filters and reset pagination only for non-search filters
   const updateFilters = useCallback((newFilters: typeof filters) => {
     setFilters(newFilters);
-    // Only reset page if it's not just a search change
     if (newFilters.status !== filters.status || 
         newFilters.origin !== filters.origin || 
         newFilters.assigned_to !== filters.assigned_to) {
@@ -448,13 +167,9 @@ export default function Leads() {
       await apiRequest('DELETE', `/api/leads/${leadId}`);
     },
     onMutate: async (leadId: string) => {
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ['/api/leads'] });
-
-      // Snapshot the previous value
       const previousLeads = queryClient.getQueryData(['/api/leads', filters, currentPage]);
 
-      // Optimistically update to the new value
       queryClient.setQueryData(['/api/leads', filters, currentPage], (old: any) => {
         if (!old?.leads) return old;
         return {
@@ -464,26 +179,21 @@ export default function Leads() {
         };
       });
 
-      // Return a context object with the snapshotted value
       return { previousLeads };
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Lead deleted successfully!" });
-      // Invalidate multiple query patterns to ensure all lead-related data refreshes
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
-      queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
+      queryClient.invalidateQueries({ queryKey: ['leads-page'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
     },
     onError: (error: Error, leadId: string, context: any) => {
-      // If it's a 404 error, the lead might already be deleted
       if (error.message.includes('404')) {
         toast({ title: "Info", description: "Lead has been deleted" });
-        // Still refresh the data to reflect the current state
         queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
-        queryClient.invalidateQueries({ queryKey: ['leads-page'] }); // For the leads page
+        queryClient.invalidateQueries({ queryKey: ['leads-page'] });
         queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       } else {
-        // Rollback the optimistic update on error
         if (context?.previousLeads) {
           queryClient.setQueryData(['/api/leads', filters, currentPage], context.previousLeads);
         }
@@ -520,11 +230,10 @@ export default function Leads() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Handle simple date strings like "2025-08-29" without timezone conversion
     let followupDate;
     if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
       const [year, month, day] = date.split('-').map(Number);
-      followupDate = new Date(year, month - 1, day); // month is 0-indexed
+      followupDate = new Date(year, month - 1, day);
     } else {
       followupDate = new Date(date);
     }
@@ -536,11 +245,10 @@ export default function Leads() {
     if (!date) return false;
     const today = new Date();
     
-    // Handle simple date strings like "2025-08-29" without timezone conversion
     let followupDate;
     if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
       const [year, month, day] = date.split('-').map(Number);
-      followupDate = new Date(year, month - 1, day); // month is 0-indexed
+      followupDate = new Date(year, month - 1, day);
     } else {
       followupDate = new Date(date);
     }
@@ -554,12 +262,12 @@ export default function Leads() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-600 mb-4">
             <AlertTriangle className="h-12 w-12 mx-auto mb-2" />
             <p className="text-lg font-semibold">Error loading leads</p>
-            <p className="text-sm text-gray-600">{error?.message || 'Unknown error occurred'}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{error?.message || 'Unknown error occurred'}</p>
           </div>
           <Button onClick={() => window.location.reload()} className="mt-4">
             Retry
@@ -571,52 +279,54 @@ export default function Leads() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading leads...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading leads...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900" data-testid="leads-title">Lead Management</h1>
-            <p className="text-gray-600 mt-1">Manage and track all your sales leads</p>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent" data-testid="leads-title">Lead Management</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage and track all your sales leads</p>
           </div>
           <div className="flex gap-3">
             <Button
               onClick={() => setLocation('/add-lead')}
               data-testid="button-add-lead"
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl transition-all duration-200"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Lead
             </Button>
-            <Button variant="outline" data-testid="button-export">
+            <Button variant="outline" data-testid="button-export" className="shadow-md hover:shadow-lg transition-all duration-200">
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
-            <Button variant="outline" data-testid="button-import">
+            <Button variant="outline" data-testid="button-import" className="shadow-md hover:shadow-lg transition-all duration-200">
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
             </Button>
           </div>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">Filters</CardTitle>
+        <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+          <CardHeader className="border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Search className="h-5 w-5 text-blue-600" />
+              Filters
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-4">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Search</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Search</label>
                 <Input
                   type="text"
                   placeholder="Search by name, phone, or email..."
@@ -632,20 +342,20 @@ export default function Leads() {
                     searchTimeoutRef.current = setTimeout(() => {
                       setFilters(prev => ({ ...prev, search: value }));
                       setCurrentPage(1);
-                    }, 500);
+                    }, 300);
                   }}
                   autoComplete="off"
                   data-testid="input-search-leads"
-                  className="w-full"
+                  className="w-full shadow-sm"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Status</label>
                 <Select
                   value={filters.status}
                   onValueChange={(value) => updateFilters({...filters, status: value})}
                 >
-                  <SelectTrigger data-testid="select-filter-status">
+                  <SelectTrigger data-testid="select-filter-status" className="shadow-sm">
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
                   <SelectContent>
@@ -659,12 +369,12 @@ export default function Leads() {
                 </Select>
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Origin</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Origin</label>
                 <Select
                   value={filters.origin}
                   onValueChange={(value) => updateFilters({...filters, origin: value})}
                 >
-                  <SelectTrigger data-testid="select-filter-origin">
+                  <SelectTrigger data-testid="select-filter-origin" className="shadow-sm">
                     <SelectValue placeholder="All Origins" />
                   </SelectTrigger>
                   <SelectContent>
@@ -681,12 +391,12 @@ export default function Leads() {
                 </Select>
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Assigned To</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Assigned To</label>
                 <Select
                   value={filters.assigned_to}
                   onValueChange={(value) => updateFilters({...filters, assigned_to: value})}
                 >
-                  <SelectTrigger data-testid="select-filter-assigned">
+                  <SelectTrigger data-testid="select-filter-assigned" className="shadow-sm">
                     <SelectValue placeholder="All Team" />
                   </SelectTrigger>
                   <SelectContent>
@@ -700,7 +410,7 @@ export default function Leads() {
                 </Select>
               </div>
               <div className="md:col-span-2 flex items-end">
-                <Button className="w-full" data-testid="button-filter">
+                <Button className="w-full shadow-md hover:shadow-lg transition-all duration-200" data-testid="button-filter">
                   <Search className="h-4 w-4 mr-2" />
                   Filter
                 </Button>
@@ -709,160 +419,106 @@ export default function Leads() {
           </CardContent>
         </Card>
 
-        {/* Leads Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">Leads Overview</CardTitle>
+        <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+          <CardHeader className="border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-900">
+            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Leads Overview</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {/* Make sure table container allows overflow scrolling */}
-            <div className="overflow-x-auto max-w-full">
+            <div className="overflow-x-auto">
               <Table data-testid="leads-table">
-                  <TableHeader>
-                    <TableRow className="bg-gray-50 hover:bg-gray-50">
-                      <TableHead className="font-semibold text-gray-900" style={{ width: '100px', minWidth: '100px' }}>Date</TableHead>
-                      <TableHead className="font-semibold text-gray-900" style={{ width: '150px', minWidth: '150px' }}>Name</TableHead>
-                      <TableHead className="font-semibold text-gray-900" style={{ width: '160px', minWidth: '160px' }}>Contact Info</TableHead>
-                      <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Origin</TableHead>
-                      <TableHead className="font-semibold text-gray-900" style={{ width: '100px', minWidth: '100px' }}>Project Type</TableHead>
-                      <TableHead className="font-semibold text-gray-900" style={{ width: '130px', minWidth: '130px' }}>Next Follow-up</TableHead>
-                      <TableHead className="font-semibold text-gray-900" style={{ width: '120px', minWidth: '120px' }}>Status</TableHead>
-                      <TableHead className="font-semibold text-gray-900" style={{ width: '130px', minWidth: '130px' }}>Project Amount</TableHead>
-                      <TableHead className="font-semibold text-gray-900 sticky right-0 bg-gray-50 z-10" style={{ width: '100px', minWidth: '100px' }}>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                <TableHeader>
+                  <TableRow className="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-900 dark:to-gray-800 hover:from-gray-100 hover:to-gray-50">
+                    <TableHead className="font-bold text-gray-900 dark:text-white">Date</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white">Name</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white">Contact</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white">Origin</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white">Type</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white">Follow-up</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white">Status</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white">Amount</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {leads && leads.length > 0 ? (
-                    leads.map((lead) => (
-                      <TableRow key={lead.id} data-testid={`lead-row-${lead.id}`} className="hover:bg-gray-50">
-                        <TableCell className="font-medium text-gray-900" style={{ width: '100px', maxWidth: '100px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                    leads.map((lead, index) => (
+                      <TableRow 
+                        key={lead.id} 
+                        data-testid={`lead-row-${lead.id}`} 
+                        className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all duration-200 border-b border-gray-100 dark:border-gray-700"
+                      >
+                        <TableCell className="font-medium text-gray-900 dark:text-white text-sm">
                           {formatDateTimezoneAware(lead.date_created, { 
                             month: 'short', 
                             day: 'numeric',
                             year: '2-digit'
                           })}
                         </TableCell>
-                        <TableCell style={{ width: '150px', maxWidth: '150px' }}>
-                          <div className="font-semibold text-gray-900" style={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={lead.name}>
+                        <TableCell>
+                          <div className="font-semibold text-gray-900 dark:text-white text-sm">
                             {lead.name}
                           </div>
                         </TableCell>
-                        <TableCell style={{ width: '160px', maxWidth: '160px' }}>
-                          <div className="text-sm" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <TableCell>
+                          <div className="text-sm space-y-1">
                             <div 
-                              style={{ fontSize: '0.75rem', lineHeight: '1.2', cursor: 'pointer' }}
-                              className="hover:text-blue-600 hover:underline"
+                              className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer flex items-center gap-1"
                               onClick={() => lead.phone && copyToClipboard(lead.phone, 'phone')}
                               title={`Click to copy: ${lead.phone}`}
                             >
-                              {lead.phone}
+                              <Phone className="h-3 w-3" />
+                              <span className="text-xs">{lead.phone}</span>
                             </div>
                             {lead.email && (
                               <div 
-                                style={{ fontSize: '0.7rem', color: '#6b7280', lineHeight: '1.2', cursor: 'pointer' }} 
-                                className="hover:text-blue-600 hover:underline"
+                                className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer flex items-center gap-1"
                                 title={`Click to copy: ${lead.email}`}
                                 onClick={() => lead.email && copyToClipboard(lead.email, 'email')}
                               >
-                                {lead.email.length > 15 ? lead.email.substring(0, 15) + '...' : lead.email}
+                                <Mail className="h-3 w-3" />
+                                <span className="text-xs truncate max-w-[150px]">{lead.email}</span>
                               </div>
                             )}
                           </div>
                         </TableCell>
                         <TableCell>
-                          {(() => {
-                            const origin = lead.lead_origin;
-                            let className = '';
-                            
-                            switch (origin) {
-                              case 'Facebook':
-                                className = 'badge-facebook';
-                                break;
-                              case 'Google Text':
-                                className = 'badge-google';
-                                break;
-                              case 'Instagram':
-                                className = 'badge-instagram';
-                                break;
-                              case 'Trade Show':
-                                className = 'badge-trade-show';
-                                break;
-                              case 'WhatsApp':
-                                className = 'badge-whatsapp';
-                                break;
-                              case 'Website':
-                                className = 'badge-website';
-                                break;
-                              case 'Commercial':
-                                className = 'badge-commercial';
-                                break;
-                              case 'Referral':
-                                className = 'badge-referral';
-                                break;
-                              default:
-                                className = 'badge-default';
-                            }
-                            
-                            return (
-                              <>
-                                <style dangerouslySetInnerHTML={{
-                                  __html: `
-                                    .badge-facebook { background-color: #2563eb !important; color: #ffffff !important; border: 1px solid #2563eb !important; }
-                                    .badge-google { background-color: #fef3c7 !important; color: #92400e !important; border: 1px solid #fcd34d !important; }
-                                    .badge-instagram { background-color: #ec4899 !important; color: #ffffff !important; border: 1px solid #f472b6 !important; }
-                                    .badge-trade-show { background-color: #ede9fe !important; color: #7c3aed !important; border: 1px solid #c4b5fd !important; }
-                                    .badge-whatsapp { background-color: #22c55e !important; color: #ffffff !important; border: 1px solid #22c55e !important; }
-                                    .badge-website { background-color: #e0f2fe !important; color: #0c4a6e !important; border: 1px solid #7dd3fc !important; }
-                                    .badge-commercial { background-color: #f3f4f6 !important; color: #374151 !important; border: 1px solid #d1d5db !important; }
-                                    .badge-referral { background-color: #fee2e2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; }
-                                    .badge-default { background-color: #f3f4f6 !important; color: #374151 !important; border: 1px solid #d1d5db !important; }
-                                    .origin-badge {
-                                      display: inline-flex !important;
-                                      padding: 0.25rem 0.5rem !important;
-                                      font-size: 0.75rem !important;
-                                      font-weight: 500 !important;
-                                      border-radius: 9999px !important;
-                                      text-transform: capitalize !important;
-                                      white-space: nowrap !important;
-                                    }
-                                  `
-                                }} />
-                                <span className={`origin-badge ${className}`}>
-                                  {lead.lead_origin.replace('-', ' ')}
-                                </span>
-                              </>
-                            );
-                          })()}
+                          <Badge 
+                            variant="outline"
+                            className={`
+                              ${lead.lead_origin === 'Facebook' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900 dark:text-blue-300' : ''}
+                              ${lead.lead_origin === 'Google Text' ? 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900 dark:text-yellow-300' : ''}
+                              ${lead.lead_origin === 'Instagram' ? 'bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-900 dark:text-pink-300' : ''}
+                              ${lead.lead_origin === 'WhatsApp' ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900 dark:text-green-300' : ''}
+                              ${lead.lead_origin === 'Website' ? 'bg-cyan-100 text-cyan-800 border-cyan-300 dark:bg-cyan-900 dark:text-cyan-300' : ''}
+                              ${lead.lead_origin === 'Commercial' ? 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300' : ''}
+                              ${lead.lead_origin === 'Referral' ? 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900 dark:text-red-300' : ''}
+                              ${lead.lead_origin === 'Trade Show' ? 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900 dark:text-purple-300' : ''}
+                              text-xs font-semibold shadow-sm
+                            `}
+                          >
+                            {lead.lead_origin}
+                          </Badge>
                         </TableCell>
-                        <TableCell style={{ width: '100px', maxWidth: '100px' }}>
-                          {(() => {
-                            const projectType = lead.project_type || 'Residential';
-                            const bgColor = projectType === 'Commercial' ? '#3b82f6' : '#22c55e';
-                            const textColor = '#ffffff';
-                            
-                            return (
-                              <span 
-                                style={{ 
-                                  backgroundColor: bgColor,
-                                  color: textColor,
-                                  padding: '0.25rem 0.5rem',
-                                  fontSize: '0.75rem',
-                                  fontWeight: '500',
-                                  borderRadius: '9999px',
-                                  whiteSpace: 'nowrap'
-                                }}
-                              >
-                                {projectType === 'Commercial' ? 'Commercial' : 'Residential'}
-                              </span>
-                            );
-                          })()}
+                        <TableCell>
+                          <Badge 
+                            className={`
+                              ${lead.project_type === 'Commercial' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}
+                              text-white text-xs font-semibold shadow-md
+                            `}
+                          >
+                            {lead.project_type}
+                          </Badge>
                         </TableCell>
-                        <TableCell style={{ width: '130px', maxWidth: '130px' }}>
+                        <TableCell>
                           {lead.next_followup_date ? (
-                            <div style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }} className={
-                              isOverdue(lead.next_followup_date) ? 'text-red-600 font-medium' :
-                              isDueToday(lead.next_followup_date) ? 'text-yellow-600 font-medium' : 'text-green-600'
-                            }>
+                            <div className={`text-xs font-medium flex items-center gap-1 ${
+                              isOverdue(lead.next_followup_date) ? 'text-red-600 dark:text-red-400' :
+                              isDueToday(lead.next_followup_date) ? 'text-yellow-600 dark:text-yellow-400' : 
+                              'text-green-600 dark:text-green-400'
+                            }`}>
+                              {isOverdue(lead.next_followup_date) ? <AlertTriangle className="h-3 w-3" /> :
+                               isDueToday(lead.next_followup_date) ? <Clock className="h-3 w-3" /> :
+                               <Check className="h-3 w-3" />}
                               {isOverdue(lead.next_followup_date) ? 'Overdue' :
                                isDueToday(lead.next_followup_date) ? 'Today' :
                                formatDateTimezoneAware(lead.next_followup_date, { 
@@ -871,84 +527,30 @@ export default function Leads() {
                                })}
                             </div>
                           ) : (
-                            <span className="text-gray-500" style={{ fontSize: '0.75rem' }}>-</span>
+                            <span className="text-gray-400 dark:text-gray-600 text-xs">-</span>
                           )}
                         </TableCell>
                         <TableCell>
-                          {(() => {
-                            const status = lead.remarks;
-                            let bgColor = '';
-                            let textColor = '';
-                            
-                            switch (status) {
-                              case 'Sold':
-                                bgColor = '#22c55e';  // Green
-                                textColor = '#ffffff';
-                                break;
-                              case 'In Progress':
-                                bgColor = '#f59e0b';  // Yellow/orange
-                                textColor = '#ffffff';
-                                break;
-                              case 'New':
-                                bgColor = '#3b82f6';  // Blue
-                                textColor = '#ffffff';
-                                break;
-                              case 'Not Interested':
-                                bgColor = '#6b7280';  // Gray
-                                textColor = '#ffffff';
-                                break;
-                              case 'Not Service Area':
-                                bgColor = '#ea580c';  // Orange
-                                textColor = '#ffffff';
-                                break;
-                              case 'Not Compatible':
-                                bgColor = '#dc2626';  // Red
-                                textColor = '#ffffff';
-                                break;
-                              default:
-                                bgColor = '#6b7280';  // Gray
-                                textColor = '#ffffff';
-                            }
-                            
-                            const uniqueId = `status-badge-${lead.id}`;
-                            
-                            return (
-                              <>
-                                <style dangerouslySetInnerHTML={{
-                                  __html: `
-                                    #${uniqueId} {
-                                      background-color: ${bgColor} !important;
-                                      color: ${textColor} !important;
-                                    }
-                                  `
-                                }} />
-                                <div
-                                  id={uniqueId}
-                                  style={{
-                                    borderRadius: '9999px',
-                                    padding: '0.125rem 0.625rem',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '600',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    textTransform: 'capitalize',
-                                    whiteSpace: 'nowrap',
-                                    border: 'none',
-                                    outline: 'none'
-                                  }}
-                                >
-                                  {status}
-                                </div>
-                              </>
-                            );
-                          })()}
+                          <Badge 
+                            className={`
+                              ${lead.remarks === 'Sold' ? 'bg-green-600 hover:bg-green-700' : ''}
+                              ${lead.remarks === 'In Progress' ? 'bg-orange-500 hover:bg-orange-600' : ''}
+                              ${lead.remarks === 'New' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                              ${lead.remarks === 'Not Interested' ? 'bg-gray-500 hover:bg-gray-600' : ''}
+                              ${lead.remarks === 'Not Service Area' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+                              ${lead.remarks === 'Not Compatible' ? 'bg-red-600 hover:bg-red-700' : ''}
+                              text-white text-xs font-bold shadow-md px-3 py-1
+                            `}
+                          >
+                            {lead.remarks}
+                          </Badge>
                         </TableCell>
-                        <TableCell style={{ width: '100px', maxWidth: '100px' }}>
-                          <span className="font-semibold text-green-700" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                        <TableCell>
+                          <span className="font-bold text-green-700 dark:text-green-400 text-sm">
                             {lead.project_amount ? formatCurrency(lead.project_amount) : '-'}
                           </span>
                         </TableCell>
-                        <TableCell className="sticky right-0 bg-white shadow-sm" style={{ width: '120px', maxWidth: '120px' }}>
+                        <TableCell>
                           <div className="flex items-center gap-1 justify-center">
                             <Button
                               size="sm"
@@ -956,9 +558,9 @@ export default function Leads() {
                               onClick={() => openQuickFollowup(lead)}
                               title="Quick Follow-up Update"
                               data-testid={`button-followup-lead-${lead.id}`}
-                              className="h-7 w-7 p-0"
+                              className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-400"
                             >
-                              <Calendar className="h-3.5 w-3.5" />
+                              <Calendar className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
@@ -966,9 +568,9 @@ export default function Leads() {
                               onClick={() => openQuickEdit(lead)}
                               title="View Lead Details"
                               data-testid={`button-view-lead-${lead.id}`}
-                              className="h-7 w-7 p-0"
+                              className="h-8 w-8 p-0 hover:bg-purple-100 dark:hover:bg-purple-900 hover:text-purple-600 dark:hover:text-purple-400"
                             >
-                              <Eye className="h-3.5 w-3.5" />
+                              <Eye className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
@@ -977,9 +579,9 @@ export default function Leads() {
                               disabled={deleteLeadMutation.isPending}
                               title="Delete Lead"
                               data-testid={`button-delete-lead-${lead.id}`}
-                              className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-400"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -987,9 +589,9 @@ export default function Leads() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-12">
+                      <TableCell colSpan={9} className="text-center py-12">
                         <div className="text-gray-500">
-                          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-full flex items-center justify-center">
                             <Search className="h-8 w-8 text-gray-400" />
                           </div>
                           <p className="text-lg font-medium mb-2">No leads found</p>
@@ -1004,9 +606,8 @@ export default function Leads() {
           </CardContent>
         </Card>
         
-        {/* Pagination */}
         <div className="flex justify-between items-center mt-6 px-2">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             Showing {leads.length > 0 ? ((currentPage - 1) * 20 + 1) : 0} to {Math.min(currentPage * 20, total)} of {total} leads
           </div>
           <div className="flex items-center space-x-2">
@@ -1016,29 +617,35 @@ export default function Leads() {
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
               data-testid="pagination-previous"
+              className="shadow-md hover:shadow-lg"
             >
               Previous
             </Button>
             
-            {/* Generate page numbers */}
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
-              const pageNum = startPage + i;
-              if (pageNum <= totalPages) {
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setCurrentPage(pageNum)}
-                    data-testid={`pagination-${pageNum}`}
-                    className="w-10"
-                  >
-                    {pageNum}
-                  </Button>
-                );
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
               }
-              return null;
+              
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNum)}
+                  data-testid={`pagination-page-${pageNum}`}
+                  className={currentPage === pageNum ? "bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg" : "shadow-md hover:shadow-lg"}
+                >
+                  {pageNum}
+                </Button>
+              );
             })}
             
             <Button 
@@ -1047,55 +654,50 @@ export default function Leads() {
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
               data-testid="pagination-next"
+              className="shadow-md hover:shadow-lg"
             >
               Next
             </Button>
           </div>
         </div>
+      </div>
 
-        <AddLeadModal
-          show={showAddModal}
-          onHide={() => setShowAddModal(false)}
+      {showQuickEdit && selectedLead && (
+        <QuickEditModal
+          lead={selectedLead}
+          onClose={() => {
+            setShowQuickEdit(false);
+            setSelectedLead(null);
+          }}
         />
+      )}
 
-        {selectedLead && (
-          <QuickEditModal
-            lead={selectedLead}
-            show={showQuickEdit}
-            onHide={() => setShowQuickEdit(false)}
-            onSave={() => {
-              setShowQuickEdit(false);
-            }}
-          />
-        )}
-
+      {showQuickFollowup && selectedFollowupLead && (
         <QuickFollowupModal
           lead={selectedFollowupLead}
-          show={showQuickFollowup}
-          onHide={() => {
+          onClose={() => {
             setShowQuickFollowup(false);
             setSelectedFollowupLead(null);
           }}
         />
+      )}
 
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this lead? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex flex-row justify-end space-x-2">
-              <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this lead from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
