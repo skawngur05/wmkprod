@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Phone, Mail, MapPin, Calendar, User, AlertTriangle, Plus, Clock, CheckCircle, XCircle, Edit } from 'lucide-react';
 import { Lead } from '@shared/schema';
+import { EditRepairRequestModal } from './edit-repair-request-modal';
 
 interface RepairReportsModalProps {
   show: boolean;
@@ -30,6 +31,8 @@ export function RepairReportsModal({ show, onHide }: RepairReportsModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState<Lead | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editRequest, setEditRequest] = useState<any | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [formData, setFormData] = useState({
     customer_name: '',
     phone: '',
@@ -121,6 +124,16 @@ export function RepairReportsModal({ show, onHide }: RepairReportsModalProps) {
       address: project.address || '',
     });
     setShowCreateForm(true);
+  };
+
+  const handleEditRepair = (request: any) => {
+    setEditRequest(request);
+    setIsEditOpen(true);
+  };
+
+  const handleCloseEdit = () => {
+    setIsEditOpen(false);
+    setEditRequest(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -431,7 +444,13 @@ export function RepairReportsModal({ show, onHide }: RepairReportsModalProps) {
                           </div>
                         </div>
                         
-                        <Button variant="outline" size="sm" className="shrink-0">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="shrink-0"
+                          onClick={() => handleEditRepair(request)}
+                          data-testid={`button-edit-repair-${request.id}`}
+                        >
                           <Edit className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
