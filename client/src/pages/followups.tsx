@@ -717,22 +717,22 @@ function FollowupsTable({
             >
               <CardContent className="p-0">
                 {/* Header Section with Lead Info */}
-                <div className="p-2 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
+                <div className="p-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start space-x-1.5 flex-1 min-w-0">
-                      <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded flex-shrink-0">
-                        <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                    <div className="flex items-start space-x-2 flex-1 min-w-0">
+                      <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded flex-shrink-0">
+                        <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-0.5 truncate">{lead.name}</h3>
-                        <div className="flex flex-wrap items-center gap-1 mb-0.5">
-                          <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-base mb-1 truncate">{lead.name}</h3>
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
                             {lead.lead_origin.replace('-', ' ')}
                           </Badge>
                           <ProjectTypeBadge lead={lead} />
                           {lead.remarks && getStatusBadge(lead.remarks)}
                         </div>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           Created: {lead.date_created ? formatDate(lead.date_created) : 'N/A'}
                         </p>
                       </div>
@@ -741,14 +741,14 @@ function FollowupsTable({
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="h-6 px-2 text-[10px] font-medium border-gray-300 dark:border-gray-600 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+                        className="h-7 px-2.5 text-xs font-medium border-gray-300 dark:border-gray-600 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
                         onClick={(e) => {
                           e.stopPropagation();
                           onQuickEdit(lead);
                         }}
                         data-testid={`button-view-${lead.id}`}
                       >
-                        <Edit className="h-2.5 w-2.5 mr-0.5" />
+                        <Edit className="h-3 w-3 mr-1" />
                         Edit
                       </Button>
                     </div>
@@ -756,18 +756,18 @@ function FollowupsTable({
                 </div>
 
                 {/* Content Grid Section */}
-                <div className="p-2">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                <div className="p-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     
                     {/* Contact Information */}
-                    <div className="space-y-1">
-                      <h4 className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Contact</h4>
-                      <div className="space-y-1">
+                    <div className="space-y-1.5">
+                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contact</h4>
+                      <div className="space-y-1.5">
                         <div className="group flex items-center text-sm">
-                          <div className="p-0.5 bg-green-100 dark:bg-green-900/30 rounded mr-1.5 flex-shrink-0">
-                            <Phone className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
+                          <div className="p-1 bg-green-100 dark:bg-green-900/30 rounded mr-2 flex-shrink-0">
+                            <Phone className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                           </div>
-                          <span className="flex-1 text-gray-700 dark:text-gray-300 font-medium truncate text-[11px]">{lead.phone}</span>
+                          <span className="flex-1 text-gray-700 dark:text-gray-300 font-medium truncate text-sm">{lead.phone}</span>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -775,18 +775,18 @@ function FollowupsTable({
                                 copyToClipboard(lead.phone, 'phone');
                               }
                             }}
-                            className="ml-1 p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-all duration-200 opacity-0 group-hover:opacity-100"
+                            className="ml-1 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-all duration-200 opacity-0 group-hover:opacity-100"
                             title="Copy phone"
                           >
-                            <Copy className="h-2 w-2 text-gray-400" />
+                            <Copy className="h-3 w-3 text-gray-400" />
                           </button>
                         </div>
                         {lead.email && (
                           <div className="group flex items-center text-sm">
-                            <div className="p-0.5 bg-blue-100 dark:bg-blue-900/30 rounded mr-1.5 flex-shrink-0">
-                              <Mail className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
+                            <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded mr-2 flex-shrink-0">
+                              <Mail className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                             </div>
-                            <span className="flex-1 text-gray-700 dark:text-gray-300 truncate text-[11px]">{lead.email}</span>
+                            <span className="flex-1 text-gray-700 dark:text-gray-300 truncate text-sm">{lead.email}</span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -794,45 +794,45 @@ function FollowupsTable({
                                   copyToClipboard(lead.email, 'email');
                                 }
                               }}
-                              className="ml-1 p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-all duration-200 opacity-0 group-hover:opacity-100"
+                              className="ml-1 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-all duration-200 opacity-0 group-hover:opacity-100"
                               title="Copy email"
                             >
-                              <Copy className="h-2 w-2 text-gray-400" />
+                              <Copy className="h-3 w-3 text-gray-400" />
                             </button>
                           </div>
                         )}
                         <div className="flex items-center text-sm">
-                          <div className="p-0.5 bg-purple-100 dark:bg-purple-900/30 rounded mr-1.5 flex-shrink-0">
-                            <User className="h-2.5 w-2.5 text-purple-600 dark:text-purple-400" />
+                          <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded mr-2 flex-shrink-0">
+                            <User className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
                           </div>
-                          <span className="text-gray-700 dark:text-gray-300 capitalize text-[11px]">{lead.assigned_to || 'Unassigned'}</span>
+                          <span className="text-gray-700 dark:text-gray-300 capitalize text-sm">{lead.assigned_to || 'Unassigned'}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Dates & Schedule */}
-                    <div className="space-y-1">
-                      <h4 className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Schedule</h4>
-                      <div className="space-y-1">
+                    <div className="space-y-1.5">
+                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Schedule</h4>
+                      <div className="space-y-1.5">
                         <div className="flex items-start">
-                          <div className="p-0.5 bg-orange-100 dark:bg-orange-900/30 rounded mr-1.5 flex-shrink-0">
-                            <Calendar className="h-2.5 w-2.5 text-orange-600 dark:text-orange-400" />
+                          <div className="p-1 bg-orange-100 dark:bg-orange-900/30 rounded mr-2 flex-shrink-0">
+                            <Calendar className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400">Follow-up</p>
-                            <p className="text-[11px] font-semibold text-gray-900 dark:text-white">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Follow-up</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">
                               {formatDate(lead.next_followup_date?.toString() || null)}
                             </p>
                           </div>
                         </div>
                         {(lead as any).pickup_date && (
                           <div className="flex items-start">
-                            <div className="p-0.5 bg-violet-100 dark:bg-violet-900/30 rounded mr-1.5 flex-shrink-0">
-                              <Calendar className="h-2.5 w-2.5 text-violet-600 dark:text-violet-400" />
+                            <div className="p-1 bg-violet-100 dark:bg-violet-900/30 rounded mr-2 flex-shrink-0">
+                              <Calendar className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-[10px] text-gray-500 dark:text-gray-400">Pickup</p>
-                              <p className="text-[11px] font-semibold text-violet-700 dark:text-violet-400">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Pickup</p>
+                              <p className="text-sm font-semibold text-violet-700 dark:text-violet-400">
                                 {formatDate((lead as any).pickup_date?.toString() || null)}
                               </p>
                             </div>
@@ -840,12 +840,12 @@ function FollowupsTable({
                         )}
                         {lead.installation_date && (
                           <div className="flex items-start">
-                            <div className="p-0.5 bg-teal-100 dark:bg-teal-900/30 rounded mr-1.5 flex-shrink-0">
-                              <Calendar className="h-2.5 w-2.5 text-teal-600 dark:text-teal-400" />
+                            <div className="p-1 bg-teal-100 dark:bg-teal-900/30 rounded mr-2 flex-shrink-0">
+                              <Calendar className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-[10px] text-gray-500 dark:text-gray-400">Install</p>
-                              <p className="text-[11px] font-semibold text-teal-700 dark:text-teal-400">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Install</p>
+                              <p className="text-sm font-semibold text-teal-700 dark:text-teal-400">
                                 {formatDate(lead.installation_date?.toString() || null)}
                               </p>
                             </div>
@@ -855,32 +855,32 @@ function FollowupsTable({
                     </div>
 
                     {/* Project Details */}
-                    <div className="space-y-1">
-                      <h4 className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Details</h4>
-                      <div className="space-y-1">
+                    <div className="space-y-1.5">
+                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Details</h4>
+                      <div className="space-y-1.5">
                         <div className="flex items-center">
-                          <div className="p-0.5 bg-green-100 dark:bg-green-900/30 rounded mr-1.5 flex-shrink-0">
-                            <DollarSign className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
+                          <div className="p-1 bg-green-100 dark:bg-green-900/30 rounded mr-2 flex-shrink-0">
+                            <DollarSign className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                           </div>
-                          <span className="text-[11px] font-bold text-green-700 dark:text-green-400">
+                          <span className="text-sm font-bold text-green-700 dark:text-green-400">
                             {formatCurrency(lead.project_amount)}
                           </span>
                         </div>
                         {getPaymentStatusBadge(lead)}
                         {(lead as any).selected_colors && Array.isArray((lead as any).selected_colors) && (lead as any).selected_colors.length > 0 && (
                           <div>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 flex items-center gap-1">
-                              <div className="h-1 w-1 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full"></div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
+                              <div className="h-1.5 w-1.5 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full"></div>
                               Colors
                             </p>
-                            <div className="flex flex-wrap gap-0.5">
+                            <div className="flex flex-wrap gap-1">
                               {(lead as any).selected_colors.map((colorCode: string) => {
                                 const colorData = wmkColorsData?.find((color: any) => color.code === colorCode);
                                 return (
                                   <Badge 
                                     key={colorCode} 
                                     variant="outline" 
-                                    className="text-[10px] px-1 py-0 h-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300"
+                                    className="text-xs px-1.5 py-0.5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300"
                                   >
                                     {colorData ? colorData.name : colorCode}
                                   </Badge>
@@ -895,14 +895,14 @@ function FollowupsTable({
 
                   {/* Notes Section */}
                   {lead.notes && (
-                    <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <div className="flex items-start space-x-1.5">
-                        <div className="p-0.5 bg-gray-100 dark:bg-gray-700 rounded flex-shrink-0">
-                          <Eye className="h-2.5 w-2.5 text-gray-600 dark:text-gray-400" />
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-start space-x-2">
+                        <div className="p-1 bg-gray-100 dark:bg-gray-700 rounded flex-shrink-0">
+                          <Eye className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-0.5">Latest Note</p>
-                          <p className="text-[11px] text-gray-700 dark:text-gray-300 line-clamp-2">
+                          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">Latest Note</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
                             {(() => {
                               const notes = lead.notes.split('\n').filter(line => line.trim());
                               if (notes.length === 0) return lead.notes;
