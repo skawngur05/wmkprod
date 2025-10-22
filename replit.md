@@ -117,6 +117,20 @@ npm run db:push
 npm run db:push -- --force
 ```
 
+**Seed database with default credentials and mockup data:**
+```bash
+npm run db:seed
+```
+
+This creates:
+- 5 default user accounts with various roles
+- 3 installers (Angel, Brian, Luis)
+- 10 sample leads (residential and commercial)
+- 6 calendar events
+- 4 sample booklet orders
+- 2 completed projects
+- 2 repair requests
+
 ### Building for Production
 ```bash
 npm run build
@@ -200,7 +214,32 @@ The deployment automatically:
 
 None currently set. Add any coding style preferences, workflow preferences, or project-specific requirements here.
 
+## Default Credentials
+
+The database includes default login credentials for development and testing. See `CREDENTIALS.md` for full details.
+
+**Quick Reference:**
+- Admin: `admin` / `admin123`
+- Sales Rep: `patrick` / `patrick123` or `kim` / `kim123`
+- Commercial: `lina` / `lina123`
+- Manager: `manager` / `manager123`
+
+⚠️ **Security Note:** These credentials use plain text passwords for development only. Do not use in production.
+
 ## Recent Changes
+
+### 2025-10-22: Default Data & Credentials
+- Created comprehensive seed data script (`server/seed-data.ts`)
+- Added 5 default user accounts with different roles
+- Populated database with realistic mockup data:
+  - 10 leads (residential and commercial)
+  - 3 installers with profiles
+  - 6 calendar events (installations, trade shows, holidays)
+  - 4 sample booklet orders
+  - 2 completed projects
+  - 2 repair requests
+- Created `CREDENTIALS.md` documentation
+- Added `npm run db:seed` script
 
 ### 2025-10-21: Initial Replit Setup
 - Converted database from MySQL to PostgreSQL
