@@ -228,17 +228,14 @@ export default function SampleBooklets() {
               <Table data-testid="booklets-table" className="table-fixed w-full">
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-900 dark:to-gray-800 hover:from-gray-100 hover:to-gray-50">
-                    <TableHead className="font-bold text-gray-900 dark:text-white w-[110px]">Order #</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white w-[180px]">Partner/Designer</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white w-[100px]">Type</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white w-[140px]">Product</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white w-[90px]">Status</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white w-[110px]">Purchase</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white w-[110px]">Date Given</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white w-[100px]">Given By</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white w-[140px]">Tracking</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white w-[180px]">Notes</TableHead>
-                    <TableHead className="font-bold text-gray-900 dark:text-white text-center w-[110px]">Actions</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[130px]">Order #</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[200px]">Partner/Designer</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[120px]">Type</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[180px]">Product</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[110px]">Status</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[120px]">Purchase</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white w-[180px]">Tracking</TableHead>
+                    <TableHead className="font-bold text-gray-900 dark:text-white text-center w-[130px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -308,26 +305,6 @@ export default function SampleBooklets() {
                             {booklet.purchase_status || 'Free'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-700 dark:text-gray-300">
-                          {booklet.date_given ? (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3 text-purple-600" />
-                              {formatDate(booklet.date_given)}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-700 dark:text-gray-300">
-                          {booklet.given_by ? (
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3 text-purple-600" />
-                              {booklet.given_by}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </TableCell>
                         <TableCell>
                           {booklet.tracking_number ? (
                             <div>
@@ -344,16 +321,6 @@ export default function SampleBooklets() {
                               <small className="text-gray-500 text-xs block mt-1">
                                 Auto-updating
                               </small>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {booklet.notes ? (
-                            <div className="flex items-start gap-1 max-w-[200px]">
-                              <FileText className="h-3 w-3 text-gray-500 mt-0.5 flex-shrink-0" />
-                              <span className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{booklet.notes}</span>
                             </div>
                           ) : (
                             <span className="text-gray-400">-</span>
@@ -398,7 +365,7 @@ export default function SampleBooklets() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-12">
+                      <TableCell colSpan={8} className="text-center py-12">
                         <div className="text-gray-500">
                           <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 rounded-full flex items-center justify-center">
                             <Package className="h-8 w-8 text-gray-400" />

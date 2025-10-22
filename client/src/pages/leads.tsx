@@ -4,7 +4,6 @@ import { useLocation } from 'wouter';
 import { Lead, LEAD_STATUSES } from '@shared/schema';
 import { formatCurrency, formatDate, getStatusColor, getOriginColor } from '@/lib/auth';
 import { useAuth } from '@/contexts/auth-context';
-import { AddLeadModal } from '@/components/modals/add-lead-modal';
 import { QuickEditModal } from '@/components/modals/quick-edit-modal';
 import { QuickFollowupModal } from '@/components/modals/quick-followup-modal';
 import { apiRequest } from '@/lib/queryClient';
@@ -57,7 +56,6 @@ export default function Leads() {
   const [searchInput, setSearchInput] = useState('');
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const [currentPage, setCurrentPage] = useState(1);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showQuickEdit, setShowQuickEdit] = useState(false);
   const [selectedFollowupLead, setSelectedFollowupLead] = useState<Lead | null>(null);
@@ -662,25 +660,27 @@ export default function Leads() {
         </div>
       </div>
 
-      {showQuickEdit && selectedLead && (
-        <QuickEditModal
-          lead={selectedLead}
-          onClose={() => {
-            setShowQuickEdit(false);
-            setSelectedLead(null);
-          }}
-        />
-      )}
+      <QuickEditModal
+        lead={selectedLead}
+        show={showQuickEdit}
+        onHide={() => {
+          setShowQuickEdit(false);
+          setSelectedLead(null);
+        }}
+        onSave={() => {
+          setShowQuickEdit(false);
+          setSelectedLead(null);
+        }}
+      />
 
-      {showQuickFollowup && selectedFollowupLead && (
-        <QuickFollowupModal
-          lead={selectedFollowupLead}
-          onClose={() => {
-            setShowQuickFollowup(false);
-            setSelectedFollowupLead(null);
-          }}
-        />
-      )}
+      <QuickFollowupModal
+        lead={selectedFollowupLead}
+        show={showQuickFollowup}
+        onHide={() => {
+          setShowQuickFollowup(false);
+          setSelectedFollowupLead(null);
+        }}
+      />
 
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
         <AlertDialogContent>
